@@ -27,3 +27,4 @@ tauri-plugin-log = "2"
 tokio = { version = "1.53.1", features = ["full"] }
 rusqlite = { version = "0.40.1", features = ["bundled"] }
 nucleo-matcher = "0.3.1"
+enigo = { version = "0.6.1", default-features = false }

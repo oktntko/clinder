@@ -1,3 +1,4 @@
+use enigo::{Enigo, Key, Keyboard, Settings};
 use nucleo_matcher::pattern::{Atom, AtomKind, CaseMatching, Normalization};
 use nucleo_matcher::{Config, Matcher, Utf32Str};
 use rusqlite::{params, Connection};
@@ -5,7 +6,7 @@ use std::collections::VecDeque;
 use std::sync::{Arc, RwLock};
 use std::thread;
 use std::time::Duration;
-use tauri::State;
+use tauri::{AppHandle, State, WebviewWindow};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_log::log;
 
@@ -99,6 +100,46 @@ fn search_history(query: String, state: State<'_, AppState>) -> Vec<SearchResult
     // 上位30件に絞って返す
     matches.truncate(30);
     matches
+}
+
+#[tauri::command]
+async fn select_and_paste(
+    content: String,
+    app_handle: AppHandle,
+    window: WebviewWindow,
+) -> Result<(), String> {
+    // 1. クリップボードに選択テキストを書き戻す
+    app_handle
+        .clipboard()
+        .write_text(content)
+        .map_err(|e| e.to_string())?;
+
+    // 2. ウィンドウを非表示にする (destroy ではなく hide)
+    window.hide().map_err(|e| e.to_string())?;
+
+    // 3. 元のアプリにフォーカスが戻るのを一瞬だけ待ってから Ctrl+V を送信
+    tokio::spawn(async move {
+        // ウィンドウが隠れてフォーカスが切り替わる猶予（50ms程度）
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+
+        if let Ok(mut enigo) = Enigo::new(&Settings::default()) {
+            // Ctrl + V (macOSなら Command + V) を送信
+            #[cfg(target_os = "windows")]
+            {
+                let _ = enigo.key(Key::Control, enigo::Direction::Press);
+                let _ = enigo.key(Key::Unicode('v'), enigo::Direction::Click);
+                let _ = enigo.key(Key::Control, enigo::Direction::Release);
+            }
+            #[cfg(target_os = "macos")]
+            {
+                let _ = enigo.key(Key::Meta, enigo::Direction::Press);
+                let _ = enigo.key(Key::Unicode('v'), enigo::Direction::Click);
+                let _ = enigo.key(Key::Meta, enigo::Direction::Release);
+            }
+        }
+    });
+
+    Ok(())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -207,7 +248,11 @@ pub fn run() {
             Ok(())
         })
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![get_history, search_history])
+        .invoke_handler(tauri::generate_handler![
+            get_history,
+            search_history,
+            select_and_paste
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 type SearchResult = {
@@ -29,6 +30,14 @@ function App() {
     void search();
   }, [query, search]);
 
+  const handleSelect = useCallback(async (content: string) => {
+    try {
+      await invoke('select_and_paste', { content });
+    } catch (err) {
+      console.error('Failed to paste content:', err);
+    }
+  }, []);
+
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       switch (e.key) {
@@ -44,10 +53,14 @@ function App() {
           e.preventDefault();
           const selected = results[cursor];
           if (selected != null) {
-            // TODO: implements
-            console.log('Selected:', selected.content);
+            void handleSelect(selected.content);
           }
           return;
+        case 'Escape': {
+          e.preventDefault();
+          void getCurrentWindow().hide();
+          return;
+        }
       }
     }
 
@@ -56,7 +69,7 @@ function App() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [cursor, results]);
+  }, [cursor, results, handleSelect]);
 
   // アクティブな要素を参照するための Ref
   const activeItemRef = useRef<HTMLDivElement | null>(null);
@@ -89,7 +102,10 @@ function App() {
                 key={i}
                 ref={isActive ? activeItemRef : null}
                 className={`line-clamp-2 shrink-0 border-l-4 bg-gray-50 py-1 pl-2 transition-colors ${isActive ? 'border-l-red-400 bg-white' : 'border-l-gray-400'}`}
-                onClick={() => setCursor(i)}
+                onClick={() => {
+                  setCursor(i);
+                  void handleSelect(result.content);
+                }}
               >
                 {result.content}
               </div>
