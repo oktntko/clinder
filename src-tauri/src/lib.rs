@@ -1,3 +1,5 @@
+use nucleo_matcher::pattern::{Atom, AtomKind, CaseMatching, Normalization};
+use nucleo_matcher::{Config, Matcher, Utf32Str};
 use rusqlite::{params, Connection};
 use std::collections::VecDeque;
 use std::sync::{Arc, RwLock};
@@ -13,6 +15,13 @@ pub struct AppState {
     pub history: Arc<RwLock<VecDeque<String>>>,
     // DB への書き込みキュー（非同期処理用）
     pub db_tx: tokio::sync::mpsc::UnboundedSender<String>,
+}
+
+// 検索結果の型定義（フロントに返す）
+#[derive(serde::Serialize)]
+pub struct SearchResult {
+    pub content: String,
+    pub score: u32,
 }
 
 // データベースの初期化
@@ -43,6 +52,53 @@ fn init_db() -> Result<Connection, rusqlite::Error> {
 fn get_history(state: State<'_, AppState>) -> Vec<String> {
     let history = state.history.read().unwrap();
     history.iter().cloned().collect()
+}
+#[tauri::command]
+fn search_history(query: String, state: State<'_, AppState>) -> Vec<SearchResult> {
+    let history = state.history.read().unwrap();
+
+    // クエリが空の場合は、直近の最新30件をそのまま返す
+    if query.trim().is_empty() {
+        return history
+            .iter()
+            .take(30)
+            .map(|text| SearchResult {
+                content: text.clone(),
+                score: 0,
+            })
+            .collect();
+    }
+
+    // nucleo マッチャーの初期化
+    let mut matcher = Matcher::new(Config::DEFAULT);
+    let atom = Atom::new(
+        &query,
+        CaseMatching::Ignore,
+        Normalization::Smart,
+        AtomKind::Fuzzy,
+        false,
+    );
+
+    let mut matches = Vec::new();
+    let mut buf = Vec::new();
+
+    for text in history.iter() {
+        let utf32 = Utf32Str::new(text, &mut buf);
+
+        if let Some(score) = atom.score(utf32, &mut matcher) {
+            matches.push(SearchResult {
+                content: text.clone(),
+                score: score as u32,
+            });
+        }
+    }
+
+    // スコアが高い順（降順）にソート
+    matches.sort_by(|a, b| b.score.cmp(&a.score));
+
+    // 上位30件に絞って返す
+    matches.truncate(30);
+    matches
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -151,7 +207,7 @@ pub fn run() {
             Ok(())
         })
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![get_history])
+        .invoke_handler(tauri::generate_handler![get_history, search_history])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
