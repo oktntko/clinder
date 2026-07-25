@@ -22,6 +22,11 @@
   },
   "devDependencies": {
     "@cspell/eslint-plugin": "^10.0.1",
+    "@fontsource-variable/m-plus-1-code": "^5.3.0",
+    "@fontsource/noto-sans-jp": "^5.3.0",
+    "@iconify/json": "^2.2.505",
+    "@iconify/tailwind4": "^1.2.3",
+    "@tailwindcss/vite": "^4.3.3",
     "@tauri-apps/cli": "^2",
     "@tsconfig/node26": "^26.0.0",
     "@tsconfig/strictest": "^2.0.8",
@@ -33,6 +38,7 @@
     "oxfmt": "^0.60.0",
     "oxlint": "^1.75.0",
     "oxlint-tsgolint": "^7.0.2001",
+    "tailwindcss": "^4.3.3",
     "typescript": "~7.0.2",
     "vite": "^8.1.5"
   },

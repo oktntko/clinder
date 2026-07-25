@@ -1,0 +1,26 @@
+@import 'tailwindcss';
+
+@plugin '@iconify/tailwind4';
+
+@theme {
+  --font-sans: 'Noto Sans JP Variable', sans-serif;
+  --font-mono: 'M PLUS 1 Code Variable', monospace;
+}
+
+@layer utilities {
+  button {
+    cursor: pointer;
+    &:disabled {
+      cursor: not-allowed;
+    }
+  }
+
+  input[type='date']::-webkit-calendar-picker-indicator,
+  input[type='datetime-local']::-webkit-calendar-picker-indicator,
+  input[type='month']::-webkit-calendar-picker-indicator,
+  input[type='time']::-webkit-calendar-picker-indicator,
+  input[type='week']::-webkit-calendar-picker-indicator,
+  select {
+    cursor: pointer;
+  }
+}
