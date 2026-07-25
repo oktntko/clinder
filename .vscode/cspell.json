@@ -1,0 +1,47 @@
+// cSpell Settings
+{
+  "$schema": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/cspell.schema.json",
+  "ignoreRandomStrings": true,
+  "useGitignore": true,
+  // Version of the setting file.  Always 0.2
+  "version": "0.2",
+  // language - current active spelling language
+  "language": "en",
+  // words - list of words to be always considered correct
+  "words": [
+    "autoincrement",
+    "Avenir",
+    "cdylib",
+    "clinder",
+    "deque",
+    "esbuild",
+    "oktntko",
+    "rgba",
+    "rlib",
+    "rusqlite",
+    "serde",
+    "staticlib",
+    "tauri",
+    "vite"
+  ],
+  // flagWords - list of words to be always considered incorrect
+  // This is useful for offensive words and common spelling errors.
+  // For example "hte" should be "the"
+  "flagWords": [],
+  // Specify paths/files to ignore.
+  "ignorePaths": [
+    "node_modules", // this will ignore anything the node_modules directory
+    ".git", // Ignore the .git directory
+    "*.dll", // Ignore all .dll files.
+    "pnpm-lock.yaml",
+    "package.json",
+    "generated",
+    "dist",
+    "types",
+    "*.svg"
+  ],
+  "ignoreRegExpList": [
+    "icon-\\[[^\\]]+\\]"
+  ],
+  "import": []
+}
