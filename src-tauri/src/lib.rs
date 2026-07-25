@@ -2,6 +2,7 @@ use std::thread;
 use std::time::Duration;
 use tauri::Emitter;
 use tauri_plugin_clipboard_manager::ClipboardExt;
+use tauri_plugin_log::log;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -12,6 +13,11 @@ fn greet(name: &str) -> String {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .level(log::LevelFilter::Trace)
+                .build(),
+        )
         .plugin(tauri_plugin_clipboard_manager::init())
         .setup(|app| {
             let handle = app.handle().clone();
@@ -24,7 +30,7 @@ pub fn run() {
                         if !current_text.is_empty() && current_text != last_text {
                             last_text = current_text.clone();
 
-                            println!("changed-clipboard {}", current_text);
+                            log::debug!("changed-clipboard {}", current_text);
 
                             let _ = handle.emit("changed-clipboard", current_text);
                         }
