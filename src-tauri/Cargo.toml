@@ -28,3 +28,6 @@ tokio = { version = "1.53.1", features = ["full"] }
 rusqlite = { version = "0.40.1", features = ["bundled"] }
 nucleo-matcher = "0.3.1"
 enigo = { version = "0.6.1", default-features = false }
+
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-global-shortcut = "2"

@@ -6,8 +6,9 @@ use std::collections::VecDeque;
 use std::sync::{Arc, RwLock};
 use std::thread;
 use std::time::Duration;
-use tauri::{AppHandle, State, WebviewWindow};
+use tauri::{AppHandle, Emitter, Manager, State, WebviewWindow};
 use tauri_plugin_clipboard_manager::ClipboardExt;
+use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 use tauri_plugin_log::log;
 
 // アプリ全体で共有する State
@@ -200,6 +201,7 @@ pub fn run() {
     let db_tx_clone = db_tx.clone();
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(
             tauri_plugin_log::Builder::new()
                 .level(log::LevelFilter::Trace)
@@ -212,6 +214,18 @@ pub fn run() {
         })
         .setup(move |app| {
             let handle = app.handle().clone();
+
+            // Alt + V
+            let toggle_shortcut = Shortcut::new(Some(Modifiers::ALT), Code::KeyV);
+
+            app.global_shortcut().on_shortcut(
+                toggle_shortcut,
+                move |app_handle, shortcut, event| {
+                    if shortcut == &toggle_shortcut && event.state() == ShortcutState::Pressed {
+                        toggle_window(app_handle);
+                    }
+                },
+            )?;
 
             // 2. クリップボード監視スレッド
             thread::spawn(move || {
@@ -237,7 +251,9 @@ pub fn run() {
                             }
 
                             // B. 非同期で SQLite INSERT タスクへ送信
-                            let _ = db_tx_clone.send(current_text);
+                            let _ = db_tx_clone.send(current_text.clone());
+
+                            let _ = handle.emit("clipboard-updated", &current_text);
                         }
                     }
 
@@ -255,4 +271,16 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+// ウィンドウの表示/非表示を切り替える関数
+fn toggle_window(app: &AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        if window.is_visible().unwrap_or(false) {
+            let _ = window.hide();
+        } else {
+            let _ = window.show();
+            let _ = window.set_focus();
+        }
+    }
 }

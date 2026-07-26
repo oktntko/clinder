@@ -13,8 +13,15 @@
     "windows": [
       {
         "title": "clinder",
-        "width": 800,
-        "height": 600
+        "width": 600,
+        "height": 600,
+        "resizable": false,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "visible": false,
+        "center": true,
+        "skipTaskbar": true
       }
     ],
     "security": {
