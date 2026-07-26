@@ -186,7 +186,7 @@ function App() {
   return (
     <div
       ref={containerRef}
-      className="mx-auto flex max-h-150 w-full flex-col divide-y divide-gray-300 rounded-lg bg-gray-50 text-sm text-gray-900 shadow-2xl"
+      className="mx-auto flex max-h-150 w-full flex-col divide-y divide-gray-300 rounded-lg bg-gray-50 text-sm text-gray-900 shadow-md"
     >
       <div
         className="pointer-events-auto flex-none cursor-move p-2 select-none"
