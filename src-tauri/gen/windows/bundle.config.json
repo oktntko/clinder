@@ -1,0 +1,27 @@
+{
+  "identityName": "YourPackageIdentityName",
+  "publisher": "CN=YourCompany",
+  "publisherDisplayName": "Your Company Name",
+  "capabilities": {
+    "general": ["internetClient"]
+  },
+  "signing": {
+    "pfx": null,
+    "pfxPassword": null
+  },
+  "extensions": {
+    "shareTarget": false,
+    "fileAssociations": [],
+    "protocolHandlers": [],
+    "toastActivation": {
+      "activationType": "foreground"
+    },
+    "startupTask": {
+      "enabled": true
+    }
+  },
+  "resourceIndex": {
+    "enabled": false,
+    "keepConfig": false
+  }
+}
