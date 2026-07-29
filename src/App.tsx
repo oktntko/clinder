@@ -4,6 +4,7 @@ import { getCurrentWindow, LogicalSize } from '@tauri-apps/api/window';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 type SearchResult = {
+  id: number;
   content: string;
   score: number;
 };
@@ -88,11 +89,37 @@ function App() {
             void handleSelect(selected.content);
           }
           return;
-        case 'Escape': {
+        case 'Escape':
           e.preventDefault();
           void getCurrentWindow().hide();
           return;
-        }
+        case 'Tab':
+          const selector =
+            'a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"]), [contenteditable]';
+          const focusableElements = document.querySelectorAll(selector);
+          const lastElementChild: Element | undefined =
+            focusableElements[focusableElements.length - 1];
+
+          // target === input かつ Shift の場合、 最後の要素にフォーカス
+          if (e.target === inputRef.current && e.shiftKey) {
+            e.preventDefault();
+
+            if (lastElementChild instanceof HTMLElement) {
+              lastElementChild.focus();
+            } else {
+              inputRef.current?.focus();
+            }
+
+            return;
+          }
+
+          // target === 最後の要素 かつ not Shift の場合、 input にフォーカス
+          if (e.target === lastElementChild && !e.shiftKey) {
+            e.preventDefault();
+            inputRef.current?.focus();
+          }
+
+          return;
       }
     }
 
@@ -132,8 +159,8 @@ function App() {
       if (!containerRef.current) return;
 
       const contentHeight = containerRef.current.scrollHeight;
-      const targetHeight = Math.min(Math.max(contentHeight, 80), 600);
-      await getCurrentWindow().setSize(new LogicalSize(600, targetHeight));
+      const targetHeight = Math.min(Math.max(contentHeight, 80), 800);
+      await getCurrentWindow().setSize(new LogicalSize(800, targetHeight));
     }
 
     requestAnimationFrame(() => {
@@ -183,19 +210,29 @@ function App() {
     };
   }, [search]);
 
+  async function deleteSearchResult(id: number) {
+    setResults((results) => results.filter((r) => r.id !== id));
+    await invoke('delete_history_item', { id });
+  }
+
+  async function clearAllSearchResult() {
+    setResults([]);
+    await invoke('clear_all_history');
+  }
+
   return (
     <div
       ref={containerRef}
-      className="mx-auto flex max-h-150 w-full flex-col divide-y divide-gray-300 rounded-lg bg-gray-50 text-sm text-gray-900 shadow-md"
+      className="mx-auto flex max-h-200 w-full flex-col divide-y divide-gray-300 rounded-lg bg-gray-100 text-sm text-gray-900 shadow-md"
     >
       <div
-        className="pointer-events-auto flex-none cursor-move p-2 select-none"
+        className="pointer-events-auto flex-none cursor-move bg-white p-2 select-none"
         onMouseDown={handleMouseDown}
       >
         <input
           ref={inputRef}
           type="text"
-          className="pointer-events-auto w-full bg-gray-50 p-2 transition focus:outline-none"
+          className="pointer-events-auto w-full p-2 transition focus:outline-none"
           autoFocus={true}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -203,7 +240,7 @@ function App() {
       </div>
 
       <div
-        tabIndex={-1}
+        id="clipboard-history"
         className="pointer-events-auto flex min-h-0 w-full flex-1 flex-col divide-y divide-gray-300 overflow-y-auto focus:outline-none"
       >
         {results.length > 0 ? (
@@ -214,20 +251,50 @@ function App() {
                 key={i}
                 ref={isActive ? activeItemRef : null}
                 type="button"
-                tabIndex={-1}
-                className={`line-clamp-2 shrink-0 cursor-pointer border-l-4 bg-gray-100 py-1 pl-2 text-start whitespace-pre-wrap transition-colors hover:bg-white focus:outline-none ${isActive ? 'border-l-red-400 bg-white ' : 'border-l-transparent'}`}
+                className={`group relative line-clamp-2 shrink-0 cursor-pointer border-l-4 py-1 pl-2 text-start whitespace-pre-wrap transition-colors hover:bg-white focus:outline-none ${isActive ? 'border-l-red-400 bg-white ' : 'border-l-transparent'}`}
+                onFocus={() => {
+                  setCursor(i);
+                }}
                 onClick={() => {
                   setCursor(i);
                   void handleSelect(result.content);
                 }}
               >
                 {result.content}
+                <div className="pointer-events-none absolute top-1/2 right-5 hidden size-5 -translate-y-1/2 rounded-full bg-white transition-all transition-discrete group-hover:block">
+                  <button
+                    title="delete"
+                    type="button"
+                    tabIndex={-1}
+                    className="pointer-events-auto inline-flex size-5 items-center justify-center rounded-full bg-gray-100 transition-colors hover:bg-gray-200"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void deleteSearchResult(result.id);
+                    }}
+                  >
+                    <span className="icon-[mingcute--close-fill] size-4"></span>
+                  </button>
+                </div>
               </button>
             );
           })
         ) : (
           <div className="flex h-60 w-full items-center justify-center">No matches found</div>
         )}
+      </div>
+
+      <div className="flex flex-row p-2">
+        <button
+          title="clear all"
+          type="button"
+          className="inline-flex size-5 items-center justify-center rounded-full bg-gray-100 transition-colors hover:bg-white focus:bg-white focus:outline-none"
+          onClick={(e) => {
+            e.stopPropagation();
+            void clearAllSearchResult();
+          }}
+        >
+          <span className="icon-[material-symbols--delete-sweep-outline] size-4"></span>
+        </button>
       </div>
     </div>
   );
