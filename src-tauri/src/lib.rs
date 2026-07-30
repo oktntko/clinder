@@ -251,6 +251,7 @@ pub fn run() {
     let history_clone = Arc::clone(&history);
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(
             tauri_plugin_log::Builder::new()
