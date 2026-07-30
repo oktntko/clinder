@@ -8,6 +8,7 @@ type SearchResult = {
   id: number;
   content: string;
   score: number;
+  indices: number[];
 };
 
 function App() {
@@ -75,14 +76,6 @@ function App() {
         case 'PageDown':
           e.preventDefault();
           setCursor((prev) => Math.min(prev + 10, Math.max(results.length - 1, 0)));
-          return;
-        case 'Home':
-          e.preventDefault();
-          setCursor(0);
-          return;
-        case 'End':
-          e.preventDefault();
-          setCursor(Math.max(results.length - 1, 0));
           return;
         case 'Enter':
           e.preventDefault();
@@ -266,7 +259,7 @@ function App() {
                   void handleSelect(result.content);
                 }}
               >
-                {result.content}
+                <FastHighlight {...result} />
                 <div className="pointer-events-none absolute top-1/2 right-5 hidden size-5 -translate-y-1/2 rounded-full bg-white transition-all transition-discrete group-hover:block dark:bg-zinc-700">
                   <button
                     title="delete"
@@ -396,6 +389,56 @@ function useStore() {
     theme,
     saveTheme,
   };
+}
+
+function FastHighlight({ content, indices }: SearchResult) {
+  if (!indices || indices.length === 0) {
+    return <>{content}</>;
+  }
+
+  // サロゲートペアや絵文字を考慮して文字単位の配列にする
+  const chars = Array.from(content);
+  const indexSet = new Set(indices);
+
+  const elements: React.ReactNode[] = [];
+  let currentChunk = '';
+  let inMark = false;
+
+  for (let i = 0; i < chars.length; i++) {
+    const isMatch = indexSet.has(i);
+
+    if (isMatch !== inMark) {
+      if (currentChunk) {
+        if (inMark) {
+          elements.push(
+            <mark key={i} className="rounded-sm bg-yellow-200 text-black">
+              {currentChunk}
+            </mark>,
+          );
+        } else {
+          elements.push(currentChunk);
+        }
+      }
+      currentChunk = '';
+      inMark = isMatch;
+    }
+
+    currentChunk += chars[i];
+  }
+
+  if (currentChunk) {
+    if (inMark) {
+      elements.push(
+        <mark key="last" className="rounded-sm bg-yellow-200 text-black">
+          {currentChunk}
+        </mark>,
+      );
+    } else {
+      elements.push(currentChunk);
+    }
+  }
+
+  return <>{elements}</>;
 }
 
 export default App;
