@@ -199,7 +199,7 @@ fn search_history(query: String, state: State<'_, AppState>) -> Vec<SearchResult
 }
 
 #[tauri::command]
-async fn select_and_paste(
+async fn select(
     content: String,
     app_handle: AppHandle,
     window: WebviewWindow,
@@ -210,6 +210,17 @@ async fn select_and_paste(
         .map_err(|e| e.to_string())?;
 
     window.hide().map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
+async fn select_and_paste(
+    content: String,
+    app_handle: AppHandle,
+    window: WebviewWindow,
+) -> Result<(), String> {
+    let _ = select(content, app_handle, window).await;
 
     tokio::spawn(async move {
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
@@ -396,6 +407,7 @@ pub fn run() {
         })
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
+            select,
             search_history,
             select_and_paste,
             delete_history_item,

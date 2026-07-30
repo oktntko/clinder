@@ -35,9 +35,17 @@ function App() {
     void search();
   }, [query, search]);
 
-  const handleSelect = useCallback(async (content: string) => {
+  const handleSelectAndPaste = useCallback(async (content: string) => {
     try {
       await invoke('select_and_paste', { content });
+    } catch (err) {
+      console.error('Failed to paste content:', err);
+    }
+  }, []);
+
+  const handleSelect = useCallback(async (content: string) => {
+    try {
+      await invoke('select', { content });
     } catch (err) {
       console.error('Failed to paste content:', err);
     }
@@ -81,7 +89,11 @@ function App() {
           e.preventDefault();
           const selected = results[cursor];
           if (selected != null) {
-            void handleSelect(selected.content);
+            if (e.ctrlKey) {
+              void handleSelect(selected.content);
+            } else {
+              void handleSelectAndPaste(selected.content);
+            }
           }
           return;
         case 'Escape':
@@ -131,7 +143,7 @@ function App() {
       window.removeEventListener('keydown', handleKeyDown, true);
       window.removeEventListener('keyup', handleKeyDown, true);
     };
-  }, [cursor, results, handleSelect]);
+  }, [cursor, results, handleSelect, handleSelectAndPaste]);
 
   // アクティブな要素を参照するための Ref
   const activeItemRef = useRef<HTMLButtonElement | null>(null);
@@ -207,12 +219,12 @@ function App() {
 
   async function deleteSearchResult(id: number) {
     setResults((results) => results.filter((r) => r.id !== id));
-    await invoke('delete_history_item', { id });
+    void invoke('delete_history_item', { id });
   }
 
   async function clearAllSearchResult() {
     setResults([]);
-    await invoke('clear_all_history');
+    void invoke('clear_all_history');
   }
 
   return (
@@ -256,7 +268,7 @@ function App() {
                 }}
                 onClick={() => {
                   setCursor(i);
-                  void handleSelect(result.content);
+                  void handleSelectAndPaste(result.content);
                 }}
               >
                 <FastHighlight {...result} />
