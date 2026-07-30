@@ -358,10 +358,11 @@ function App() {
 function useStore() {
   const [store, setStore] = useState<Store>();
   const [enablePin, setEnablePin] = useState(false);
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
 
   useEffect(() => {
     void (async () => {
+      // %USERPROFILE%\AppData\Roaming\oktntko.clinder
       const store = await Store.load('settings.json');
       setStore(store);
 
@@ -372,7 +373,7 @@ function useStore() {
 
       async function getTheme(store: Store) {
         const v = await store?.get<'light' | 'dark'>('theme');
-        return v ?? 'light';
+        return v ?? 'dark';
       }
 
       setEnablePin(await getEnablePin(store));

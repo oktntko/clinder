@@ -4,13 +4,14 @@
   "description": "Capability for the main window",
   "windows": ["main"],
   "permissions": [
+    "clipboard-manager:default",
     "core:default",
+    "core:webview:allow-set-webview-zoom",
     "core:window:allow-hide",
     "core:window:allow-set-size",
     "core:window:allow-start-dragging",
-    "opener:default",
-    "clipboard-manager:default",
     "log:default",
+    "opener:default",
     "store:default"
   ]
 }

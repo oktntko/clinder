@@ -3,9 +3,10 @@ use nucleo_matcher::pattern::{Atom, AtomKind, CaseMatching, Normalization};
 use nucleo_matcher::{Config, Matcher, Utf32Str};
 use rusqlite::{params, Connection};
 use std::collections::VecDeque;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
-use std::thread;
 use std::time::Duration;
+use std::{fs, thread};
 use tauri::{AppHandle, Emitter, Manager, State, WebviewWindow};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
@@ -35,9 +36,22 @@ pub struct SearchResult {
     pub indices: Vec<u32>,
 }
 
-// データベースの初期化
-fn init_db() -> Result<Connection, rusqlite::Error> {
-    let conn = Connection::open("clipboard_history.db")?;
+fn get_database_path(app_handle: &AppHandle) -> Result<PathBuf, Box<dyn std::error::Error>> {
+    // %USERPROFILE%\AppData\Local\oktntko.clinder
+    let app_data_dir = app_handle.path().app_local_data_dir()?;
+
+    if !app_data_dir.exists() {
+        fs::create_dir_all(&app_data_dir)?;
+    }
+
+    Ok(app_data_dir.join("clipboard_history.db"))
+}
+
+fn open_db_connection(path: &Path) -> Result<Connection, rusqlite::Error> {
+    Connection::open(path)
+}
+
+fn ensure_db_schema(conn: &Connection) -> Result<(), rusqlite::Error> {
     conn.execute(
         "CREATE TABLE IF NOT EXISTS history(
                 id INTEGER PRIMARY KEY AUTOINCREMENT
@@ -52,14 +66,30 @@ fn init_db() -> Result<Connection, rusqlite::Error> {
         ON history(created_at DESC)",
         [],
     )?;
+
+    Ok(())
+}
+
+fn init_db(app: &AppHandle) -> Result<Connection, Box<dyn std::error::Error>> {
+    let db_path = get_database_path(app)?;
+    let existed = db_path.exists();
+    let conn = open_db_connection(&db_path)?;
+
+    if !existed {
+        ensure_db_schema(&conn)?;
+    }
+
     Ok(conn)
 }
 
 // 指定IDの 1 行削除
 #[tauri::command]
-fn delete_history_item(id: i64, state: State<'_, AppState>) -> Result<(), String> {
-    // DB から削除
-    let conn = init_db().map_err(|e| e.to_string())?;
+fn delete_history_item(
+    app_handle: AppHandle,
+    id: i64,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    let conn = init_db(&app_handle).map_err(|e| e.to_string())?;
     conn.execute("DELETE FROM history WHERE id = ?1", params![id])
         .map_err(|e| e.to_string())?;
 
@@ -72,9 +102,9 @@ fn delete_history_item(id: i64, state: State<'_, AppState>) -> Result<(), String
 
 // 全件削除
 #[tauri::command]
-fn clear_all_history(state: State<'_, AppState>) -> Result<(), String> {
+fn clear_all_history(app_handle: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
     // DB を全件削除 (DELETE OR TRUNCATE)
-    let conn = init_db().map_err(|e| e.to_string())?;
+    let conn = init_db(&app_handle).map_err(|e| e.to_string())?;
     conn.execute("DELETE FROM history", [])
         .map_err(|e| e.to_string())?;
 
@@ -250,86 +280,16 @@ pub fn run() {
 
     let history = Arc::new(RwLock::new(VecDeque::<HistoryItem>::with_capacity(100)));
 
-    // アプリ起動時に DB から (id, content) を読み出す
-    if let Ok(conn) = init_db() {
-        if let Ok(mut stmt) = conn.prepare(
-            "SELECT
-                    id
-                    , content
-                FROM
-                    history
-                ORDER BY
-                    created_at DESC
-                    , id DESC
-                LIMIT
-                    100",
-        ) {
-            if let Ok(rows) = stmt.query_map([], |row| {
-                Ok(HistoryItem {
-                    id: row.get(0)?,
-                    content: row.get(1)?,
-                })
-            }) {
-                let mut mem = history.write().unwrap();
-                for item in rows.flatten() {
-                    mem.push_back(item);
-                }
-            }
-        }
-    }
-
-    // 1. SQLite 書き込み専用スレッド
-    let history_for_db_thread = Arc::clone(&history);
-    thread::spawn(move || {
-        let conn = match init_db() {
-            Ok(c) => c,
-            Err(e) => {
-                log::error!("Failed to open DB: {}", e);
-                return;
-            }
-        };
-
-        while let Some(text) = db_rx.blocking_recv() {
-            // INSERT または UPDATE 実行
-            let res = conn.execute(
-                "INSERT
-                    INTO history(content)
-                    VALUES (?1)
-                        ON CONFLICT(content) DO UPDATE
-                    SET
-                        created_at = CURRENT_TIMESTAMP",
-                params![text],
-            );
-
-            // DB に保存/更新された行の id を取得し、RAM 上の HistoryItem の id を同期・更新
-            if res.is_ok() {
-                if let Ok(last_id) = conn.query_row(
-                    "SELECT id FROM history WHERE content = ?1",
-                    params![text],
-                    |row| row.get::<_, i64>(0),
-                ) {
-                    let mut mem = history_for_db_thread.write().unwrap();
-                    mem.retain(|x| x.content != text);
-                    mem.push_front(HistoryItem {
-                        id: last_id,
-                        content: text,
-                    });
-                    if mem.len() > 100 {
-                        mem.pop_back();
-                    }
-                }
-            }
-        }
-    });
-
-    let history_clone = Arc::clone(&history);
-
     tauri::Builder::default()
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(
             tauri_plugin_log::Builder::new()
-                .level(log::LevelFilter::Trace)
+                .level(if cfg!(debug_assertions) {
+                    log::LevelFilter::Trace
+                } else {
+                    log::LevelFilter::Warn
+                })
                 .build(),
         )
         .plugin(tauri_plugin_clipboard_manager::init())
@@ -338,7 +298,78 @@ pub fn run() {
             db_tx,
         })
         .setup(move |app| {
-            let handle = app.handle().clone();
+            let app_handle = app.handle().clone();
+            let history_for_setup = Arc::clone(&history);
+            let history_for_db_thread = Arc::clone(&history);
+            let history_clone = Arc::clone(&history);
+
+            if let Ok(conn) = init_db(&app_handle) {
+                if let Ok(mut stmt) = conn.prepare(
+                    "SELECT
+                            id
+                            , content
+                        FROM
+                            history
+                        ORDER BY
+                            created_at DESC
+                            , id DESC
+                        LIMIT
+                            100",
+                ) {
+                    if let Ok(rows) = stmt.query_map([], |row| {
+                        Ok(HistoryItem {
+                            id: row.get(0)?,
+                            content: row.get(1)?,
+                        })
+                    }) {
+                        let mut mem = history_for_setup.write().unwrap();
+                        for item in rows.flatten() {
+                            mem.push_back(item);
+                        }
+                    }
+                }
+            }
+
+            let db_handle = app_handle.clone();
+            thread::spawn(move || {
+                let conn = match init_db(&db_handle) {
+                    Ok(c) => c,
+                    Err(e) => {
+                        log::error!("Failed to open DB: {}", e);
+                        return;
+                    }
+                };
+
+                while let Some(text) = db_rx.blocking_recv() {
+                    let res = conn.execute(
+                        "INSERT
+                            INTO history(content)
+                            VALUES (?1)
+                                ON CONFLICT(content) DO UPDATE
+                            SET
+                                created_at = CURRENT_TIMESTAMP",
+                        params![text],
+                    );
+
+                    if res.is_ok() {
+                        if let Ok(last_id) = conn.query_row(
+                            "SELECT id FROM history WHERE content = ?1",
+                            params![text],
+                            |row| row.get::<_, i64>(0),
+                        ) {
+                            let mut mem = history_for_db_thread.write().unwrap();
+                            mem.retain(|x| x.content != text);
+                            mem.push_front(HistoryItem {
+                                id: last_id,
+                                content: text,
+                            });
+                            if mem.len() > 100 {
+                                mem.pop_back();
+                            }
+                        }
+                    }
+                }
+            });
 
             let toggle_shortcut = Shortcut::new(Some(Modifiers::ALT), Code::KeyV);
 
@@ -351,19 +382,17 @@ pub fn run() {
                 },
             )?;
 
-            // 2. クリップボード監視スレッド
+            let clipboard_handle = app_handle.clone();
             thread::spawn(move || {
                 let mut last_text = String::new();
 
                 loop {
-                    if let Ok(current_text) = handle.clipboard().read_text() {
+                    if let Ok(current_text) = clipboard_handle.clipboard().read_text() {
                         if !current_text.is_empty() && current_text != last_text {
                             last_text = current_text.clone();
                             log::debug!("changed-clipboard {}", current_text);
 
-                            // --- 1. SQLite へ保存 & 発行された id を取得 ---
-                            if let Ok(conn) = init_db() {
-                                // RETURNING id を使って、INSERT/UPDATE された行の id を直接取得
+                            if let Ok(conn) = init_db(&clipboard_handle) {
                                 let res: Result<i64, _> = conn.query_row(
                                     "INSERT
                                         INTO history(content)
@@ -395,7 +424,7 @@ pub fn run() {
                                 }
                             }
 
-                            let _ = handle.emit("clipboard-updated", &current_text);
+                            let _ = app_handle.emit("clipboard-updated", &current_text);
                         }
                     }
 

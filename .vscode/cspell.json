@@ -14,8 +14,8 @@
     "cdylib",
     "clinder",
     "deque",
-    "esbuild",
     "enigo",
+    "esbuild",
     "iconify",
     "Noto",
     "nucleo",
@@ -27,6 +27,7 @@
     "staticlib",
     "tauri",
     "unlisten",
+    "USERPROFILE",
     "vite"
   ],
   // flagWords - list of words to be always considered incorrect
@@ -45,6 +46,8 @@
     "types",
     "*.svg"
   ],
-  "ignoreRegExpList": ["icon-\\[[^\\]]+\\]"],
+  "ignoreRegExpList": [
+    "icon-\\[[^\\]]+\\]"
+  ],
   "import": []
 }
