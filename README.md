@@ -1,41 +1,47 @@
-# Clinder 📋⚡
+# Clinder
 
 ![Logo](./doc/image/readme_header.png)
 
-> A blazing-fast, lightweight, keyboard-centric clipboard manager built with **Tauri v2**, **Rust**, and **React**.
+> A blazing-fast, lightweight, keyboard-centric clipboard manager.
 
-`Clinder` は、キーボード操作だけでストレスなく使える爆速な常駐型クリップボード履歴マネージャーです。
-`Alt + V` (macOS: `Cmd + V`) のグローバルショートカットで一瞬で起動し、インクリメンタルなあいまい検索（Fuzzy Search）で必要な履歴を即座にコピー＆貼り付けできます。
+Clinder is a lightweight, always-running clipboard history manager designed for fast, keyboard-only use.
+Open it with the global shortcut `Alt + V` and use incremental fuzzy search to find, copy, and paste past clipboard entries.
 
 ---
 
-## 📖 Usage
+## Usage
 
-### 1. 起動と基本操作
+### 1. Launching and basic controls
 
-- **`Alt + V`** (macOS: **`Cmd + V`**): 画面の呼び出し / 非表示
-- **`Esc`** または **画面外クリック**: 非表示
+- **`Alt + V`** : Show / hide the window
+- **`Esc`** or **click outside the window** : Hide
 
-### 2. 検索と貼り付け
+### 2. Searching and pasting
 
-1. ショートカットキーで呼び出し
-2. キーワードを入力（あいまい検索）
-3. **`↑` / `↓`** で選択 ➔ **`Enter`** で自動貼り付け
+1. Open with the shortcut
+2. Type keywords (fuzzy search)
+3. Use **`↑` / `↓`** to select ➔ **`Enter`** to auto-paste (**`Ctrl + Enter`** to copy the selected entry back to the clipboard)
 
 ## Inspired
 
 - [CLCL](https://nakka.com/soft/clcl/)
-- [Clipboard+](https://www.flowlauncher.com/plugins/clipboard-plus/) (Flow Launcher Plugins)
+- [fzf](https://github.com/junegunn/fzf)
+
+## Alternatives
+
+- [Clipboard+](https://www.flowlauncher.com/plugins/clipboard-plus/) (Flow Launcher plugin)
+
+---
 
 ## TODO
 
-- Fuzzy-Search の ON/OFF
-- 単語検索 の ON/OFF
-- 大文字小文字区別 の ON/OFF
-- (設定) 起動ショートカットキーの設定変更
-- (設定) 各種キーバインド
-- フォント選定
-- 画像のクリップボード履歴の管理
-- README補強
-- スタートアップ時に自動起動
-- DBからの検索
+- Toggle fuzzy-search on/off
+- Toggle whole-word search on/off
+- Toggle case sensitivity on/off
+- (Settings) Change the startup shortcut
+- (Settings) Configure keybindings
+- Choose and refine fonts
+- Add support for image clipboard history
+- Improve and expand this README
+- Option to auto-start at system startup
+- Search backed by a database

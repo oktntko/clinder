@@ -254,24 +254,25 @@ function App() {
           results.map((result, i) => {
             const isActive = cursor === i;
             return (
-              <button
-                key={i}
-                ref={isActive ? activeItemRef : null}
-                type="button"
-                className={`group relative line-clamp-2 shrink-0 cursor-pointer border-l-4 py-1 pl-2 text-start whitespace-pre-wrap transition-colors hover:bg-white focus:outline-none dark:hover:bg-zinc-700/50 ${
-                  isActive
-                    ? 'border-l-red-400 bg-white dark:border-l-red-500 dark:bg-zinc-700'
-                    : 'border-l-transparent'
-                }`}
-                onFocus={() => {
-                  setCursor(i);
-                }}
-                onClick={() => {
-                  setCursor(i);
-                  void handleSelectAndPaste(result.content);
-                }}
-              >
-                <FastHighlight {...result} />
+              <div key={i} className="group relative">
+                <button
+                  ref={isActive ? activeItemRef : null}
+                  type="button"
+                  className={`line-clamp-2 w-full shrink-0 cursor-pointer border-l-4 py-1 pl-2 text-start whitespace-pre-wrap transition-colors hover:bg-white focus:outline-none dark:hover:bg-zinc-700/50 ${
+                    isActive
+                      ? 'border-l-red-400 bg-white dark:border-l-red-500 dark:bg-zinc-700'
+                      : 'border-l-transparent'
+                  }`}
+                  onFocus={() => {
+                    setCursor(i);
+                  }}
+                  onClick={() => {
+                    setCursor(i);
+                    void handleSelectAndPaste(result.content);
+                  }}
+                >
+                  <FastHighlight {...result} />
+                </button>
                 <div className="pointer-events-none absolute top-1/2 right-5 hidden size-5 -translate-y-1/2 rounded-full bg-white transition-all transition-discrete group-hover:block dark:bg-zinc-700">
                   <button
                     title="delete"
@@ -286,7 +287,7 @@ function App() {
                     <span className="icon-[mingcute--close-fill] size-4"></span>
                   </button>
                 </div>
-              </button>
+              </div>
             );
           })
         ) : (

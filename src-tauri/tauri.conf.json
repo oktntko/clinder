@@ -21,8 +21,7 @@
         "alwaysOnTop": true,
         "visible": false,
         "center": true,
-        "skipTaskbar": true,
-        "zoomHotkeysEnabled": true
+        "skipTaskbar": true
       }
     ],
     "security": {
