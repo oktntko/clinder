@@ -46,8 +46,6 @@
     "types",
     "*.svg"
   ],
-  "ignoreRegExpList": [
-    "icon-\\[[^\\]]+\\]"
-  ],
+  "ignoreRegExpList": ["icon-\\[[^\\]]+\\]"],
   "import": []
 }
