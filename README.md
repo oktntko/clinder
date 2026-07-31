@@ -1,6 +1,6 @@
 # Clinder
 
-![Logo](./doc/image/readme_header.png)
+![Logo](./src-tauri/gen/windows/Assets/Wide310x150Logo.png)
 
 > A blazing-fast, lightweight, keyboard-centric clipboard manager.
 
