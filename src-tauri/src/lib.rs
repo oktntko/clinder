@@ -118,11 +118,33 @@ fn clear_all_history(app_handle: AppHandle, state: State<'_, AppState>) -> Resul
     Ok(())
 }
 
-// 検索
-#[tauri::command]
-fn search_history(query: String, state: State<'_, AppState>) -> Vec<SearchResult> {
-    let history = state.history.read().unwrap();
+fn load_history_from_db(app_handle: &AppHandle) -> Result<Vec<HistoryItem>, String> {
+    let conn = init_db(app_handle).map_err(|e| e.to_string())?;
+    let mut stmt = conn
+        .prepare(
+            "SELECT
+                id,
+                content
+            FROM history
+            ORDER BY created_at DESC, id DESC",
+        )
+        .map_err(|e| e.to_string())?;
 
+    let rows = stmt
+        .query_map([], |row| {
+            Ok(HistoryItem {
+                id: row.get(0)?,
+                content: row.get(1)?,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    rows.into_iter()
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())
+}
+
+fn search_history_items(history: &[HistoryItem], query: &str) -> Vec<SearchResult> {
     // クエリが空の場合は、直近の最新30件をそのまま返す
     if query.trim().is_empty() {
         return history
@@ -152,7 +174,7 @@ fn search_history(query: String, state: State<'_, AppState>) -> Vec<SearchResult
     // nucleo マッチャーの初期化
     let mut matcher = Matcher::new(Config::DEFAULT);
     let atom = Atom::new(
-        &query,
+        query,
         CaseMatching::Ignore,
         Normalization::Smart,
         AtomKind::Fuzzy,
@@ -231,6 +253,32 @@ fn search_history(query: String, state: State<'_, AppState>) -> Vec<SearchResult
     // 上位30件に絞って返す
     matches.truncate(30);
     matches
+}
+
+// 検索
+#[tauri::command]
+fn search_history(
+    query: String,
+    app_handle: AppHandle,
+    state: State<'_, AppState>,
+) -> Vec<SearchResult> {
+    let history_from_db = load_history_from_db(&app_handle);
+
+    let history_items = match history_from_db {
+        Ok(items) => items,
+        Err(err) => {
+            log::warn!("Falling back to in-memory history for search: {}", err);
+            state
+                .history
+                .read()
+                .unwrap()
+                .iter()
+                .cloned()
+                .collect::<Vec<_>>()
+        }
+    };
+
+    search_history_items(&history_items, &query)
 }
 
 #[tauri::command]

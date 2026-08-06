@@ -41,4 +41,3 @@ Open it with the global shortcut `Alt + V` and use incremental fuzzy search to f
 - Choose and refine fonts
 - Add support for image clipboard history
 - Improve and expand this README
-- Search backed by a database
