@@ -4,13 +4,15 @@ use nucleo_matcher::{Config, Matcher, Utf32Str};
 use rusqlite::{params, Connection};
 use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 use std::{fs, thread};
 use tauri::{AppHandle, Emitter, Manager, State, WebviewWindow};
 use tauri_plugin_clipboard_manager::ClipboardExt;
-use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
+use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 use tauri_plugin_log::log;
+use tauri_plugin_store::StoreExt;
 
 // RAM 上で保持する要素（ID と テキスト）
 #[derive(Clone, serde::Serialize)]
@@ -274,6 +276,80 @@ async fn select_and_paste(
     Ok(())
 }
 
+#[tauri::command]
+async fn update_window_toggle_shortcut(
+    new_shortcut_str: String,
+    app: AppHandle,
+) -> Result<(), String> {
+    let global_shortcut = app.global_shortcut();
+
+    let new_shortcut: Shortcut = new_shortcut_str
+        .parse()
+        .map_err(|_| format!("Invalid key.: {}", new_shortcut_str))?;
+
+    let store = app
+        .store("settings.json")
+        .map_err(|err| format!("Failed to load the configuration file.: {}", err))?;
+
+    let current_shortcut_str = match store.get("window_toggle_shortcut") {
+        Some(value) => value.as_str().unwrap_or("Alt+V").to_string(),
+        None => "Alt+V".to_string(),
+    };
+
+    let current_shortcut: Shortcut = current_shortcut_str
+        .parse()
+        .unwrap_or_else(|_| Shortcut::from_str("Alt+V").unwrap());
+
+    if current_shortcut == new_shortcut {
+        return Ok(());
+    }
+
+    let _ = global_shortcut.unregister(current_shortcut.clone());
+
+    let app_handle = app.clone();
+    let new_shortcut_for_closure = new_shortcut.clone();
+
+    let register_result =
+        global_shortcut.on_shortcut(new_shortcut.clone(), move |_app, shortcut, event| {
+            if shortcut == &new_shortcut_for_closure && event.state() == ShortcutState::Pressed {
+                toggle_window(&app_handle);
+            }
+        });
+
+    match register_result {
+        Ok(_) => {
+            // 成功：設定ファイルに保存
+            store.set(
+                "window_toggle_shortcut",
+                serde_json::json!(new_shortcut_str),
+            );
+            store
+                .save()
+                .map_err(|err| format!("Failed to save settings.: {}", err))?;
+
+            Ok(())
+        }
+        Err(err) => {
+            // 失敗：旧キーをハンドラー付きで復元（ロールバック）
+            let app_handle_rollback = app.clone();
+            let current_shortcut_for_closure = current_shortcut.clone();
+
+            let _ = global_shortcut.on_shortcut(current_shortcut, move |_app, shortcut, event| {
+                if shortcut == &current_shortcut_for_closure
+                    && event.state() == ShortcutState::Pressed
+                {
+                    toggle_window(&app_handle_rollback);
+                }
+            });
+
+            Err(format!(
+                "Registration failed. It may already be in use by another app.: {}",
+                err
+            ))
+        }
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let (db_tx, mut db_rx) = tokio::sync::mpsc::unbounded_channel::<String>();
@@ -371,7 +447,13 @@ pub fn run() {
                 }
             });
 
-            let toggle_shortcut = Shortcut::new(Some(Modifiers::ALT), Code::KeyV);
+            let store = app.store("settings.json")?;
+            let shortcut_str = match store.get("window_toggle_shortcut") {
+                Some(value) => value.as_str().unwrap_or("Alt+V").to_string(),
+                None => "Alt+V".to_string(),
+            };
+            let toggle_shortcut = Shortcut::from_str(&shortcut_str)
+                .unwrap_or_else(|_| Shortcut::from_str("Alt+V").unwrap());
 
             app.global_shortcut().on_shortcut(
                 toggle_shortcut,
@@ -440,7 +522,8 @@ pub fn run() {
             search_history,
             select_and_paste,
             delete_history_item,
-            clear_all_history
+            clear_all_history,
+            update_window_toggle_shortcut
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

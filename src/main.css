@@ -26,3 +26,31 @@
     cursor: pointer;
   }
 }
+
+body {
+  overflow-y: hidden;
+}
+
+/* Width and height of the scrollbar track */
+::-webkit-scrollbar {
+  width: calc(var(--spacing) * 1.5);
+  height: calc(var(--spacing) * 1.5);
+}
+
+/* Background of the scrollbar track */
+::-webkit-scrollbar-track {
+  border-radius: calc(var(--spacing) * 2);
+  background: var(--color-gray-200);
+}
+:where(.dark) ::-webkit-scrollbar-track {
+  background: var(--color-zinc-700);
+}
+
+/* The draggable scrollbar handle */
+::-webkit-scrollbar-thumb {
+  border-radius: calc(var(--spacing) * 2);
+  background: var(--color-gray-400);
+}
+:where(.dark) ::-webkit-scrollbar-thumb {
+  background: var(--color-zinc-500);
+}
