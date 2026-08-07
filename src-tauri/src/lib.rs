@@ -353,6 +353,40 @@ async fn update_window_toggle_shortcut(
     }
 }
 
+fn register_toggle_shortcut(app: &AppHandle, preferred_shortcut: &str) -> Option<Shortcut> {
+    let candidates = [preferred_shortcut, "Alt+V", "Alt+Shift+V", "Ctrl+Alt+V"];
+
+    for candidate in candidates {
+        let shortcut = match Shortcut::from_str(candidate) {
+            Ok(shortcut) => shortcut,
+            Err(err) => {
+                log::warn!("Invalid shortcut candidate '{}': {}", candidate, err);
+                continue;
+            }
+        };
+
+        let app_handle = app.clone();
+        let shortcut_for_closure = shortcut.clone();
+
+        match app
+            .global_shortcut()
+            .on_shortcut(shortcut.clone(), move |_, shortcut, event| {
+                if shortcut == &shortcut_for_closure && event.state() == ShortcutState::Pressed {
+                    toggle_window(&app_handle);
+                }
+            }) {
+            Ok(_) => return Some(shortcut_for_closure),
+            Err(err) => log::warn!(
+                "Failed to register global shortcut '{}': {}",
+                candidate,
+                err
+            ),
+        }
+    }
+
+    None
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let (db_tx, mut db_rx) = tokio::sync::mpsc::unbounded_channel::<String>();
@@ -450,22 +484,25 @@ pub fn run() {
                 }
             });
 
-            let store = app.store("settings.json")?;
-            let shortcut_str = match store.get("window_toggle_shortcut") {
+            let store = match app.store("settings.json") {
+                Ok(store) => Some(store),
+                Err(err) => {
+                    log::warn!("Failed to load settings store: {}", err);
+                    None
+                }
+            };
+
+            let shortcut_str = match store
+                .as_ref()
+                .and_then(|store| store.get("window_toggle_shortcut"))
+            {
                 Some(value) => value.as_str().unwrap_or("Alt+V").to_string(),
                 None => "Alt+V".to_string(),
             };
-            let toggle_shortcut = Shortcut::from_str(&shortcut_str)
-                .unwrap_or_else(|_| Shortcut::from_str("Alt+V").unwrap());
 
-            app.global_shortcut().on_shortcut(
-                toggle_shortcut,
-                move |app_handle, shortcut, event| {
-                    if shortcut == &toggle_shortcut && event.state() == ShortcutState::Pressed {
-                        toggle_window(app_handle);
-                    }
-                },
-            )?;
+            if register_toggle_shortcut(&app_handle, &shortcut_str).is_none() {
+                log::warn!("Global shortcut registration skipped; continuing without it.");
+            }
 
             let clipboard_handle = app_handle.clone();
             thread::spawn(move || {
