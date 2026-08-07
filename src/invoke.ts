@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 export type SearchResult = {
   id: number;
   content: string;
+  snippet: string;
   score: number;
   indices: number[];
 };

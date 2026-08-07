@@ -34,6 +34,7 @@ pub struct AppState {
 pub struct SearchResult {
     pub id: i64,
     pub content: String,
+    pub snippet: String,
     pub score: u32,
     pub indices: Vec<u32>,
 }
@@ -139,7 +140,8 @@ fn search_history(query: String, state: State<'_, AppState>) -> Vec<SearchResult
 
                 SearchResult {
                     id: item.id,
-                    content: truncated_content,
+                    content: item.content.clone(),
+                    snippet: truncated_content,
                     score: 0,
                     indices: Vec::new(),
                 }
@@ -215,7 +217,8 @@ fn search_history(query: String, state: State<'_, AppState>) -> Vec<SearchResult
 
             matches.push(SearchResult {
                 id: item.id,
-                content: snippet,
+                content: item.content.clone(),
+                snippet: snippet,
                 score: score as u32,
                 indices: adjusted_indices,
             });

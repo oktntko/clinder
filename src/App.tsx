@@ -306,13 +306,13 @@ function Clipboard(props: ClipboardProps) {
     </div>
   );
 
-  function Highlight({ content, indices }: SearchResult) {
+  function Highlight({ snippet, indices }: SearchResult) {
     if (!indices || indices.length === 0) {
-      return <>{content}</>;
+      return <>{snippet}</>;
     }
 
     // サロゲートペアや絵文字を考慮して文字単位の配列にする
-    const chars = Array.from(content);
+    const chars = Array.from(snippet);
     const indexSet = new Set(indices);
 
     const elements: React.ReactNode[] = [];
