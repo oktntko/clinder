@@ -35,9 +35,6 @@ Open it with the global shortcut `Alt + V` and use incremental fuzzy search to f
 
 ## TODO
 
-- Toggle fuzzy-search on/off
-- Toggle whole-word search on/off
-- Toggle case sensitivity on/off
 - Choose and refine fonts
 - Add support for image clipboard history
 - Improve and expand this README

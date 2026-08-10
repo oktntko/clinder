@@ -131,7 +131,7 @@ function Clipboard(props: ClipboardProps) {
 
   const search = useCallback(async () => {
     try {
-      const _results = await invoke.search_history(query);
+      const _results = await invoke.search_history(query, props.searchMode);
       setResults(_results);
       if (_results.length === 0) {
         setCursor(0);
@@ -141,7 +141,7 @@ function Clipboard(props: ClipboardProps) {
     } catch (err) {
       console.error('Failed to search history:', err);
     }
-  }, [query, cursor]);
+  }, [query, cursor, props.searchMode]);
 
   useEffect(() => {
     void search();
@@ -229,14 +229,50 @@ function Clipboard(props: ClipboardProps) {
 
   return (
     <div className={`flex max-h-198 flex-col`}>
-      <div className="shrink-0 border-b border-b-gray-300 select-none dark:border-b-zinc-700 dark:bg-zinc-900">
+      <div className="flex shrink-0 flex-row items-center gap-1 border-b border-b-gray-300 px-2 pt-px pb-2 select-none dark:border-b-zinc-700 dark:bg-zinc-900">
         <input
           type="text"
-          className="w-full px-2 pt-2 pb-4 transition focus:outline-none dark:bg-transparent dark:text-zinc-100"
+          className="w-full transition focus:outline-none dark:bg-transparent dark:text-zinc-100"
           autoFocus={true}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
+
+        <div
+          title="search_mode"
+          className="inline-flex items-center justify-center gap-1 rounded-full border border-gray-300 bg-gray-100 p-1 transition-colors hover:bg-white focus:bg-white focus:outline-none dark:border-zinc-600 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
+        >
+          <button
+            title="fuzzy search"
+            type="button"
+            className={`inline-flex items-center justify-center rounded-full p-1 transition-colors focus:outline-none ${
+              props.searchMode === 'fuzzy'
+                ? 'bg-green-200 hover:bg-green-300 focus:bg-green-300 dark:bg-emerald-900/60 dark:text-emerald-300 dark:hover:bg-emerald-800/80 dark:focus:bg-emerald-800/80'
+                : 'bg-gray-200 hover:bg-gray-300 focus:bg-gray-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600'
+            }`}
+            onClick={(e) => {
+              e.stopPropagation();
+              void props.saveSearchMode('fuzzy');
+            }}
+          >
+            <span className="icon-[codicon--search-fuzzy] size-4"></span>
+          </button>
+          <button
+            title="exact search"
+            type="button"
+            className={`inline-flex items-center justify-center rounded-full p-1 transition-colors focus:outline-none ${
+              props.searchMode === 'substring'
+                ? 'bg-green-200 hover:bg-green-300 focus:bg-green-300 dark:bg-emerald-900/60 dark:text-emerald-300 dark:hover:bg-emerald-800/80 dark:focus:bg-emerald-800/80'
+                : 'bg-gray-200 hover:bg-gray-300 focus:bg-gray-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600'
+            }`}
+            onClick={(e) => {
+              e.stopPropagation();
+              void props.saveSearchMode('substring');
+            }}
+          >
+            <span className="icon-[mdi--target] size-4"></span>
+          </button>
+        </div>
       </div>
 
       <div
@@ -623,6 +659,7 @@ function Footer(props: FooterProps) {
 
 function useStore() {
   const [store, setStore] = useState<Store>();
+
   const [enablePin, setEnablePin] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [page, setPage] = useState<'clipboard' | 'keybindings'>('clipboard');
@@ -630,6 +667,7 @@ function useStore() {
   const [selectAction, setSelectAction] = useState<'send-and-paste' | 'send-only'>(
     'send-and-paste',
   );
+  const [searchMode, setSearchMode] = useState<'fuzzy' | 'substring'>('fuzzy');
 
   useEffect(() => {
     void (async () => {
@@ -657,10 +695,16 @@ function useStore() {
         return v ?? 'send-and-paste';
       }
 
-      setEnablePin(await getEnablePin(store));
-      setTheme(await getTheme(store));
-      setWindowToggleShortcut(await getWindowToggleShortcut(store));
-      setSelectAction(await getSelectAction(store));
+      async function getSearchMode(store: Store) {
+        const v = await store?.get<'fuzzy' | 'substring'>('search_mode');
+        return v ?? 'fuzzy';
+      }
+
+      void getEnablePin(store).then(setEnablePin);
+      void getTheme(store).then(setTheme);
+      void getWindowToggleShortcut(store).then(setWindowToggleShortcut);
+      void getSelectAction(store).then(setSelectAction);
+      void getSearchMode(store).then(setSearchMode);
     })();
 
     return () => undefined;
@@ -684,6 +728,12 @@ function useStore() {
     await store?.save();
   }
 
+  async function saveSearchMode(v: 'fuzzy' | 'substring') {
+    setSearchMode(v);
+    await store?.set('search_mode', v);
+    await store?.save();
+  }
+
   return {
     enablePin,
     saveEnablePin,
@@ -694,6 +744,8 @@ function useStore() {
     windowToggleShortcut,
     selectAction,
     saveSelectAction,
+    searchMode,
+    saveSearchMode,
   };
 }
 

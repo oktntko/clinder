@@ -2,6 +2,7 @@ use enigo::{Enigo, Key, Keyboard, Settings};
 use nucleo_matcher::pattern::{Atom, AtomKind, CaseMatching, Normalization};
 use nucleo_matcher::{Config, Matcher, Utf32Str};
 use rusqlite::{params, Connection};
+use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -146,7 +147,18 @@ fn load_history_from_db(app_handle: &AppHandle) -> Result<Vec<HistoryItem>, Stri
         .map_err(|e| e.to_string())
 }
 
-fn search_history_items(history: &[HistoryItem], query: &str) -> Vec<SearchResult> {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SearchMode {
+    Fuzzy,
+    Substring,
+}
+
+fn search_history_items(
+    history: &[HistoryItem],
+    query: &str,
+    search_mode: SearchMode,
+) -> Vec<SearchResult> {
     // クエリが空の場合は、直近の最新30件をそのまま返す
     if query.trim().is_empty() {
         return history
@@ -175,7 +187,10 @@ fn search_history_items(history: &[HistoryItem], query: &str) -> Vec<SearchResul
         query,
         CaseMatching::Ignore,
         Normalization::Smart,
-        AtomKind::Fuzzy,
+        match search_mode {
+            SearchMode::Fuzzy => AtomKind::Fuzzy,
+            SearchMode::Substring => AtomKind::Substring,
+        },
         false,
     );
 
@@ -219,6 +234,7 @@ fn search_history_items(history: &[HistoryItem], query: &str) -> Vec<SearchResul
 #[tauri::command]
 fn search_history(
     query: String,
+    search_mode: SearchMode,
     app_handle: AppHandle,
     state: State<'_, AppState>,
 ) -> Vec<SearchResult> {
@@ -238,7 +254,7 @@ fn search_history(
         }
     };
 
-    search_history_items(&history_items, &query)
+    search_history_items(&history_items, &query, search_mode)
 }
 
 #[tauri::command]

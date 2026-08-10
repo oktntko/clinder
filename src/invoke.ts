@@ -10,8 +10,8 @@ export type SearchResult = {
   readonly trimmed_end: boolean;
 };
 
-async function search_history(query: string) {
-  return invoke<SearchResult[]>('search_history', { query });
+async function search_history(query: string, searchMode: 'fuzzy' | 'substring') {
+  return invoke<SearchResult[]>('search_history', { query, searchMode });
 }
 
 async function clear_all_history() {
