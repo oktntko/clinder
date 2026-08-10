@@ -244,27 +244,38 @@ function Clipboard(props: ClipboardProps) {
         className="flex min-h-0 w-full flex-1 flex-col divide-y divide-gray-300 overflow-y-auto focus:outline-none dark:divide-zinc-700"
       >
         {results.length > 0 ? (
-          results.map((result, i) => {
+          results.map((item, i) => {
             const isActive = cursor === i;
             return (
-              <div key={i} className="group relative">
+              <div
+                key={i}
+                className={`group relative border-l-4 px-1 transition-colors hover:bg-gray-200/50 dark:hover:bg-zinc-700/50 ${
+                  isActive
+                    ? 'border-l-red-500 bg-gray-200 dark:bg-zinc-700'
+                    : 'border-l-transparent'
+                } `}
+              >
                 <button
                   ref={isActive ? activeItemRef : null}
                   type="button"
-                  className={`line-clamp-2 w-full shrink-0 cursor-pointer border-l-4 py-1 pl-2 text-start whitespace-pre-wrap transition-colors hover:bg-gray-200/50 focus:outline-none dark:hover:bg-zinc-700/50 ${
-                    isActive
-                      ? 'border-l-red-500 bg-gray-200 dark:bg-zinc-700'
-                      : 'border-l-transparent'
+                  className={`relative w-full shrink-0 cursor-pointer truncate py-1 text-start focus:outline-none ${
+                    item.trimmed_begin
+                      ? "before:icon-[lucide--ellipsis] pl-5 before:absolute before:top-1/2 before:left-0 before:inline-block before:size-4 before:-translate-y-1/2 before:bg-gray-300 before:content-[''] dark:before:bg-zinc-600"
+                      : ''
+                  } ${
+                    item.trimmed_end
+                      ? "after:icon-[lucide--ellipsis] pr-5 after:absolute after:top-1/2 after:right-0 after:inline-block after:size-4 after:-translate-y-1/2 after:bg-gray-300 after:content-[''] dark:after:bg-zinc-600"
+                      : ''
                   }`}
                   onFocus={() => {
                     setCursor(i);
                   }}
                   onClick={() => {
                     setCursor(i);
-                    void invoke.select_and_paste(result.content);
+                    void invoke.select_and_paste(item.content);
                   }}
                 >
-                  <Highlight {...result} />
+                  <Highlight {...item} />
                 </button>
                 <div className="pointer-events-none absolute top-1/2 right-5 hidden size-5 -translate-y-1/2 rounded-full bg-gray-200 transition-all transition-discrete group-hover:block dark:bg-zinc-700">
                   <button
@@ -274,7 +285,7 @@ function Clipboard(props: ClipboardProps) {
                     className="pointer-events-auto inline-flex size-5 items-center justify-center rounded-full bg-gray-100 transition-colors hover:bg-gray-300 dark:bg-zinc-800 dark:hover:bg-zinc-600"
                     onClick={(e) => {
                       e.stopPropagation();
-                      void deleteSearchResult(result.id);
+                      void deleteSearchResult(item.id);
                     }}
                   >
                     <span className="icon-[mingcute--close-fill] size-4"></span>

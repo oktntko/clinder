@@ -37,6 +37,8 @@ pub struct SearchResult {
     pub snippet: String,
     pub score: u32,
     pub indices: Vec<u32>,
+    pub trimmed_begin: bool,
+    pub trimmed_end: bool,
 }
 
 fn get_database_path(app_handle: &AppHandle) -> Result<PathBuf, Box<dyn std::error::Error>> {
@@ -151,21 +153,17 @@ fn search_history_items(history: &[HistoryItem], query: &str) -> Vec<SearchResul
             .iter()
             .take(30)
             .map(|item| {
-                // 空検索でも 100 文字を超える場合は先頭 100 文字にする（安全策）
-                let truncated_content = if item.content.chars().count() > 100 {
-                    let mut s: String = item.content.chars().take(100).collect();
-                    s.push_str("...");
-                    s
-                } else {
-                    item.content.clone()
-                };
+                let (snippet, indices, trimmed_begin, trimmed_end) =
+                    extract_around_index_with_indices(&item.content, &[]);
 
                 SearchResult {
                     id: item.id,
                     content: item.content.clone(),
-                    snippet: truncated_content,
+                    snippet,
                     score: 0,
-                    indices: Vec::new(),
+                    indices,
+                    trimmed_begin,
+                    trimmed_end,
                 }
             })
             .collect();
@@ -185,64 +183,26 @@ fn search_history_items(history: &[HistoryItem], query: &str) -> Vec<SearchResul
 
     for item in history.iter() {
         let mut buf = Vec::new();
-        let utf32 = Utf32Str::new(&item.content, &mut buf);
+        // 改行コード \r\n があると indices がずれるため、除去しておく
+        let content = item.content.replace("\r\n", "\n");
+        let utf32 = Utf32Str::new(&content, &mut buf);
         let mut indices = Vec::new();
 
         // score だけでなく indices（マッチ位置）も取得する
         if let Some(score) = atom.indices(utf32, &mut matcher, &mut indices) {
             indices.sort_unstable(); // 位置を昇順にソート
 
-            let char_count = item.content.chars().count();
-            let (snippet, adjusted_indices) = if char_count > 100 && !indices.is_empty() {
-                // -------------------------------------------------------------
-                // ★ スニペット化処理 (100文字以上の場合)
-                // -------------------------------------------------------------
-                let first_match = indices[0] as usize;
-
-                // 最初のマッチ位置の「前50文字」を開始点とする
-                let start_char_idx = first_match.saturating_sub(50);
-                // 開始点から「最大100文字」を切出範囲とする
-                let end_char_idx = (start_char_idx + 100).min(char_count);
-
-                // 文字単位で安全にスライス
-                let mut snippet_str: String = item
-                    .content
-                    .chars()
-                    .skip(start_char_idx)
-                    .take(end_char_idx - start_char_idx)
-                    .collect();
-
-                // 先頭・末尾が切り取られていれば "..." を付与
-                if start_char_idx > 0 {
-                    snippet_str.insert_str(0, "...");
-                }
-                if end_char_idx < char_count {
-                    snippet_str.push_str("...");
-                }
-
-                // 「...」を先頭に付けた場合オフセットが 3 文字分ずれる
-                let prefix_offset = if start_char_idx > 0 { 3 } else { 0 };
-
-                // スニペット範囲内に含まれるインデックスだけを抽出＆位置再計算
-                let new_indices: Vec<u32> = indices
-                    .iter()
-                    .map(|&i| i as usize)
-                    .filter(|&i| i >= start_char_idx && i < end_char_idx)
-                    .map(|i| (i - start_char_idx + prefix_offset) as u32)
-                    .collect();
-
-                (snippet_str, new_indices)
-            } else {
-                // 100文字以下の場合はそのまま使う
-                (item.content.clone(), indices)
-            };
+            let (snippet, adjusted_indices, trimmed_begin, trimmed_end) =
+                extract_around_index_with_indices(&content, &indices);
 
             matches.push(SearchResult {
                 id: item.id,
                 content: item.content.clone(),
-                snippet: snippet,
+                snippet,
                 score: score as u32,
                 indices: adjusted_indices,
+                trimmed_begin,
+                trimmed_end,
             });
         }
     }
@@ -626,4 +586,69 @@ fn toggle_window(app: &AppHandle) {
             let _ = window.set_focus();
         }
     }
+}
+
+fn extract_around_index_with_indices(
+    text: &str,
+    indices: &[u32],
+) -> (String, Vec<u32>, bool, bool) {
+    if text.is_empty() {
+        return (String::new(), Vec::new(), false, false);
+    }
+
+    if indices.is_empty() {
+        return (
+            text.chars().take(80).collect(),
+            Vec::new(),
+            false,
+            text.chars().count() > 80,
+        );
+    }
+
+    let chars: Vec<(usize, char)> = text.char_indices().collect();
+    let total_chars = chars.len();
+    let first_match = indices[0] as usize;
+    if first_match >= total_chars {
+        return (
+            text.chars().take(80).collect(),
+            Vec::new(),
+            false,
+            text.chars().count() > 80,
+        );
+    }
+
+    // 1. 開始文字位置の決定 (indexより前)
+    let begin_char_idx = first_match.saturating_sub(20);
+    let end_char_idx = (first_match + 80).min(total_chars);
+
+    let begin_byte = chars[begin_char_idx].0;
+    let end_byte = if end_char_idx < total_chars {
+        chars[end_char_idx].0
+    } else {
+        text.len()
+    };
+    let sliced_text = text[begin_byte..end_byte].to_string();
+
+    // 4. indices のオフセット補正とフィルタリング
+    // 切り出した範囲 (begin_char_idx .. end_char_idx) に含まれるインデックスのみを残し、
+    // 切り出し開始位置 (begin_char_idx) 分だけ引き算する
+    let adjusted_indices: Vec<u32> = indices
+        .iter()
+        .copied()
+        .filter_map(|idx| {
+            let idx_usize = idx as usize;
+            if idx_usize >= begin_char_idx && idx_usize < end_char_idx {
+                Some((idx_usize - begin_char_idx) as u32)
+            } else {
+                None // 切り出し範囲から外れたものは除外
+            }
+        })
+        .collect();
+
+    (
+        sliced_text,
+        adjusted_indices,
+        begin_char_idx > 0,
+        end_char_idx < total_chars,
+    )
 }

@@ -1,11 +1,13 @@
 import { invoke } from '@tauri-apps/api/core';
 
 export type SearchResult = {
-  id: number;
-  content: string;
-  snippet: string;
-  score: number;
-  indices: number[];
+  readonly id: number;
+  readonly content: string;
+  readonly snippet: string;
+  readonly score: number;
+  readonly indices: number[];
+  readonly trimmed_begin: boolean;
+  readonly trimmed_end: boolean;
 };
 
 async function search_history(query: string) {
