@@ -11,7 +11,8 @@
     "tauri:windows:build": "tauri-windows-bundle build",
     "spell-check": "cspell .",
     "lint": "oxlint --type-aware --type-check",
-    "format": "oxfmt"
+    "format": "oxfmt",
+    "tag": "tsx script/tag.ts"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
