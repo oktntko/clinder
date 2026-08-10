@@ -45,12 +45,6 @@ importers:
       '@cspell/eslint-plugin':
         specifier: ^10.0.1
         version: 10.0.1(eslint@10.7.0(jiti@2.7.0))
-      '@fontsource-variable/m-plus-1-code':
-        specifier: ^5.3.0
-        version: 5.3.0
-      '@fontsource/noto-sans-jp':
-        specifier: ^5.3.0
-        version: 5.3.0
       '@iconify/json':
         specifier: ^2.2.505
         version: 2.2.505
@@ -553,12 +547,6 @@ packages:
   '@eslint/plugin-kit@0.7.2':
     resolution: {integrity: sha512-+CNAzxglkrpNf/kKywqQfk74QjtceuOE7Qm+AF8miRvPF/wmmK5+OJOgVh3AVTT3RP2mH3+FOaxlE5v72owk0A==}
     engines: {node: ^20.19.0 || ^22.13.0 || >=24}
-
-  '@fontsource-variable/m-plus-1-code@5.3.0':
-    resolution: {integrity: sha512-1mK4KAFWqQigzMTuAbRE8UBypigEcTbZ5X0fJs0rNwD50yfXgu1o8qNTSx5kg2JW/kpy5mN62acz9RUOYVdRQQ==}
-
-  '@fontsource/noto-sans-jp@5.3.0':
-    resolution: {integrity: sha512-OZbBzZ8LrFRs2RFT2Cc0HUV2C2ZeSfyEXhDJWR0EZuZaraJfRubpvrFmUnCljuBDEkw8Vn6CE/+nf9dj9b+0lg==}
 
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
@@ -2668,10 +2656,6 @@ snapshots:
     dependencies:
       '@eslint/core': 1.2.1
       levn: 0.4.1
-
-  '@fontsource-variable/m-plus-1-code@5.3.0': {}
-
-  '@fontsource/noto-sans-jp@5.3.0': {}
 
   '@humanfs/core@0.19.2':
     dependencies:

@@ -28,8 +28,6 @@
   "devDependencies": {
     "@choochmeque/tauri-windows-bundle": "^0.1.28",
     "@cspell/eslint-plugin": "^10.0.1",
-    "@fontsource-variable/m-plus-1-code": "^5.3.0",
-    "@fontsource/noto-sans-jp": "^5.3.0",
     "@iconify/json": "^2.2.505",
     "@iconify/tailwind4": "^1.2.3",
     "@tailwindcss/vite": "^4.3.3",

@@ -1,12 +1,19 @@
 @import 'tailwindcss';
 
+@font-face {
+  font-family: 'Explex35';
+  src: url('/fonts/Explex35/Explex35-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 @custom-variant dark (&:where(.dark, .dark *));
 
 @plugin '@iconify/tailwind4';
 
 @theme {
-  --font-sans: 'Noto Sans JP Variable', sans-serif;
-  --font-mono: 'M PLUS 1 Code Variable', monospace;
+  --font-sans: 'Explex35', sans-serif;
 }
 
 @layer utilities {
