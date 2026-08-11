@@ -35,5 +35,8 @@ Open it with the global shortcut `Alt + V` and use incremental fuzzy search to f
 
 ## TODO
 
+- Improve UI
+- Default KeyBinding Fallback
 - Add support for image clipboard history
+- Mac version
 - Improve and expand this README

@@ -46,6 +46,10 @@ async function update_window_toggle_shortcut(newShortcutStr: string) {
   }
 }
 
+async function list_system_font(): Promise<string[]> {
+  return invoke('list_system_font');
+}
+
 export default {
   search_history,
   clear_all_history,
@@ -53,4 +57,5 @@ export default {
   select,
   select_and_paste,
   update_window_toggle_shortcut,
+  list_system_font,
 };

@@ -1,8 +1,10 @@
 use enigo::{Enigo, Key, Keyboard, Settings};
+use font_kit::source::SystemSource;
 use nucleo_matcher::pattern::{Atom, AtomKind, CaseMatching, Normalization};
 use nucleo_matcher::{Config, Matcher, Utf32Str};
 use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeSet;
 use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -587,7 +589,8 @@ pub fn run() {
             select_and_paste,
             delete_history_item,
             clear_all_history,
-            update_window_toggle_shortcut
+            update_window_toggle_shortcut,
+            list_system_font
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -667,4 +670,20 @@ fn extract_around_index_with_indices(
         begin_char_idx > 0,
         end_char_idx < total_chars,
     )
+}
+
+#[tauri::command]
+fn list_system_font() -> Vec<String> {
+    let source = SystemSource::new();
+    let mut font_names = BTreeSet::new();
+
+    if let Ok(families) = source.all_families() {
+        for family in families {
+            if !family.is_empty() && !family.starts_with('.') {
+                font_names.insert(family);
+            }
+        }
+    }
+
+    font_names.into_iter().collect()
 }

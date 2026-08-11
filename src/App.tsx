@@ -24,8 +24,8 @@ function App() {
             switch (store.page) {
               case 'clipboard':
                 e.preventDefault();
-                return store.setPage('keybindings');
-              case 'keybindings':
+                return store.setPage('setting');
+              case 'setting':
                 e.preventDefault();
                 return store.setPage('clipboard');
             }
@@ -116,7 +116,7 @@ function App() {
         {/* data-tauri-drag-region */}
         <div className="block h-2 cursor-move select-none" onMouseDown={handleMouseDown}></div>
 
-        {store.page === 'clipboard' ? <Clipboard {...store} /> : <Keybindings {...store} />}
+        {store.page === 'clipboard' ? <Clipboard {...store} /> : <Setting {...store} />}
       </div>
     </>
   );
@@ -404,17 +404,44 @@ function Clipboard(props: ClipboardProps) {
   }
 }
 
-type KeybindingsProps = ReturnType<typeof useStore> & {};
+type SettingProps = ReturnType<typeof useStore> & {};
 
-function Keybindings(props: KeybindingsProps) {
+function Setting(props: SettingProps) {
   const $toast = useToast();
 
   return (
     <div className="flex max-h-198 flex-col">
       <div className="mx-auto pt-4 pb-10">
-        <div className="py-4 text-lg font-bold">Keybindings</div>
+        <div className="py-4 text-lg font-bold">Setting</div>
 
         <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1">
+            <div>
+              <label htmlFor="font" className="text-xs capitalize">
+                font
+              </label>
+            </div>
+            <div className="ps-2">
+              <select
+                id="font"
+                value={props.font}
+                className="w-full rounded-md border border-gray-300 bg-white p-2 outline-none dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                onChange={(e) => {
+                  const newFont = (e.target as HTMLSelectElement).value;
+                  void props.saveAndApplyFont(newFont);
+                }}
+                autoFocus={true}
+              >
+                <option value="">System Font</option>
+                {props.systemFontList.map((font) => (
+                  <option key={font} value={font} style={{ fontFamily: `"${font}"` }}>
+                    {font}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
           <form
             className="flex flex-col gap-1"
             onSubmit={async (e) => {
@@ -455,12 +482,11 @@ function Keybindings(props: KeybindingsProps) {
               <ShortcutInput
                 id="window open / hide"
                 default={props.windowToggleShortcut}
-                autoFocus={true}
                 className="rounded-md border border-gray-300 bg-white p-2 outline-none dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
               />
               <button
                 type="submit"
-                className="inline-flex items-center rounded bg-gray-200 p-2 text-sm transition-colors hover:bg-gray-300 focus:bg-gray-300 focus:outline-none dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
+                className="inline-flex items-center rounded bg-gray-200 p-2 transition-colors hover:bg-gray-300 focus:bg-gray-300 focus:outline-none dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
               >
                 <span className="icon-[material-symbols--check-rounded] size-4"></span>
               </button>
@@ -582,16 +608,16 @@ function Footer(props: FooterProps) {
             <span className="icon-[solar--clipboard-outline] size-4"></span>
           </button>
           <button
-            title="keybindings"
+            title="setting"
             type="button"
             className={`inline-flex items-center justify-center rounded-full p-1 transition-colors focus:outline-none ${
-              props.page === 'keybindings'
+              props.page === 'setting'
                 ? 'bg-green-200 hover:bg-green-300 focus:bg-green-300 dark:bg-emerald-900/60 dark:text-emerald-300 dark:hover:bg-emerald-800/80 dark:focus:bg-emerald-800/80'
                 : 'bg-gray-200 hover:bg-gray-300 focus:bg-gray-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600'
             }`}
             onClick={(e) => {
               e.stopPropagation();
-              props.setPage('keybindings');
+              props.setPage('setting');
             }}
           >
             <span className="icon-[material-symbols--keyboard-outline] size-4"></span>
@@ -662,12 +688,14 @@ function useStore() {
 
   const [enablePin, setEnablePin] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
-  const [page, setPage] = useState<'clipboard' | 'keybindings'>('clipboard');
+  const [page, setPage] = useState<'clipboard' | 'setting'>('clipboard');
   const [windowToggleShortcut, setWindowToggleShortcut] = useState<string>('Alt+V');
   const [selectAction, setSelectAction] = useState<'send-and-paste' | 'send-only'>(
     'send-and-paste',
   );
   const [searchMode, setSearchMode] = useState<'fuzzy' | 'substring'>('fuzzy');
+  const [font, setFont] = useState<string>('');
+  const [systemFontList, setSystemFontList] = useState<string[]>([]);
 
   useEffect(() => {
     void (async () => {
@@ -700,11 +728,21 @@ function useStore() {
         return v ?? 'fuzzy';
       }
 
+      async function getFont(store: Store) {
+        const v = await store?.get<string>('font');
+        return v ?? '';
+      }
+
       void getEnablePin(store).then(setEnablePin);
       void getTheme(store).then(setTheme);
       void getWindowToggleShortcut(store).then(setWindowToggleShortcut);
       void getSelectAction(store).then(setSelectAction);
       void getSearchMode(store).then(setSearchMode);
+      void getFont(store).then((v) => {
+        setFont(v);
+        applyFont(v);
+      });
+      void invoke.list_system_font().then(setSystemFontList);
     })();
 
     return () => undefined;
@@ -734,6 +772,21 @@ function useStore() {
     await store?.save();
   }
 
+  function applyFont(v: string) {
+    if (v) {
+      document.documentElement.style.setProperty('--user-font', `"${v}"`);
+    } else {
+      document.documentElement.style.removeProperty('--user-font');
+    }
+  }
+
+  async function saveAndApplyFont(v: string) {
+    setFont(v);
+    applyFont(v);
+    await store?.set('font', v);
+    await store?.save();
+  }
+
   return {
     enablePin,
     saveEnablePin,
@@ -746,6 +799,9 @@ function useStore() {
     saveSelectAction,
     searchMode,
     saveSearchMode,
+    font,
+    saveAndApplyFont,
+    systemFontList,
   };
 }
 
