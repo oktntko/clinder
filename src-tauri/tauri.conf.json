@@ -25,7 +25,11 @@
       }
     ],
     "security": {
-      "csp": null
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["$APPLOCALDATA/**"]
+      },
+      "csp": "default-src 'self'; img-src 'self' asset: http://asset.localhost blob: data:;"
     }
   },
   "bundle": {

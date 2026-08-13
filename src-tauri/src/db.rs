@@ -1,5 +1,5 @@
 use rusqlite::{
-    params,
+    params, params_from_iter,
     types::{FromSql, FromSqlError, FromSqlResult, ToSql, ToSqlOutput, ValueRef},
     Connection, Result,
 };
@@ -10,7 +10,7 @@ use tauri::{AppHandle, Manager};
 
 pub fn ensure_db(app_handle: &AppHandle) -> Result<Connection, Box<dyn std::error::Error>> {
     let db_path: PathBuf = get_db_path(app_handle)?;
-    let existed = db_path.exists();
+    let existed = db_path.exists(); // コネクションを作るとファイルも作られるので、コネクションを作る前に存在チェックする
     let conn = Connection::open(&db_path)?;
 
     if !existed {
@@ -37,6 +37,8 @@ CREATE TABLE IF NOT EXISTS clip(
     id              INTEGER PRIMARY KEY AUTOINCREMENT
   , content_type    TEXT NOT NULL CHECK(content_type IN ('text', 'image'))
   , content         TEXT NOT NULL
+  , description     TEXT NOT NULL
+  , bookmark        BOOLEAN NOT NULL CHECK (bookmark IN (0, 1)) DEFAULT 0
   , updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP
   , UNIQUE(content_type, content)
 );
@@ -54,6 +56,8 @@ pub struct Clip {
     pub id: i64,
     pub content_type: ContentType,
     pub content: String,
+    pub description: String,
+    pub bookmark: bool,
     pub updated_at: String,
 }
 
@@ -87,32 +91,71 @@ impl FromSql for ContentType {
     }
 }
 
-pub fn find_many_clip(app_handle: &AppHandle) -> Result<Vec<Clip>, String> {
+pub fn find_many_clip(
+    app_handle: &AppHandle,
+    param_content_type: Vec<ContentType>,
+    param_bookmark: Vec<bool>,
+) -> Result<Vec<Clip>, String> {
     let conn = ensure_db(app_handle).map_err(|e| e.to_string())?;
 
-    const SQL: &str = "
+    let default_content_type = vec![ContentType::Text, ContentType::Image];
+    let default_bookmark = vec![true, false];
+
+    let content_type = if param_content_type.is_empty() {
+        default_content_type
+    } else {
+        param_content_type
+    };
+    let bookmark = if param_bookmark.is_empty() {
+        default_bookmark
+    } else {
+        param_bookmark
+    };
+
+    let sql = format!(
+        "
 SELECT
     id
   , content_type
   , content
+  , description
+  , bookmark
   , updated_at
 FROM
   clip
+WHERE
+  content_type IN ({})
+  AND bookmark IN ({})
 ORDER BY
   updated_at DESC
   , id DESC
 LIMIT
-  1000";
+  1000",
+        std::iter::repeat("?")
+            .take(content_type.len())
+            .collect::<Vec<_>>()
+            .join(", "),
+        std::iter::repeat("?")
+            .take(bookmark.len())
+            .collect::<Vec<_>>()
+            .join(", ")
+    );
 
-    let mut stmt = conn.prepare(SQL).map_err(|e| e.to_string())?;
+    let all_params = std::iter::empty::<&dyn ToSql>()
+        .chain(content_type.iter().map(|x| x as &dyn ToSql))
+        .chain(bookmark.iter().map(|x| x as &dyn ToSql));
+
+    let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
 
     let rows = stmt
-        .query_map([], |row| {
+        .query_map(params_from_iter(all_params), |row| {
             Ok(Clip {
                 id: row.get(0)?,
                 content_type: row.get(1)?,
                 content: row.get(2)?,
-                updated_at: row.get(3)?,
+                description: row.get(3)?,
+                bookmark: row.get(4)?,
+                updated_at: row.get(5)?,
             })
         })
         .map_err(|e| e.to_string())?;
@@ -153,30 +196,42 @@ pub fn upsert_clip(
     app_handle: &AppHandle,
     content_type: ContentType,
     content: String,
+    description: String,
+    bookmark: bool,
 ) -> Result<Clip, String> {
     let conn = ensure_db(app_handle).map_err(|e| e.to_string())?;
 
     const SQL: &str = "
 INSERT
-INTO clip(content_type, content)
-VALUES (?1, ?2)
+INTO clip(content_type, content, description, bookmark)
+VALUES (?1, ?2, ?3, ?4)
 ON CONFLICT(content_type, content) DO
 UPDATE 
 SET
-  updated_at = CURRENT_TIMESTAMP
+  description = ?3
+  , bookmark = ?4
+  , updated_at = CURRENT_TIMESTAMP
 RETURNING
     id
   , content_type
   , content
+  , description
+  , bookmark
   , updated_at";
 
-    conn.query_row(SQL, params![content_type, content], |row| {
-        Ok(Clip {
-            id: row.get(0)?,
-            content_type: row.get(1)?,
-            content: row.get(2)?,
-            updated_at: row.get(3)?,
-        })
-    })
+    conn.query_row(
+        SQL,
+        params![content_type, content, description, bookmark],
+        |row| {
+            Ok(Clip {
+                id: row.get(0)?,
+                content_type: row.get(1)?,
+                content: row.get(2)?,
+                description: row.get(3)?,
+                bookmark: row.get(4)?,
+                updated_at: row.get(5)?,
+            })
+        },
+    )
     .map_err(|e| e.to_string())
 }

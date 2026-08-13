@@ -3,12 +3,15 @@ import { invoke } from '@tauri-apps/api/core';
 //////////////////// ////////////////////
 // DB 関連
 //////////////////// ////////////////////
+export type SearchMode = 'fuzzy' | 'substring';
 export type ContentType = 'text' | 'image';
 
 export type Clip = {
   readonly id: number;
   readonly content_type: ContentType;
   readonly content: string;
+  readonly description: string;
+  readonly bookmark: boolean;
   readonly updated_at: string;
 };
 
@@ -21,12 +24,27 @@ export type Searched = {
   readonly trimmed_end: boolean;
 };
 
-async function search_clipboard(query: string, searchMode: 'fuzzy' | 'substring') {
-  return invoke<Searched[]>('search_clipboard', { query, searchMode });
+async function search_clipboard({
+  query,
+  search_mode: searchMode,
+  content_type: contentType,
+  bookmark,
+}: {
+  query: string;
+  search_mode: SearchMode;
+  content_type: ContentType[];
+  bookmark: boolean[];
+}) {
+  return invoke<Searched[]>('search_clipboard', {
+    query,
+    searchMode,
+    contentType,
+    bookmark,
+  });
 }
 
-async function delete_clip(id: number) {
-  return invoke('delete_clip', { id });
+async function delete_clip({ id, content, content_type: contentType }: Clip) {
+  return invoke('delete_clip', { id, content, contentType });
 }
 
 async function clear_clipboard() {
@@ -36,17 +54,17 @@ async function clear_clipboard() {
 //////////////////// ////////////////////
 // クリップボード関連
 //////////////////// ////////////////////
-async function send_clipboard(content: string) {
+async function send_clipboard({ content, content_type: contentType }: Clip) {
   try {
-    await invoke('send_clipboard', { content });
+    await invoke('send_clipboard', { content, contentType });
   } catch (err) {
     console.error('Failed to paste content:', err);
   }
 }
 
-async function send_and_paste(content: string) {
+async function send_and_paste({ content, content_type: contentType }: Clip) {
   try {
-    await invoke('send_and_paste', { content });
+    await invoke('send_and_paste', { content, contentType });
   } catch (err) {
     console.error('Failed to paste content:', err);
   }

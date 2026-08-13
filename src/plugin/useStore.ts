@@ -1,7 +1,7 @@
 import { Store } from '@tauri-apps/plugin-store';
 import { useEffect, useState } from 'react';
 
-import invoke from '~/command';
+import invoke, { type ContentType, type SearchMode } from '~/command';
 
 export type Theme = 'light' | 'dark';
 export type Page = 'clipboard' | 'setting';
@@ -10,14 +10,21 @@ export type SelectAction = 'send-and-paste' | 'send-only';
 export function useStore() {
   const [store, setStore] = useState<Store>();
 
+  // window setting
   const [enablePin, setEnablePin] = useState(false);
   const [theme, setTheme] = useState<Theme>('dark');
   const [page, setPage] = useState<Page>('clipboard');
-  const [windowToggleShortcut, setWindowToggleShortcut] = useState<string>('Alt+V');
-  const [selectAction, setSelectAction] = useState<SelectAction>('send-and-paste');
-  const [searchMode, setSearchMode] = useState<'fuzzy' | 'substring'>('fuzzy');
   const [font, setFont] = useState<string>('');
   const [systemFontList, setSystemFontList] = useState<string[]>([]);
+
+  // keybindings
+  const [windowToggleShortcut, setWindowToggleShortcut] = useState<string>('Alt+V');
+  const [selectAction, setSelectAction] = useState<SelectAction>('send-and-paste');
+
+  // search input
+  const [searchMode, setSearchMode] = useState<SearchMode>('fuzzy');
+  const [searchContentType, setSearchContentType] = useState<ContentType[]>(['text', 'image']);
+  const [searchBookmark, setSearchBookmark] = useState<boolean[]>([true, false]);
 
   useEffect(() => {
     void (async () => {
@@ -46,8 +53,18 @@ export function useStore() {
       }
 
       async function getSearchMode(store: Store) {
-        const v = await store?.get<'fuzzy' | 'substring'>('search_mode');
+        const v = await store?.get<SearchMode>('search_mode');
         return v ?? 'fuzzy';
+      }
+
+      async function getSearchContentType(store: Store) {
+        const v = await store?.get<ContentType[]>('search_content_type');
+        return v ?? ['text', 'image'];
+      }
+
+      async function getSearchBookmark(store: Store) {
+        const v = await store?.get<boolean[]>('search_bookmark');
+        return v ?? [true, false];
       }
 
       async function getFont(store: Store) {
@@ -60,6 +77,8 @@ export function useStore() {
       void getWindowToggleShortcut(store).then(setWindowToggleShortcut);
       void getSelectAction(store).then(setSelectAction);
       void getSearchMode(store).then(setSearchMode);
+      void getSearchContentType(store).then(setSearchContentType);
+      void getSearchBookmark(store).then(setSearchBookmark);
       void getFont(store).then((v) => {
         setFont(v);
         applyFont(v);
@@ -88,9 +107,21 @@ export function useStore() {
     await store?.save();
   }
 
-  async function saveSearchMode(v: 'fuzzy' | 'substring') {
+  async function saveSearchMode(v: SearchMode) {
     setSearchMode(v);
     await store?.set('search_mode', v);
+    await store?.save();
+  }
+
+  async function saveSearchContentType(v: ContentType[]) {
+    setSearchContentType(v);
+    await store?.set('search_content_type', v);
+    await store?.save();
+  }
+
+  async function saveSearchBookmark(v: boolean[]) {
+    setSearchBookmark(v);
+    await store?.set('search_bookmark', v);
     await store?.save();
   }
 
@@ -121,6 +152,10 @@ export function useStore() {
     saveSelectAction,
     searchMode,
     saveSearchMode,
+    searchContentType,
+    saveSearchContentType,
+    searchBookmark,
+    saveSearchBookmark,
     font,
     saveAndApplyFont,
     systemFontList,

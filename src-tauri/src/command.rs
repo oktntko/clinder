@@ -1,3 +1,4 @@
+use crate::clipboard_image;
 use crate::db;
 
 use enigo::{Enigo, Key, Keyboard, Settings};
@@ -6,7 +7,9 @@ use nucleo_matcher::pattern::{Atom, AtomKind, CaseMatching, Normalization};
 use nucleo_matcher::{Config, Matcher, Utf32Str};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
+use std::path::Path;
 use std::str::FromStr;
+use tauri::image::Image;
 use tauri::{AppHandle, Manager, WebviewWindow};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
@@ -39,9 +42,11 @@ pub fn search_clipboard(
     app_handle: AppHandle,
     search_mode: SearchMode,
     query: String,
+    content_type: Vec<db::ContentType>,
+    bookmark: Vec<bool>,
 ) -> Result<Vec<Searched>, String> {
     log::debug!("search_clipboard");
-    let clipboard = db::find_many_clip(&app_handle)?;
+    let clipboard = db::find_many_clip(&app_handle, content_type, bookmark)?;
 
     // クエリが空の場合、先頭100件を返す
     if query.trim().is_empty() {
@@ -49,8 +54,12 @@ pub fn search_clipboard(
             .iter()
             .take(100)
             .map(|clip| {
+                let content = match clip.content_type {
+                    db::ContentType::Text => clip.content.replace("\r\n", "\n"),
+                    db::ContentType::Image => clip.description.replace("\r\n", "\n"),
+                };
                 let (snippet, indices, trimmed_begin, trimmed_end) =
-                    extract_around_index_with_indices(&clip.content, &[]);
+                    extract_around_index_with_indices(&content, &[]);
 
                 Searched {
                     clip: clip.clone(),
@@ -81,7 +90,10 @@ pub fn search_clipboard(
     for clip in clipboard.iter() {
         let mut buf = Vec::new();
         // 改行コード \r\n があると indices がずれるため、除去しておく
-        let content = clip.content.replace("\r\n", "\n");
+        let content = match clip.content_type {
+            db::ContentType::Text => clip.content.replace("\r\n", "\n"),
+            db::ContentType::Image => clip.description.replace("\r\n", "\n"),
+        };
         let utf32 = Utf32Str::new(&content, &mut buf);
         let mut indices_origin: Vec<u32> = Vec::new();
 
@@ -176,9 +188,20 @@ fn extract_around_index_with_indices(
 
 // 指定IDの 1 行削除
 #[tauri::command]
-pub fn delete_clip(app_handle: AppHandle, id: i64) -> Result<(), String> {
+pub fn delete_clip(
+    app_handle: AppHandle,
+    id: i64,
+    content: String,
+    content_type: db::ContentType,
+) -> Result<(), String> {
     log::debug!("delete_clip");
     db::delete_clip(&app_handle, id)?;
+
+    if content_type == db::ContentType::Image {
+        let path = Path::new(&content);
+        let _ = std::fs::remove_file(path);
+        log::debug!("delete_clip {}", content);
+    }
 
     Ok(())
 }
@@ -188,6 +211,10 @@ pub fn delete_clip(app_handle: AppHandle, id: i64) -> Result<(), String> {
 pub fn clear_clipboard(app_handle: AppHandle) -> Result<(), String> {
     log::debug!("clear_clipboard");
     db::delete_many_clip(&app_handle)?;
+
+    if let Ok(image_dir) = clipboard_image::get_clipboard_image_dir(&app_handle) {
+        let _ = std::fs::remove_dir_all(image_dir);
+    }
 
     Ok(())
 }
@@ -200,12 +227,21 @@ pub async fn send_clipboard(
     app_handle: AppHandle,
     window: WebviewWindow,
     content: String,
+    content_type: db::ContentType,
 ) -> Result<(), String> {
     log::debug!("send_clipboard");
-    app_handle
-        .clipboard()
-        .write_text(content)
-        .map_err(|e| e.to_string())?;
+    if content_type == db::ContentType::Text {
+        app_handle
+            .clipboard()
+            .write_text(content)
+            .map_err(|e| e.to_string())?;
+    } else {
+        let image = Image::from_path(&content).map_err(|e| e.to_string())?;
+        app_handle
+            .clipboard()
+            .write_image(&image)
+            .map_err(|e| e.to_string())?;
+    }
 
     window.hide().map_err(|e| e.to_string())?;
 
@@ -217,9 +253,10 @@ pub async fn send_and_paste(
     app_handle: AppHandle,
     window: WebviewWindow,
     content: String,
+    content_type: db::ContentType,
 ) -> Result<(), String> {
     log::debug!("send_and_paste");
-    let _ = send_clipboard(app_handle, window, content).await;
+    let _ = send_clipboard(app_handle, window, content, content_type).await;
 
     tokio::spawn(async move {
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;

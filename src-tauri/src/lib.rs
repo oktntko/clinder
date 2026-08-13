@@ -1,3 +1,4 @@
+mod clipboard_image;
 mod command;
 mod db;
 
@@ -49,6 +50,7 @@ pub fn run() {
             let clipboard_handle = app_handle.clone();
             thread::spawn(move || {
                 let mut last_text = String::new();
+                let mut last_image_hash = String::new();
 
                 loop {
                     if let Ok(current_text) = clipboard_handle.clipboard().read_text() {
@@ -60,8 +62,50 @@ pub fn run() {
                                 &clipboard_handle,
                                 db::ContentType::Text,
                                 current_text,
+                                "".to_string(),
+                                false,
                             ) {
+                                log::debug!("clipboard-updated text");
                                 let _ = app_handle.emit("clipboard-updated", &clip_item);
+                            }
+                        }
+                    }
+
+                    if let Ok(rgba_image) = clipboard_handle.clipboard().read_image() {
+                        let bytes = rgba_image.rgba();
+                        let width = rgba_image.width();
+                        let height = rgba_image.height();
+
+                        let current_image_hash = clipboard_image::calculate_hash(bytes);
+
+                        if !current_image_hash.is_empty() && current_image_hash != last_image_hash {
+                            last_image_hash = current_image_hash.clone();
+                            log::debug!("changed-clipboard {}", current_image_hash);
+
+                            if let Ok(image_dir) =
+                                clipboard_image::get_clipboard_image_dir(&clipboard_handle)
+                            {
+                                let filename = format!("{}.png", &current_image_hash);
+                                let image_path = image_dir.join(&filename);
+
+                                // image クレートを使って RGBA データから PNG ファイルを作成
+                                if let Some(img_buf) =
+                                    image::RgbaImage::from_raw(width, height, bytes.to_vec())
+                                {
+                                    if img_buf.save(&image_path).is_ok() {
+                                        if let Ok(clip_item) = db::upsert_clip(
+                                            &clipboard_handle,
+                                            db::ContentType::Image,
+                                            image_path.to_string_lossy().into_owned(),
+                                            "".to_string(),
+                                            false,
+                                        ) {
+                                            log::debug!("clipboard-updated image");
+                                            let _ =
+                                                app_handle.emit("clipboard-updated", &clip_item);
+                                        }
+                                    }
+                                }
                             }
                         }
                     }

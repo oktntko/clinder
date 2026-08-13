@@ -1,10 +1,12 @@
+import { convertFileSrc } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { useStore } from '~/plugin/useStore';
 
-import invoke, { type Searched } from '~/command';
+import invoke, { type Clip, type Searched } from '~/command';
 import { Footer } from '~/component/Footer';
+import { R } from '~/lib/remeda';
 
 type ClipboardProps = ReturnType<typeof useStore> & {};
 
@@ -15,17 +17,24 @@ export function Clipboard(props: ClipboardProps) {
 
   const search = useCallback(async () => {
     try {
-      const _clipboard = await invoke.search_clipboard(query, props.searchMode);
+      const _clipboard = await invoke.search_clipboard({
+        query,
+        search_mode: props.searchMode,
+        content_type: props.searchContentType,
+        bookmark: props.searchBookmark,
+      });
       setClipboard(_clipboard);
-      if (_clipboard.length === 0) {
-        setCursor(0);
-      } else {
-        setCursor(Math.min(cursor, _clipboard.length - 1));
-      }
     } catch (err) {
       console.error('Failed to search history:', err);
     }
-  }, [query, cursor, props.searchMode]);
+  }, [query, props.searchMode, props.searchContentType, props.searchBookmark]);
+
+  useEffect(() => {
+    setCursor((prev) => {
+      if (clipboard.length === 0) return 0;
+      return Math.min(prev, clipboard.length - 1);
+    });
+  }, [clipboard]);
 
   useEffect(() => {
     void search();
@@ -66,15 +75,15 @@ export function Clipboard(props: ClipboardProps) {
           if (selected != null) {
             if (!e.ctrlKey) {
               if (props.selectAction === 'send-and-paste') {
-                void invoke.send_and_paste(selected.clip.content);
+                void invoke.send_and_paste(selected.clip);
               } else {
-                void invoke.send_clipboard(selected.clip.content);
+                void invoke.send_clipboard(selected.clip);
               }
             } else {
               if (props.selectAction === 'send-and-paste') {
-                void invoke.send_clipboard(selected.clip.content);
+                void invoke.send_clipboard(selected.clip);
               } else {
-                void invoke.send_and_paste(selected.clip.content);
+                void invoke.send_and_paste(selected.clip);
               }
             }
           }
@@ -101,9 +110,9 @@ export function Clipboard(props: ClipboardProps) {
     }
   }, [cursor]);
 
-  async function deleteClip(id: number) {
-    setClipboard((item) => item.filter((r) => r.clip.id !== id));
-    void invoke.delete_clip(id);
+  async function deleteClip(clip: Clip) {
+    setClipboard((item) => item.filter((r) => r.clip.id !== clip.id));
+    void invoke.delete_clip(clip);
   }
 
   async function clearClipboard() {
@@ -122,40 +131,114 @@ export function Clipboard(props: ClipboardProps) {
           onChange={(e) => setQuery(e.target.value)}
         />
 
-        <div
-          title="search_mode"
-          className="inline-flex items-center justify-center gap-1 rounded-full border border-gray-300 bg-gray-100 p-1 transition-colors hover:bg-white focus:bg-white focus:outline-none dark:border-zinc-600 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
-        >
+        <div className="inline-flex flex-row items-center gap-2">
+          <div
+            title="search_content_type"
+            className="inline-flex items-center justify-center gap-1 rounded-full border border-gray-300 bg-gray-100 p-1 transition-colors hover:bg-white focus:bg-white focus:outline-none dark:border-zinc-600 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
+          >
+            <button
+              title="text"
+              type="button"
+              className={`inline-flex items-center justify-center rounded-full p-1 transition-colors focus:outline-none ${
+                props.searchContentType.some((x) => x === 'text')
+                  ? 'bg-green-200 hover:bg-green-300 focus:bg-green-300 dark:bg-emerald-900/60 dark:text-emerald-300 dark:hover:bg-emerald-800/80 dark:focus:bg-emerald-800/80'
+                  : 'bg-gray-200 hover:bg-gray-300 focus:bg-gray-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600'
+              }`}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (props.searchContentType.some((x) => x === 'text')) {
+                  void props.saveSearchContentType(
+                    props.searchContentType.filter((x) => x !== 'text'),
+                  );
+                } else {
+                  void props.saveSearchContentType(
+                    R.unique(props.searchContentType.concat(['text'])),
+                  );
+                }
+              }}
+            >
+              <span className="icon-[humbleicons--text] size-4"></span>
+            </button>
+            <button
+              title="image"
+              type="button"
+              className={`inline-flex items-center justify-center rounded-full p-1 transition-colors focus:outline-none ${
+                props.searchContentType.some((x) => x === 'image')
+                  ? 'bg-green-200 hover:bg-green-300 focus:bg-green-300 dark:bg-emerald-900/60 dark:text-emerald-300 dark:hover:bg-emerald-800/80 dark:focus:bg-emerald-800/80'
+                  : 'bg-gray-200 hover:bg-gray-300 focus:bg-gray-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600'
+              }`}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (props.searchContentType.some((x) => x === 'image')) {
+                  void props.saveSearchContentType(
+                    props.searchContentType.filter((x) => x !== 'image'),
+                  );
+                } else {
+                  void props.saveSearchContentType(
+                    R.unique(props.searchContentType.concat(['image'])),
+                  );
+                }
+              }}
+            >
+              <span className="icon-[humbleicons--image] size-4"></span>
+            </button>
+          </div>
+
           <button
-            title="fuzzy search"
+            title="search_bookmark"
             type="button"
-            className={`inline-flex items-center justify-center rounded-full p-1 transition-colors focus:outline-none ${
-              props.searchMode === 'fuzzy'
+            className={`inline-flex items-center justify-center rounded-full p-2 transition-colors focus:outline-none ${
+              props.searchBookmark.length === 1 && props.searchBookmark[0] === true
                 ? 'bg-green-200 hover:bg-green-300 focus:bg-green-300 dark:bg-emerald-900/60 dark:text-emerald-300 dark:hover:bg-emerald-800/80 dark:focus:bg-emerald-800/80'
                 : 'bg-gray-200 hover:bg-gray-300 focus:bg-gray-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600'
             }`}
             onClick={(e) => {
               e.stopPropagation();
-              void props.saveSearchMode('fuzzy');
+              void props.saveSearchBookmark(
+                props.searchBookmark.length === 1 && props.searchBookmark[0] === true
+                  ? [true, false]
+                  : [true],
+              );
             }}
           >
-            <span className="icon-[codicon--search-fuzzy] size-4"></span>
+            <span className="icon-[material-symbols--bookmark-outline-rounded] size-4"></span>
           </button>
-          <button
-            title="exact search"
-            type="button"
-            className={`inline-flex items-center justify-center rounded-full p-1 transition-colors focus:outline-none ${
-              props.searchMode === 'substring'
-                ? 'bg-green-200 hover:bg-green-300 focus:bg-green-300 dark:bg-emerald-900/60 dark:text-emerald-300 dark:hover:bg-emerald-800/80 dark:focus:bg-emerald-800/80'
-                : 'bg-gray-200 hover:bg-gray-300 focus:bg-gray-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600'
-            }`}
-            onClick={(e) => {
-              e.stopPropagation();
-              void props.saveSearchMode('substring');
-            }}
+
+          <div
+            title="search_mode"
+            className="inline-flex items-center justify-center gap-1 rounded-full border border-gray-300 bg-gray-100 p-1 transition-colors hover:bg-white focus:bg-white focus:outline-none dark:border-zinc-600 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
           >
-            <span className="icon-[mdi--target] size-4"></span>
-          </button>
+            <button
+              title="fuzzy search"
+              type="button"
+              className={`inline-flex items-center justify-center rounded-full p-1 transition-colors focus:outline-none ${
+                props.searchMode === 'fuzzy'
+                  ? 'bg-green-200 hover:bg-green-300 focus:bg-green-300 dark:bg-emerald-900/60 dark:text-emerald-300 dark:hover:bg-emerald-800/80 dark:focus:bg-emerald-800/80'
+                  : 'bg-gray-200 hover:bg-gray-300 focus:bg-gray-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600'
+              }`}
+              onClick={(e) => {
+                e.stopPropagation();
+                void props.saveSearchMode('fuzzy');
+              }}
+            >
+              <span className="icon-[codicon--search-fuzzy] size-4"></span>
+            </button>
+            <button
+              title="exact search"
+              type="button"
+              className={`inline-flex items-center justify-center rounded-full p-1 transition-colors focus:outline-none ${
+                props.searchMode === 'substring'
+                  ? 'bg-green-200 hover:bg-green-300 focus:bg-green-300 dark:bg-emerald-900/60 dark:text-emerald-300 dark:hover:bg-emerald-800/80 dark:focus:bg-emerald-800/80'
+                  : 'bg-gray-200 hover:bg-gray-300 focus:bg-gray-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600'
+              }`}
+              onClick={(e) => {
+                e.stopPropagation();
+                void props.saveSearchMode('substring');
+              }}
+            >
+              <span className="icon-[mdi--target] size-4"></span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -178,6 +261,7 @@ export function Clipboard(props: ClipboardProps) {
                 <button
                   ref={isActive ? activeItemRef : null}
                   type="button"
+                  title={item.clip.content}
                   className={`relative w-full shrink-0 cursor-pointer truncate py-1 text-start focus:outline-none ${
                     item.trimmed_begin
                       ? "before:icon-[lucide--ellipsis] pl-5 before:absolute before:top-1/2 before:left-0 before:inline-block before:size-4 before:-translate-y-1/2 before:bg-gray-300 before:content-[''] dark:before:bg-zinc-600"
@@ -192,10 +276,14 @@ export function Clipboard(props: ClipboardProps) {
                   }}
                   onClick={() => {
                     setCursor(i);
-                    void invoke.send_and_paste(item.clip.content);
+                    void invoke.send_and_paste(item.clip);
                   }}
                 >
-                  <Highlight {...item} />
+                  {item.clip.content_type === 'text' ? (
+                    <HighlightText {...item} />
+                  ) : (
+                    <ShrinkImage {...item} />
+                  )}
                 </button>
                 <div className="pointer-events-none absolute top-1/2 right-5 hidden size-5 -translate-y-1/2 rounded-full bg-gray-200 transition-all transition-discrete group-hover:block dark:bg-zinc-700">
                   <button
@@ -205,7 +293,7 @@ export function Clipboard(props: ClipboardProps) {
                     className="pointer-events-auto inline-flex size-5 items-center justify-center rounded-full bg-gray-100 transition-colors hover:bg-gray-300 dark:bg-zinc-800 dark:hover:bg-zinc-600"
                     onClick={(e) => {
                       e.stopPropagation();
-                      void deleteClip(item.clip.id);
+                      void deleteClip(item.clip);
                     }}
                   >
                     <span className="icon-[mingcute--close-fill] size-4"></span>
@@ -236,54 +324,60 @@ export function Clipboard(props: ClipboardProps) {
       </Footer>
     </div>
   );
+}
 
-  function Highlight({ snippet, indices }: Searched) {
-    if (!indices || indices.length === 0) {
-      return <>{snippet}</>;
-    }
-
-    // サロゲートペアや絵文字を考慮して文字単位の配列にする
-    const chars = Array.from(snippet);
-    const indexSet = new Set(indices);
-
-    const elements: React.ReactNode[] = [];
-    let currentChunk = '';
-    let inMark = false;
-
-    for (let i = 0; i < chars.length; i++) {
-      const isMatch = indexSet.has(i);
-
-      if (isMatch !== inMark) {
-        if (currentChunk) {
-          if (inMark) {
-            elements.push(
-              <mark key={i} className="rounded-sm bg-yellow-200 text-black">
-                {currentChunk}
-              </mark>,
-            );
-          } else {
-            elements.push(currentChunk);
-          }
-        }
-        currentChunk = '';
-        inMark = isMatch;
-      }
-
-      currentChunk += chars[i];
-    }
-
-    if (currentChunk) {
-      if (inMark) {
-        elements.push(
-          <mark key="last" className="rounded-sm bg-yellow-200 text-black">
-            {currentChunk}
-          </mark>,
-        );
-      } else {
-        elements.push(currentChunk);
-      }
-    }
-
-    return <>{elements}</>;
+function HighlightText({ snippet, indices }: Searched) {
+  if (!indices || indices.length === 0) {
+    return <>{snippet}</>;
   }
+
+  // サロゲートペアや絵文字を考慮して文字単位の配列にする
+  const chars = Array.from(snippet);
+  const indexSet = new Set(indices);
+
+  const elements: React.ReactNode[] = [];
+  let currentChunk = '';
+  let inMark = false;
+
+  for (let i = 0; i < chars.length; i++) {
+    const isMatch = indexSet.has(i);
+
+    if (isMatch !== inMark) {
+      if (currentChunk) {
+        if (inMark) {
+          elements.push(
+            <mark key={i} className="rounded-sm bg-yellow-200 text-black">
+              {currentChunk}
+            </mark>,
+          );
+        } else {
+          elements.push(currentChunk);
+        }
+      }
+      currentChunk = '';
+      inMark = isMatch;
+    }
+
+    currentChunk += chars[i];
+  }
+
+  if (currentChunk) {
+    if (inMark) {
+      elements.push(
+        <mark key="last" className="rounded-sm bg-yellow-200 text-black">
+          {currentChunk}
+        </mark>,
+      );
+    } else {
+      elements.push(currentChunk);
+    }
+  }
+
+  return <>{elements}</>;
+}
+
+function ShrinkImage({ clip: { content } }: Searched) {
+  const imageUrl = convertFileSrc(content);
+
+  return <img src={imageUrl} alt="clipboard image" className="h-auto max-h-32 w-auto max-w-150" />;
 }
