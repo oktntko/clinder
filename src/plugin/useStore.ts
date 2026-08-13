@@ -1,7 +1,7 @@
 import { Store } from '@tauri-apps/plugin-store';
 import { useEffect, useState } from 'react';
 
-import invoke from '~/invoke';
+import invoke from '~/command';
 
 export type Theme = 'light' | 'dark';
 export type Page = 'clipboard' | 'setting';

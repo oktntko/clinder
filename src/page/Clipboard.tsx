@@ -3,24 +3,24 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { useStore } from '~/plugin/useStore';
 
+import invoke, { type Searched } from '~/command';
 import { Footer } from '~/component/Footer';
-import invoke, { type SearchResult } from '~/invoke';
 
 type ClipboardProps = ReturnType<typeof useStore> & {};
 
 export function Clipboard(props: ClipboardProps) {
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<SearchResult[]>([]);
+  const [clipboard, setClipboard] = useState<Searched[]>([]);
   const [cursor, setCursor] = useState(0);
 
   const search = useCallback(async () => {
     try {
-      const _results = await invoke.search_history(query, props.searchMode);
-      setResults(_results);
-      if (_results.length === 0) {
+      const _clipboard = await invoke.search_clipboard(query, props.searchMode);
+      setClipboard(_clipboard);
+      if (_clipboard.length === 0) {
         setCursor(0);
       } else {
-        setCursor(Math.min(cursor, _results.length - 1));
+        setCursor(Math.min(cursor, _clipboard.length - 1));
       }
     } catch (err) {
       console.error('Failed to search history:', err);
@@ -50,7 +50,7 @@ export function Clipboard(props: ClipboardProps) {
           return;
         case 'ArrowDown':
           e.preventDefault();
-          setCursor((prev) => Math.min(prev + 1, Math.max(results.length - 1, 0)));
+          setCursor((prev) => Math.min(prev + 1, Math.max(clipboard.length - 1, 0)));
           return;
         case 'PageUp':
           e.preventDefault();
@@ -58,23 +58,23 @@ export function Clipboard(props: ClipboardProps) {
           return;
         case 'PageDown':
           e.preventDefault();
-          setCursor((prev) => Math.min(prev + 10, Math.max(results.length - 1, 0)));
+          setCursor((prev) => Math.min(prev + 10, Math.max(clipboard.length - 1, 0)));
           return;
         case 'Enter':
           e.preventDefault();
-          const selected = results[cursor];
+          const selected = clipboard[cursor];
           if (selected != null) {
             if (!e.ctrlKey) {
               if (props.selectAction === 'send-and-paste') {
-                void invoke.select_and_paste(selected.content);
+                void invoke.send_and_paste(selected.clip.content);
               } else {
-                void invoke.select(selected.content);
+                void invoke.send_clipboard(selected.clip.content);
               }
             } else {
               if (props.selectAction === 'send-and-paste') {
-                void invoke.select(selected.content);
+                void invoke.send_clipboard(selected.clip.content);
               } else {
-                void invoke.select_and_paste(selected.content);
+                void invoke.send_and_paste(selected.clip.content);
               }
             }
           }
@@ -87,7 +87,7 @@ export function Clipboard(props: ClipboardProps) {
     return () => {
       window.removeEventListener('keydown', handleKeyDown, true);
     };
-  }, [cursor, results, props.selectAction]);
+  }, [cursor, clipboard, props.selectAction]);
 
   // アクティブな要素を参照するための Ref
   const activeItemRef = useRef<HTMLButtonElement | null>(null);
@@ -101,14 +101,14 @@ export function Clipboard(props: ClipboardProps) {
     }
   }, [cursor]);
 
-  async function deleteSearchResult(id: number) {
-    setResults((results) => results.filter((r) => r.id !== id));
-    void invoke.delete_history_item(id);
+  async function deleteClip(id: number) {
+    setClipboard((item) => item.filter((r) => r.clip.id !== id));
+    void invoke.delete_clip(id);
   }
 
-  async function clearAllSearchResult() {
-    setResults([]);
-    void invoke.clear_all_history();
+  async function clearClipboard() {
+    setClipboard([]);
+    void invoke.clear_clipboard();
   }
 
   return (
@@ -163,8 +163,8 @@ export function Clipboard(props: ClipboardProps) {
         tabIndex={-1}
         className="flex min-h-0 w-full flex-1 flex-col divide-y divide-gray-300 overflow-y-auto focus:outline-none dark:divide-zinc-700"
       >
-        {results.length > 0 ? (
-          results.map((item, i) => {
+        {clipboard.length > 0 ? (
+          clipboard.map((item, i) => {
             const isActive = cursor === i;
             return (
               <div
@@ -192,7 +192,7 @@ export function Clipboard(props: ClipboardProps) {
                   }}
                   onClick={() => {
                     setCursor(i);
-                    void invoke.select_and_paste(item.content);
+                    void invoke.send_and_paste(item.clip.content);
                   }}
                 >
                   <Highlight {...item} />
@@ -205,7 +205,7 @@ export function Clipboard(props: ClipboardProps) {
                     className="pointer-events-auto inline-flex size-5 items-center justify-center rounded-full bg-gray-100 transition-colors hover:bg-gray-300 dark:bg-zinc-800 dark:hover:bg-zinc-600"
                     onClick={(e) => {
                       e.stopPropagation();
-                      void deleteSearchResult(item.id);
+                      void deleteClip(item.clip.id);
                     }}
                   >
                     <span className="icon-[mingcute--close-fill] size-4"></span>
@@ -228,7 +228,7 @@ export function Clipboard(props: ClipboardProps) {
           className="inline-flex items-center justify-center rounded-full bg-gray-200 p-2 transition-colors hover:bg-gray-300 focus:bg-gray-300 focus:outline-none dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
           onClick={(e) => {
             e.stopPropagation();
-            void clearAllSearchResult();
+            void clearClipboard();
           }}
         >
           <span className="icon-[tabler--trash] size-4"></span>
@@ -237,7 +237,7 @@ export function Clipboard(props: ClipboardProps) {
     </div>
   );
 
-  function Highlight({ snippet, indices }: SearchResult) {
+  function Highlight({ snippet, indices }: Searched) {
     if (!indices || indices.length === 0) {
       return <>{snippet}</>;
     }

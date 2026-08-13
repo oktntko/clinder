@@ -2,8 +2,8 @@ import { useState } from 'react';
 
 import type { useStore } from '~/plugin/useStore';
 
+import invoke from '~/command';
 import { Footer } from '~/component/Footer';
-import invoke from '~/invoke';
 import { cn } from '~/lib/utils';
 import { useToast } from '~/plugin/useToast';
 
