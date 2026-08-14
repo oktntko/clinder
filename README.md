@@ -35,20 +35,20 @@ Open it with the global shortcut `Alt + V` and use incremental fuzzy search to f
 
 ## TODO
 
+- info ページ
+  - ライセンスとかバージョン情報とか
+  - 設定ファイルの場所（dbとjsonと画像）とリンク
+- 古いデータの自動削除（時間 or 件数による）
+- Default KeyBinding Fallback
 - Improve UI
   - 全体的にとりあえず置いた感からの脱却を図る
   - フォントのテキスト検索対応（セレクトやめる）
   - フォント選択するときに若干固まるのか反応しないのか現象が起きる
-- Default KeyBinding Fallback
+- コピーするときに最後の空行を削除する設定
 - 画像コピー
   - OCRで文字抽出してテキスト検索可能にする
   - Ctrl + i で画像のみ検索のトグル（設定可）
 - ブックマーク機能
   - Ctrl + B でブックマークのみ検索のトグルやブックマークのトグル（設定可）
-- 古いデータの自動削除（時間 or 件数による）
 - Mac version
 - Improve and expand this README
-- コピーするときに最後の空行を削除する設定
-- info ページ
-  - ライセンスとかバージョン情報とか
-  - 設定ファイルの場所（dbとjsonと画像）とリンク

@@ -4,7 +4,11 @@ mod db;
 
 use std::thread;
 use std::time::Duration;
-use tauri::Emitter;
+use tauri::{
+    menu::{Menu, MenuItem},
+    tray::TrayIconBuilder,
+    Emitter, Manager,
+};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_log::log;
 use tauri_plugin_store::StoreExt;
@@ -25,7 +29,34 @@ pub fn run() {
         )
         .plugin(tauri_plugin_clipboard_manager::init())
         .setup(move |app: &mut tauri::App| {
-            let app_handle = app.handle().clone();
+            let open_item = MenuItem::with_id(app, "open", "Open", true, None::<&str>)?;
+            let hide_item = MenuItem::with_id(app, "hide", "Hide", true, None::<&str>)?;
+            let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+            let tray_menu = Menu::with_items(app, &[&open_item, &hide_item, &quit_item])?;
+
+            TrayIconBuilder::new()
+                .icon(app.default_window_icon().unwrap().clone())
+                .tooltip("clinder")
+                .menu(&tray_menu)
+                .show_menu_on_left_click(true)
+                .on_menu_event(|_app_handle, event| match event.id.as_ref() {
+                    "open" => {
+                        if let Some(window) = _app_handle.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                    }
+                    "hide" => {
+                        if let Some(window) = _app_handle.get_webview_window("main") {
+                            let _ = window.hide();
+                        }
+                    }
+                    "quit" => {
+                        _app_handle.exit(0);
+                    }
+                    _ => {}
+                })
+                .build(app)?;
 
             let store = match app.store("settings.json") {
                 Ok(store) => Some(store),
@@ -42,6 +73,8 @@ pub fn run() {
                 Some(value) => value.as_str().unwrap_or("Alt+V").to_string(),
                 None => "Alt+V".to_string(),
             };
+
+            let app_handle = app.handle().clone();
 
             if command::register_toggle_shortcut(&app_handle, &shortcut_str).is_none() {
                 log::warn!("Global shortcut registration skipped; continuing without it.");
