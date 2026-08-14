@@ -128,9 +128,7 @@ WHERE
   AND bookmark IN ({})
 ORDER BY
   updated_at DESC
-  , id DESC
-LIMIT
-  1000",
+  , id DESC",
         std::iter::repeat("?")
             .take(content_type.len())
             .collect::<Vec<_>>()

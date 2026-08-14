@@ -35,9 +35,6 @@ Open it with the global shortcut `Alt + V` and use incremental fuzzy search to f
 
 ## TODO
 
-- info ページ
-  - ライセンスとかバージョン情報とか
-  - 設定ファイルの場所（dbとjsonと画像）とリンク
 - 古いデータの自動削除（時間 or 件数による）
 - Default KeyBinding Fallback
 - Improve UI

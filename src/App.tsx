@@ -1,9 +1,10 @@
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useEffect, useState } from 'react';
 
-import { Clipboard } from './page/Clipboard';
-import { Setting } from './page/Setting';
-import { useStore } from './plugin/useStore';
+import { Clipboard } from '~/page/Clipboard';
+import { Information } from '~/page/Information';
+import { Setting } from '~/page/Setting';
+import { useStore } from '~/plugin/useStore';
 
 function App() {
   const store = useStore();
@@ -24,6 +25,9 @@ function App() {
                 e.preventDefault();
                 return store.setPage('setting');
               case 'setting':
+                e.preventDefault();
+                return store.setPage('information');
+              case 'information':
                 e.preventDefault();
                 return store.setPage('clipboard');
             }
@@ -114,7 +118,13 @@ function App() {
         {/* data-tauri-drag-region */}
         <div className="block h-2 cursor-move select-none" onMouseDown={handleMouseDown}></div>
 
-        {store.page === 'clipboard' ? <Clipboard {...store} /> : <Setting {...store} />}
+        {store.page === 'clipboard' ? (
+          <Clipboard {...store} />
+        ) : store.page === 'setting' ? (
+          <Setting {...store} />
+        ) : (
+          <Information {...store} />
+        )}
       </div>
     </>
   );

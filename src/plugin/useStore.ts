@@ -1,10 +1,15 @@
+import { getVersion } from '@tauri-apps/api/app';
+import {
+  appDataDir as getAppDataDir,
+  appLocalDataDir as getAppLocalDataDir,
+} from '@tauri-apps/api/path';
 import { Store } from '@tauri-apps/plugin-store';
 import { useEffect, useState } from 'react';
 
 import invoke, { type ContentType, type SearchMode } from '~/command';
 
 export type Theme = 'light' | 'dark';
-export type Page = 'clipboard' | 'setting';
+export type Page = 'clipboard' | 'setting' | 'information';
 export type SelectAction = 'send-and-paste' | 'send-only';
 
 export function useStore() {
@@ -25,6 +30,11 @@ export function useStore() {
   const [searchMode, setSearchMode] = useState<SearchMode>('fuzzy');
   const [searchContentType, setSearchContentType] = useState<ContentType[]>(['text', 'image']);
   const [searchBookmark, setSearchBookmark] = useState<boolean[]>([true, false]);
+
+  // information
+  const [version, setVersion] = useState<string>('');
+  const [appLocalDataDir, setAppLocalDataDir] = useState<string>('');
+  const [appDataDir, setAppDataDir] = useState('');
 
   useEffect(() => {
     void (async () => {
@@ -84,6 +94,10 @@ export function useStore() {
         applyFont(v);
       });
       void invoke.list_system_font().then(setSystemFontList);
+
+      void getVersion().then(setVersion);
+      void getAppLocalDataDir().then(setAppLocalDataDir);
+      void getAppDataDir().then(setAppDataDir);
     })();
 
     return () => undefined;
@@ -159,5 +173,8 @@ export function useStore() {
     font,
     saveAndApplyFont,
     systemFontList,
+    version,
+    appLocalDataDir,
+    appDataDir,
   };
 }

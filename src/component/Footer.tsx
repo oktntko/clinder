@@ -40,7 +40,22 @@ export function Footer(props: FooterProps) {
               props.setPage('setting');
             }}
           >
-            <span className="icon-[material-symbols--keyboard-outline] size-4"></span>
+            <span className="icon-[ep--setting] size-4"></span>
+          </button>
+          <button
+            title="information"
+            type="button"
+            className={`inline-flex items-center justify-center rounded-full p-1 transition-colors focus:outline-none ${
+              props.page === 'information'
+                ? 'bg-green-200 hover:bg-green-300 focus:bg-green-300 dark:bg-emerald-900/60 dark:text-emerald-300 dark:hover:bg-emerald-800/80 dark:focus:bg-emerald-800/80'
+                : 'bg-gray-200 hover:bg-gray-300 focus:bg-gray-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600'
+            }`}
+            onClick={(e) => {
+              e.stopPropagation();
+              props.setPage('information');
+            }}
+          >
+            <span className="icon-[mdi--information-outline] size-4"></span>
           </button>
         </div>
 
