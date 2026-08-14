@@ -219,6 +219,15 @@ pub fn clear_clipboard(app_handle: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+// ブックマーク更新
+#[tauri::command]
+pub fn update_clip(app_handle: AppHandle, bookmark: bool, id: i64) -> Result<(), String> {
+    log::debug!("update_clip");
+    db::update_clip(&app_handle, bookmark, id)?;
+
+    Ok(())
+}
+
 //////////////////// ////////////////////
 // クリップボード関連
 //////////////////// ////////////////////

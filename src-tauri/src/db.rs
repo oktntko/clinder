@@ -235,3 +235,34 @@ RETURNING
     )
     .map_err(|e| e.to_string())
 }
+
+pub fn update_clip(app_handle: &AppHandle, bookmark: bool, id: i64) -> Result<Clip, String> {
+    let conn = ensure_db(app_handle).map_err(|e| e.to_string())?;
+
+    const SQL: &str = "
+UPDATE clip
+SET
+  bookmark = ?1
+  , updated_at = CURRENT_TIMESTAMP
+WHERE
+    id = ?2
+RETURNING
+    id
+  , content_type
+  , content
+  , description
+  , bookmark
+  , updated_at";
+
+    conn.query_row(SQL, params![bookmark, id], |row| {
+        Ok(Clip {
+            id: row.get(0)?,
+            content_type: row.get(1)?,
+            content: row.get(2)?,
+            description: row.get(3)?,
+            bookmark: row.get(4)?,
+            updated_at: row.get(5)?,
+        })
+    })
+    .map_err(|e| e.to_string())
+}

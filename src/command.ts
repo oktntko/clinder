@@ -51,6 +51,10 @@ async function clear_clipboard() {
   return invoke('clear_clipboard');
 }
 
+async function update_clip({ id, bookmark }: Clip) {
+  return invoke('update_clip', { id, bookmark });
+}
+
 //////////////////// ////////////////////
 // クリップボード関連
 //////////////////// ////////////////////
@@ -92,6 +96,7 @@ export default {
   search_clipboard,
   delete_clip,
   clear_clipboard,
+  update_clip,
   send_clipboard,
   send_and_paste,
   update_window_toggle_shortcut,

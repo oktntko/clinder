@@ -111,13 +111,21 @@ export function Clipboard(props: ClipboardProps) {
   }, [cursor]);
 
   async function deleteClip(clip: Clip) {
-    setClipboard((item) => item.filter((r) => r.clip.id !== clip.id));
+    setClipboard((clipboard) => clipboard.filter((item) => item.clip.id !== clip.id));
     void invoke.delete_clip(clip);
   }
 
   async function clearClipboard() {
     setClipboard([]);
     void invoke.clear_clipboard();
+  }
+
+  async function updateClip(clip: Clip) {
+    const updatedClip = { ...clip, bookmark: !clip.bookmark };
+    setClipboard((clipboard) =>
+      clipboard.map((item) => (item.clip.id === clip.id ? { ...item, clip: updatedClip } : item)),
+    );
+    void invoke.update_clip({ ...updatedClip });
   }
 
   return (
@@ -285,7 +293,8 @@ export function Clipboard(props: ClipboardProps) {
                     <ShrinkImage {...item} />
                   )}
                 </button>
-                <div className="pointer-events-none absolute top-1/2 right-5 hidden size-5 -translate-y-1/2 rounded-full bg-gray-200 transition-all transition-discrete group-hover:block dark:bg-zinc-700">
+
+                <div className="pointer-events-none absolute top-1/2 right-5 hidden -translate-y-1/2 items-center justify-center gap-1 rounded-full bg-gray-200 p-0.5 transition-all transition-discrete group-hover:inline-flex dark:bg-zinc-700">
                   <button
                     title="delete"
                     type="button"
@@ -298,6 +307,23 @@ export function Clipboard(props: ClipboardProps) {
                   >
                     <span className="icon-[mingcute--close-fill] size-4"></span>
                   </button>
+                </div>
+
+                <div className="pointer-events-none absolute top-0 right-0">
+                  <button
+                    title="bookmark"
+                    type="button"
+                    tabIndex={-1}
+                    className={`pointer-events-auto aspect-square size-5 transition-colors [clip-path:polygon(0_0,100%_0,100%_100%)] ${
+                      item.clip.bookmark
+                        ? 'bg-green-400 hover:bg-green-500 dark:bg-emerald-700 dark:hover:bg-emerald-800'
+                        : 'bg-gray-100/90 hover:bg-gray-300 dark:bg-zinc-800/50 dark:hover:bg-zinc-600'
+                    }`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void updateClip(item.clip);
+                    }}
+                  ></button>
                 </div>
               </div>
             );

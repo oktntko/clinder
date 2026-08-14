@@ -121,6 +121,7 @@ pub fn run() {
             command::search_clipboard,
             command::delete_clip,
             command::clear_clipboard,
+            command::update_clip,
             command::send_clipboard,
             command::send_and_paste,
             command::update_window_toggle_shortcut,

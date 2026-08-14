@@ -40,12 +40,10 @@ Open it with the global shortcut `Alt + V` and use incremental fuzzy search to f
   - フォントのテキスト検索対応（セレクトやめる）
   - フォント選択するときに若干固まるのか反応しないのか現象が起きる
 - Default KeyBinding Fallback
-- Add support for image clipboard history
+- 画像コピー
   - OCRで文字抽出してテキスト検索可能にする
   - Ctrl + i で画像のみ検索のトグル（設定可）
 - ブックマーク機能
-  - コピー履歴をブックマーク
-  - or 入力中のテキストをブックマーク
   - Ctrl + B でブックマークのみ検索のトグルやブックマークのトグル（設定可）
 - 古いデータの自動削除（時間 or 件数による）
 - Mac version
