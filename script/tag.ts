@@ -2,6 +2,13 @@ import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 
+try {
+  execSync('git diff --quiet', { stdio: 'inherit' });
+} catch (_) {
+  console.log('Git changes detected. Exiting.');
+  process.exit(1);
+}
+
 // 引数または環境変数からバージョンを取得（先頭の "v" を除去）
 const rawVersion = process.argv[2] || process.env.npm_package_version;
 if (!rawVersion) {
@@ -37,4 +44,21 @@ if (fs.existsSync(cargoPath)) {
   fs.writeFileSync(cargoPath, cargoContent);
 }
 
+// 4. src-tauri/Cargo.lock の更新
+const cargoLockPath = path.resolve('src-tauri/Cargo.lock');
+if (fs.existsSync(cargoLockPath)) {
+  let cargoContent = fs.readFileSync(cargoLockPath, 'utf8');
+  // [[package]] の name = "clinder" セクション内の version を更新
+  cargoContent = cargoContent.replace(
+    /(\[\[package\]\][\s\S]*?name\s*=\s*"clinder"[\s\S]*?^version\s*=\s*")([^"]+)(")/m,
+    `$1${version}$3`,
+  );
+  fs.writeFileSync(cargoLockPath, cargoContent);
+}
+
+execSync(`pnpm format src-tauri/tauri.conf.json`);
+execSync(
+  `git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml src-tauri/Cargo.lock`,
+);
+execSync(`git commit -m "${rawVersion}"`);
 execSync(`git tag ${rawVersion}`);

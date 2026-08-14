@@ -1,8 +1,8 @@
 [package]
 name = "clinder"
 version = "0.9.0"
-description = "A Tauri App"
-authors = ["you"]
+description = "Clinder is a lightweight, always-running clipboard history manager designed for fast, keyboard-only use."
+authors = ["oktntko@gmail.com"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
