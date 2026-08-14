@@ -210,7 +210,7 @@ pub fn delete_clip(
 #[tauri::command]
 pub fn clear_clipboard(app_handle: AppHandle) -> Result<(), String> {
     log::debug!("clear_clipboard");
-    db::delete_many_clip(&app_handle)?;
+    db::delete_all_clip(&app_handle)?;
 
     if let Ok(image_dir) = clipboard_image::get_clipboard_image_dir(&app_handle) {
         let _ = std::fs::remove_dir_all(image_dir);

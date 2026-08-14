@@ -35,8 +35,6 @@ Open it with the global shortcut `Alt + V` and use incremental fuzzy search to f
 
 ## TODO
 
-- 古いデータの自動削除（時間 or 件数による）
-- Default KeyBinding Fallback
 - Improve UI
   - 全体的にとりあえず置いた感からの脱却を図る
   - フォントのテキスト検索対応（セレクトやめる）

@@ -177,7 +177,7 @@ WHERE
     Ok(())
 }
 
-pub fn delete_many_clip(app_handle: &AppHandle) -> Result<(), String> {
+pub fn delete_all_clip(app_handle: &AppHandle) -> Result<(), String> {
     let conn = ensure_db(app_handle).map_err(|e| e.to_string())?;
 
     const SQL: &str = "
@@ -188,6 +188,55 @@ FROM
     conn.execute(SQL, []).map_err(|e| e.to_string())?;
 
     Ok(())
+}
+
+pub fn delete_many_clip_offset(
+    app_handle: &AppHandle,
+    history_size: i64,
+) -> Result<Vec<Clip>, String> {
+    let conn = ensure_db(app_handle).map_err(|e| e.to_string())?;
+
+    const SQL: &str = "
+DELETE 
+FROM
+  clip 
+WHERE
+  id NOT IN (
+    SELECT
+        id
+    FROM
+      clip
+    ORDER BY
+      updated_at DESC
+    LIMIT
+      ?1
+  )
+RETURNING
+    id
+  , content_type
+  , content
+  , description
+  , bookmark
+  , updated_at";
+
+    let mut stmt = conn.prepare(SQL).map_err(|e| e.to_string())?;
+
+    let deleted_clipboard = stmt
+        .query_map(params![history_size], |row| {
+            Ok(Clip {
+                id: row.get(0)?,
+                content_type: row.get(1)?,
+                content: row.get(2)?,
+                description: row.get(3)?,
+                bookmark: row.get(4)?,
+                updated_at: row.get(5)?,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<Clip>, _>>()
+        .map_err(|e| e.to_string())?;
+
+    Ok(deleted_clipboard)
 }
 
 pub fn upsert_clip(

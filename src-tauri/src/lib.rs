@@ -2,8 +2,9 @@ mod clipboard_image;
 mod command;
 mod db;
 
-use std::thread;
 use std::time::Duration;
+use std::{path::Path, thread};
+use tauri::AppHandle;
 use tauri::{
     menu::{Menu, MenuItem},
     tray::TrayIconBuilder,
@@ -12,6 +13,7 @@ use tauri::{
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_log::log;
 use tauri_plugin_store::StoreExt;
+use tokio::time;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -80,7 +82,7 @@ pub fn run() {
                 log::warn!("Global shortcut registration skipped; continuing without it.");
             }
 
-            let clipboard_handle = app_handle.clone();
+            let clipboard_handle = app.handle().clone();
             thread::spawn(move || {
                 let mut last_text = String::new();
                 let mut last_image_hash = String::new();
@@ -147,6 +149,23 @@ pub fn run() {
                 }
             });
 
+            // 古いデータを削除する
+            let cleanup_handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                let mut interval = time::interval(Duration::from_hours(24));
+
+                loop {
+                    interval.tick().await;
+
+                    let handle = cleanup_handle.clone();
+
+                    let _ = tokio::task::spawn_blocking(move || {
+                        cleanup(&handle);
+                    })
+                    .await;
+                }
+            });
+
             Ok(())
         })
         .plugin(tauri_plugin_opener::init())
@@ -162,4 +181,46 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+fn cleanup(app_handle: &AppHandle) {
+    log::info!("delete clipboard task started");
+
+    // 設定ストアから history_size を取得
+    let store = match app_handle.store("settings.json") {
+        Ok(store) => store,
+        Err(err) => {
+            log::warn!("Failed to load settings store: {}", err);
+            return;
+        }
+    };
+
+    let history_size = match store.get("history_size").and_then(|value| value.as_i64()) {
+        Some(value) => {
+            if value <= 0 {
+                return;
+            }
+            value
+        }
+        None => {
+            log::warn!("history_size not found in settings");
+            return;
+        }
+    };
+
+    match db::delete_many_clip_offset(app_handle, history_size) {
+        Ok(deleted_clipboard) => {
+            for clip in deleted_clipboard {
+                if clip.content_type == db::ContentType::Image {
+                    let path = Path::new(&clip.content);
+                    if let Err(e) = std::fs::remove_file(path) {
+                        log::warn!("Failed to delete image file {:?}: {}", path, e);
+                    }
+                }
+            }
+        }
+        Err(err) => {
+            log::error!("Failed to delete clips from DB: {}", err);
+        }
+    }
 }

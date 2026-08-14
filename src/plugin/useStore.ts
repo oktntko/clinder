@@ -31,6 +31,8 @@ export function useStore() {
   const [searchContentType, setSearchContentType] = useState<ContentType[]>(['text', 'image']);
   const [searchBookmark, setSearchBookmark] = useState<boolean[]>([true, false]);
 
+  const [historySize, setHistorySize] = useState<number>(0);
+
   // information
   const [version, setVersion] = useState<string>('');
   const [appLocalDataDir, setAppLocalDataDir] = useState<string>('');
@@ -82,6 +84,11 @@ export function useStore() {
         return v ?? '';
       }
 
+      async function getHistorySize(store: Store) {
+        const v = await store?.get<number>('history_size');
+        return v ?? 0;
+      }
+
       void getEnablePin(store).then(setEnablePin);
       void getTheme(store).then(setTheme);
       void getWindowToggleShortcut(store).then(setWindowToggleShortcut);
@@ -93,6 +100,8 @@ export function useStore() {
         setFont(v);
         applyFont(v);
       });
+      void getHistorySize(store).then(setHistorySize);
+
       void invoke.list_system_font().then(setSystemFontList);
 
       void getVersion().then(setVersion);
@@ -154,6 +163,12 @@ export function useStore() {
     await store?.save();
   }
 
+  async function saveHistorySize(v: number) {
+    setHistorySize(v);
+    await store?.set('history_size', v);
+    await store?.save();
+  }
+
   return {
     enablePin,
     saveEnablePin,
@@ -172,6 +187,8 @@ export function useStore() {
     saveSearchBookmark,
     font,
     saveAndApplyFont,
+    historySize,
+    saveHistorySize,
     systemFontList,
     version,
     appLocalDataDir,
