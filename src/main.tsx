@@ -4,12 +4,15 @@ import ReactDOM from 'react-dom/client';
 
 import App from '~/App';
 import '~/main.css';
+import DialogProvider from '~/plugin/DialogPlugin';
 import ToastProvider from '~/plugin/ToastPlugin';
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
     <ToastProvider>
-      <App />
+      <DialogProvider>
+        <App />
+      </DialogProvider>
     </ToastProvider>
   </React.StrictMode>,
 );

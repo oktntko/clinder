@@ -2,7 +2,7 @@ import { convertFileSrc } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { useStore } from '~/plugin/useStore';
+import type { Shortcut, useStore } from '~/plugin/useStore';
 
 import invoke, { type Clip, type Searched } from '~/command';
 import { Footer } from '~/component/Footer';
@@ -10,7 +10,12 @@ import { R } from '~/lib/remeda';
 
 type ClipboardProps = ReturnType<typeof useStore> & {};
 
-export function Clipboard(props: ClipboardProps) {
+export function Clipboard({
+  saveSearchContentType,
+  saveSearchBookmark,
+  saveSearchMode,
+  ...props
+}: ClipboardProps) {
   const [query, setQuery] = useState('');
   const [clipboard, setClipboard] = useState<Searched[]>([]);
   const [cursor, setCursor] = useState(0);
@@ -50,8 +55,108 @@ export function Clipboard(props: ClipboardProps) {
     };
   }, [search]);
 
+  const deleteClip = useCallback(async function (clip: Clip) {
+    setClipboard((clipboard) => clipboard.filter((item) => item.clip.id !== clip.id));
+    void invoke.delete_clip(clip);
+  }, []);
+
+  const clearClipboard = useCallback(async function () {
+    setClipboard([]);
+    void invoke.clear_clipboard();
+  }, []);
+
+  const toggleClipBookmark = useCallback(async function (clip: Clip) {
+    const updatedClip = { ...clip, bookmark: !clip.bookmark };
+    setClipboard((clipboard) =>
+      clipboard.map((item) => (item.clip.id === clip.id ? { ...item, clip: updatedClip } : item)),
+    );
+    return invoke.update_clip({ ...updatedClip });
+  }, []);
+
+  const toggleSearchContentTypeText = useCallback(async () => {
+    return saveSearchContentType((prev) =>
+      prev.some((x) => x === 'text')
+        ? prev.filter((x) => x !== 'text')
+        : R.unique(prev.concat(['text'])),
+    );
+  }, [saveSearchContentType]);
+
+  const toggleSearchContentTypeImage = useCallback(async () => {
+    return saveSearchContentType((prev) =>
+      prev.some((x) => x === 'image')
+        ? prev.filter((x) => x !== 'image')
+        : R.unique(prev.concat(['image'])),
+    );
+  }, [saveSearchContentType]);
+
+  const toggleSearchBookmark = useCallback(async () => {
+    return saveSearchBookmark((prev) =>
+      prev.length === 1 && prev[0] === true ? [true, false] : [true],
+    );
+  }, [saveSearchBookmark]);
+
+  const toggleSearchMode = useCallback(async () => {
+    return saveSearchMode((prev) => (prev === 'fuzzy' ? 'substring' : 'fuzzy'));
+  }, [saveSearchMode]);
+
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
+      if (matchShortcut(e, props.shortcutSendAndPaste)) {
+        e.preventDefault();
+        const selected = clipboard[cursor];
+        if (selected != null) {
+          void invoke.send_and_paste(selected.clip);
+        }
+        return;
+      }
+
+      if (matchShortcut(e, props.shortcutSendClipboard)) {
+        e.preventDefault();
+        const selected = clipboard[cursor];
+        if (selected != null) {
+          void invoke.send_clipboard(selected.clip);
+        }
+        return;
+      }
+
+      if (matchShortcut(e, props.shortcutDeleteClip)) {
+        e.preventDefault();
+        const selected = clipboard[cursor];
+        if (selected != null) {
+          void deleteClip(selected.clip);
+        }
+        return;
+      }
+
+      if (matchShortcut(e, props.shortcutToggleClipBookmark)) {
+        e.preventDefault();
+        const selected = clipboard[cursor];
+        if (selected != null) {
+          void toggleClipBookmark(selected.clip);
+        }
+        return;
+      }
+
+      if (matchShortcut(e, props.shortcutToggleSearchContentTypeText)) {
+        e.preventDefault();
+        return toggleSearchContentTypeText();
+      }
+
+      if (matchShortcut(e, props.shortcutToggleSearchContentTypeImage)) {
+        e.preventDefault();
+        return toggleSearchContentTypeImage();
+      }
+
+      if (matchShortcut(e, props.shortcutToggleSearchBookmark)) {
+        e.preventDefault();
+        return toggleSearchBookmark();
+      }
+
+      if (matchShortcut(e, props.shortcutToggleSearchMode)) {
+        e.preventDefault();
+        return toggleSearchMode();
+      }
+
       switch (e.key) {
         case 'ArrowUp':
           e.preventDefault();
@@ -69,25 +174,6 @@ export function Clipboard(props: ClipboardProps) {
           e.preventDefault();
           setCursor((prev) => Math.min(prev + 10, Math.max(clipboard.length - 1, 0)));
           return;
-        case 'Enter':
-          e.preventDefault();
-          const selected = clipboard[cursor];
-          if (selected != null) {
-            if (!e.ctrlKey) {
-              if (props.selectAction === 'send-and-paste') {
-                void invoke.send_and_paste(selected.clip);
-              } else {
-                void invoke.send_clipboard(selected.clip);
-              }
-            } else {
-              if (props.selectAction === 'send-and-paste') {
-                void invoke.send_clipboard(selected.clip);
-              } else {
-                void invoke.send_and_paste(selected.clip);
-              }
-            }
-          }
-          return;
       }
     }
 
@@ -96,7 +182,24 @@ export function Clipboard(props: ClipboardProps) {
     return () => {
       window.removeEventListener('keydown', handleKeyDown, true);
     };
-  }, [cursor, clipboard, props.selectAction]);
+  }, [
+    cursor,
+    clipboard,
+    props.shortcutSendAndPaste,
+    props.shortcutSendClipboard,
+    props.shortcutDeleteClip,
+    props.shortcutToggleClipBookmark,
+    props.shortcutToggleSearchContentTypeText,
+    props.shortcutToggleSearchContentTypeImage,
+    props.shortcutToggleSearchBookmark,
+    props.shortcutToggleSearchMode,
+    deleteClip,
+    toggleClipBookmark,
+    toggleSearchContentTypeText,
+    toggleSearchContentTypeImage,
+    toggleSearchBookmark,
+    toggleSearchMode,
+  ]);
 
   // アクティブな要素を参照するための Ref
   const activeItemRef = useRef<HTMLButtonElement | null>(null);
@@ -110,24 +213,6 @@ export function Clipboard(props: ClipboardProps) {
     }
   }, [cursor]);
 
-  async function deleteClip(clip: Clip) {
-    setClipboard((clipboard) => clipboard.filter((item) => item.clip.id !== clip.id));
-    void invoke.delete_clip(clip);
-  }
-
-  async function clearClipboard() {
-    setClipboard([]);
-    void invoke.clear_clipboard();
-  }
-
-  async function updateClip(clip: Clip) {
-    const updatedClip = { ...clip, bookmark: !clip.bookmark };
-    setClipboard((clipboard) =>
-      clipboard.map((item) => (item.clip.id === clip.id ? { ...item, clip: updatedClip } : item)),
-    );
-    void invoke.update_clip({ ...updatedClip });
-  }
-
   return (
     <div className={`flex max-h-198 flex-col`}>
       <div className="flex shrink-0 flex-row items-center gap-1 border-b border-b-gray-300 px-2 pt-px pb-2 select-none dark:border-b-zinc-700 dark:bg-zinc-900">
@@ -140,57 +225,36 @@ export function Clipboard(props: ClipboardProps) {
         />
 
         <div className="inline-flex flex-row items-center gap-2">
-          <div
-            title="search_content_type"
-            className="inline-flex items-center justify-center gap-1 rounded-full border border-gray-300 bg-gray-100 p-1 transition-colors hover:bg-white focus:bg-white focus:outline-none dark:border-zinc-600 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
+          <button
+            title="text"
+            type="button"
+            className={`inline-flex items-center justify-center rounded-full p-2 transition-colors focus:outline-none ${
+              props.searchContentType.some((x) => x === 'text')
+                ? 'bg-green-200 hover:bg-green-300 focus:bg-green-300 dark:bg-emerald-900/60 dark:text-emerald-300 dark:hover:bg-emerald-800/80 dark:focus:bg-emerald-800/80'
+                : 'bg-gray-200 hover:bg-gray-300 focus:bg-gray-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600'
+            }`}
+            onClick={(e) => {
+              e.stopPropagation();
+              return toggleSearchContentTypeText();
+            }}
           >
-            <button
-              title="text"
-              type="button"
-              className={`inline-flex items-center justify-center rounded-full p-1 transition-colors focus:outline-none ${
-                props.searchContentType.some((x) => x === 'text')
-                  ? 'bg-green-200 hover:bg-green-300 focus:bg-green-300 dark:bg-emerald-900/60 dark:text-emerald-300 dark:hover:bg-emerald-800/80 dark:focus:bg-emerald-800/80'
-                  : 'bg-gray-200 hover:bg-gray-300 focus:bg-gray-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600'
-              }`}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (props.searchContentType.some((x) => x === 'text')) {
-                  void props.saveSearchContentType(
-                    props.searchContentType.filter((x) => x !== 'text'),
-                  );
-                } else {
-                  void props.saveSearchContentType(
-                    R.unique(props.searchContentType.concat(['text'])),
-                  );
-                }
-              }}
-            >
-              <span className="icon-[humbleicons--text] size-4"></span>
-            </button>
-            <button
-              title="image"
-              type="button"
-              className={`inline-flex items-center justify-center rounded-full p-1 transition-colors focus:outline-none ${
-                props.searchContentType.some((x) => x === 'image')
-                  ? 'bg-green-200 hover:bg-green-300 focus:bg-green-300 dark:bg-emerald-900/60 dark:text-emerald-300 dark:hover:bg-emerald-800/80 dark:focus:bg-emerald-800/80'
-                  : 'bg-gray-200 hover:bg-gray-300 focus:bg-gray-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600'
-              }`}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (props.searchContentType.some((x) => x === 'image')) {
-                  void props.saveSearchContentType(
-                    props.searchContentType.filter((x) => x !== 'image'),
-                  );
-                } else {
-                  void props.saveSearchContentType(
-                    R.unique(props.searchContentType.concat(['image'])),
-                  );
-                }
-              }}
-            >
-              <span className="icon-[humbleicons--image] size-4"></span>
-            </button>
-          </div>
+            <span className="icon-[humbleicons--text] size-4"></span>
+          </button>
+          <button
+            title="image"
+            type="button"
+            className={`inline-flex items-center justify-center rounded-full p-2 transition-colors focus:outline-none ${
+              props.searchContentType.some((x) => x === 'image')
+                ? 'bg-green-200 hover:bg-green-300 focus:bg-green-300 dark:bg-emerald-900/60 dark:text-emerald-300 dark:hover:bg-emerald-800/80 dark:focus:bg-emerald-800/80'
+                : 'bg-gray-200 hover:bg-gray-300 focus:bg-gray-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600'
+            }`}
+            onClick={(e) => {
+              e.stopPropagation();
+              return toggleSearchContentTypeImage();
+            }}
+          >
+            <span className="icon-[humbleicons--image] size-4"></span>
+          </button>
 
           <button
             title="search_bookmark"
@@ -202,51 +266,27 @@ export function Clipboard(props: ClipboardProps) {
             }`}
             onClick={(e) => {
               e.stopPropagation();
-              void props.saveSearchBookmark(
-                props.searchBookmark.length === 1 && props.searchBookmark[0] === true
-                  ? [true, false]
-                  : [true],
-              );
+              return toggleSearchBookmark();
             }}
           >
             <span className="icon-[material-symbols--bookmark-outline-rounded] size-4"></span>
           </button>
 
-          <div
-            title="search_mode"
-            className="inline-flex items-center justify-center gap-1 rounded-full border border-gray-300 bg-gray-100 p-1 transition-colors hover:bg-white focus:bg-white focus:outline-none dark:border-zinc-600 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
+          <button
+            title="fuzzy search"
+            type="button"
+            className={`inline-flex items-center justify-center rounded-full p-2 transition-colors focus:outline-none ${
+              props.searchMode === 'fuzzy'
+                ? 'bg-green-200 hover:bg-green-300 focus:bg-green-300 dark:bg-emerald-900/60 dark:text-emerald-300 dark:hover:bg-emerald-800/80 dark:focus:bg-emerald-800/80'
+                : 'bg-gray-200 hover:bg-gray-300 focus:bg-gray-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600'
+            }`}
+            onClick={(e) => {
+              e.stopPropagation();
+              return toggleSearchMode();
+            }}
           >
-            <button
-              title="fuzzy search"
-              type="button"
-              className={`inline-flex items-center justify-center rounded-full p-1 transition-colors focus:outline-none ${
-                props.searchMode === 'fuzzy'
-                  ? 'bg-green-200 hover:bg-green-300 focus:bg-green-300 dark:bg-emerald-900/60 dark:text-emerald-300 dark:hover:bg-emerald-800/80 dark:focus:bg-emerald-800/80'
-                  : 'bg-gray-200 hover:bg-gray-300 focus:bg-gray-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600'
-              }`}
-              onClick={(e) => {
-                e.stopPropagation();
-                void props.saveSearchMode('fuzzy');
-              }}
-            >
-              <span className="icon-[codicon--search-fuzzy] size-4"></span>
-            </button>
-            <button
-              title="exact search"
-              type="button"
-              className={`inline-flex items-center justify-center rounded-full p-1 transition-colors focus:outline-none ${
-                props.searchMode === 'substring'
-                  ? 'bg-green-200 hover:bg-green-300 focus:bg-green-300 dark:bg-emerald-900/60 dark:text-emerald-300 dark:hover:bg-emerald-800/80 dark:focus:bg-emerald-800/80'
-                  : 'bg-gray-200 hover:bg-gray-300 focus:bg-gray-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600'
-              }`}
-              onClick={(e) => {
-                e.stopPropagation();
-                void props.saveSearchMode('substring');
-              }}
-            >
-              <span className="icon-[mdi--target] size-4"></span>
-            </button>
-          </div>
+            <span className="icon-[codicon--search-fuzzy] size-4"></span>
+          </button>
         </div>
       </div>
 
@@ -284,7 +324,7 @@ export function Clipboard(props: ClipboardProps) {
                   }}
                   onClick={() => {
                     setCursor(i);
-                    void invoke.send_and_paste(item.clip);
+                    return invoke.send_and_paste(item.clip);
                   }}
                 >
                   {item.clip.content_type === 'text' ? (
@@ -302,7 +342,7 @@ export function Clipboard(props: ClipboardProps) {
                     className="pointer-events-auto inline-flex size-5 items-center justify-center rounded-full bg-gray-100 transition-colors hover:bg-gray-300 dark:bg-zinc-800 dark:hover:bg-zinc-600"
                     onClick={(e) => {
                       e.stopPropagation();
-                      void deleteClip(item.clip);
+                      return deleteClip(item.clip);
                     }}
                   >
                     <span className="icon-[mingcute--close-fill] size-4"></span>
@@ -321,7 +361,7 @@ export function Clipboard(props: ClipboardProps) {
                     }`}
                     onClick={(e) => {
                       e.stopPropagation();
-                      void updateClip(item.clip);
+                      return toggleClipBookmark(item.clip);
                     }}
                   ></button>
                 </div>
@@ -335,7 +375,7 @@ export function Clipboard(props: ClipboardProps) {
         )}
       </div>
 
-      <Footer {...props}>
+      <Footer {...{ saveSearchContentType, saveSearchBookmark, saveSearchMode, ...props }}>
         <button
           title="clear all"
           type="button"
@@ -406,4 +446,14 @@ function ShrinkImage({ clip: { content } }: Searched) {
   const imageUrl = convertFileSrc(content);
 
   return <img src={imageUrl} alt="clipboard image" className="h-auto max-h-32 w-auto max-w-150" />;
+}
+
+function matchShortcut(e: KeyboardEvent, shortcut: Shortcut) {
+  return (
+    e.ctrlKey === shortcut.ctrlKey &&
+    e.shiftKey === shortcut.shiftKey &&
+    e.altKey === shortcut.altKey &&
+    e.metaKey === shortcut.metaKey &&
+    e.code === shortcut.code
+  );
 }

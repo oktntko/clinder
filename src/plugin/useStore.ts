@@ -4,13 +4,113 @@ import {
   appLocalDataDir as getAppLocalDataDir,
 } from '@tauri-apps/api/path';
 import { Store } from '@tauri-apps/plugin-store';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type SetStateAction } from 'react';
 
 import invoke, { type ContentType, type SearchMode } from '~/command';
 
 export type Theme = 'light' | 'dark';
 export type Page = 'clipboard' | 'setting' | 'information';
-export type SelectAction = 'send-and-paste' | 'send-only';
+
+export type Shortcut = {
+  ctrlKey: boolean;
+  shiftKey: boolean;
+  altKey: boolean;
+  metaKey: boolean;
+  code: string;
+};
+
+const STORE = {
+  setting: {
+    HISTORY_SIZE: 'history_size',
+  },
+  appearance: {
+    PIN: 'pin',
+    THEME: 'theme',
+    FONT: 'font',
+  },
+  global_shortcut: {
+    TOGGLE_WINDOW: 'toggle_window',
+  },
+  app_shortcut: {
+    SEND_AND_PASTE: 'send_and_paste',
+    SEND_CLIPBOARD: 'send_clipboard',
+    DELETE_CLIP: 'delete_clip',
+    TOGGLE_CLIP_BOOKMARK: 'toggle_clip_bookmark',
+    TOGGLE_SEARCH_CONTENT_TYPE_TEXT: 'toggle_search_content_type_text',
+    TOGGLE_SEARCH_CONTENT_TYPE_IMAGE: 'toggle_search_content_type_image',
+    TOGGLE_SEARCH_BOOKMARK: 'toggle_search_bookmark',
+    TOGGLE_SEARCH_MODE: 'toggle_search_mode',
+  },
+  state: {
+    SEARCH_CONTENT_TYPE: 'search_content_type',
+    SEARCH_BOOKMARK: 'search_bookmark',
+    SEARCH_MODE: 'search_mode',
+  },
+} as const;
+
+const defaultGlobalShortcutToggleWindow: Shortcut = {
+  ctrlKey: false,
+  shiftKey: false,
+  altKey: true,
+  metaKey: false,
+  code: 'KeyV',
+};
+const defaultShortcutSendAndPaste: Shortcut = {
+  ctrlKey: false,
+  shiftKey: false,
+  altKey: false,
+  metaKey: false,
+  code: 'Enter',
+};
+const defaultShortcutSendClipboard: Shortcut = {
+  ctrlKey: true,
+  shiftKey: false,
+  altKey: false,
+  metaKey: false,
+  code: 'Enter',
+};
+const defaultShortcutDeleteClip: Shortcut = {
+  ctrlKey: true,
+  shiftKey: false,
+  altKey: false,
+  metaKey: false,
+  code: 'KeyD',
+};
+const defaultShortcutToggleClipBookmark: Shortcut = {
+  ctrlKey: true,
+  shiftKey: false,
+  altKey: false,
+  metaKey: false,
+  code: 'KeyB',
+};
+const defaultShortcutToggleSearchContentTypeText: Shortcut = {
+  ctrlKey: false,
+  shiftKey: false,
+  altKey: true,
+  metaKey: false,
+  code: 'KeyT',
+};
+const defaultShortcutToggleSearchContentTypeImage: Shortcut = {
+  ctrlKey: false,
+  shiftKey: false,
+  altKey: true,
+  metaKey: false,
+  code: 'KeyI',
+};
+const defaultShortcutToggleSearchBookmark: Shortcut = {
+  ctrlKey: false,
+  shiftKey: false,
+  altKey: true,
+  metaKey: false,
+  code: 'KeyB',
+};
+const defaultShortcutToggleSearchMode: Shortcut = {
+  ctrlKey: false,
+  shiftKey: false,
+  altKey: true,
+  metaKey: false,
+  code: 'KeyF',
+};
 
 export function useStore() {
   const [store, setStore] = useState<Store>();
@@ -22,13 +122,9 @@ export function useStore() {
   const [font, setFont] = useState<string>('');
   const [systemFontList, setSystemFontList] = useState<string[]>([]);
 
-  // keybindings
-  const [windowToggleShortcut, setWindowToggleShortcut] = useState<string>('Alt+V');
-  const [selectAction, setSelectAction] = useState<SelectAction>('send-and-paste');
-
   // search input
   const [searchMode, setSearchMode] = useState<SearchMode>('fuzzy');
-  const [searchContentType, setSearchContentType] = useState<ContentType[]>(['text', 'image']);
+  const [searchContentType, setSearchContentType] = useState<ContentType[]>([]);
   const [searchBookmark, setSearchBookmark] = useState<boolean[]>([true, false]);
 
   const [historySize, setHistorySize] = useState<number>(0);
@@ -38,6 +134,31 @@ export function useStore() {
   const [appLocalDataDir, setAppLocalDataDir] = useState<string>('');
   const [appDataDir, setAppDataDir] = useState('');
 
+  // shortcut
+  const [globalShortcutToggleWindow, setGlobalShortcutToggleWindow] = useState<Shortcut>(
+    defaultGlobalShortcutToggleWindow,
+  );
+  const [shortcutSendAndPaste, setShortcutSendAndPaste] = useState<Shortcut>(
+    defaultShortcutSendAndPaste,
+  );
+  const [shortcutSendClipboard, setShortcutSendClipboard] = useState<Shortcut>(
+    defaultShortcutSendClipboard,
+  );
+  const [shortcutDeleteClip, setShortcutDeleteClip] = useState<Shortcut>(defaultShortcutDeleteClip);
+  const [shortcutToggleClipBookmark, setShortcutToggleClipBookmark] = useState<Shortcut>(
+    defaultShortcutToggleClipBookmark,
+  );
+  const [shortcutToggleSearchContentTypeText, setShortcutToggleSearchContentTypeText] =
+    useState<Shortcut>(defaultShortcutToggleSearchContentTypeText);
+  const [shortcutToggleSearchContentTypeImage, setShortcutToggleSearchContentTypeImage] =
+    useState<Shortcut>(defaultShortcutToggleSearchContentTypeImage);
+  const [shortcutToggleSearchBookmark, setShortcutToggleSearchBookmark] = useState<Shortcut>(
+    defaultShortcutToggleSearchBookmark,
+  );
+  const [shortcutToggleSearchMode, setShortcutToggleSearchMode] = useState<Shortcut>(
+    defaultShortcutToggleSearchMode,
+  );
+
   useEffect(() => {
     void (async () => {
       // %USERPROFILE%\AppData\Roaming\oktntko.clinder
@@ -45,54 +166,82 @@ export function useStore() {
       setStore(store);
 
       async function getEnablePin(store: Store) {
-        const v = await store?.get<boolean>('pin');
+        const v = await store?.get<boolean>(STORE.appearance.PIN);
         return v ?? false;
       }
 
       async function getTheme(store: Store) {
-        const v = await store?.get<Theme>('theme');
+        const v = await store?.get<Theme>(STORE.appearance.THEME);
         return v ?? 'dark';
       }
 
-      async function getWindowToggleShortcut(store: Store) {
-        const v = await store?.get<string>('window_toggle_shortcut');
-        return v ?? 'Alt+V';
-      }
-
-      async function getSelectAction(store: Store) {
-        const v = await store?.get<SelectAction>('select_action');
-        return v ?? 'send-and-paste';
-      }
-
       async function getSearchMode(store: Store) {
-        const v = await store?.get<SearchMode>('search_mode');
+        const v = await store?.get<SearchMode>(STORE.state.SEARCH_MODE);
         return v ?? 'fuzzy';
       }
 
       async function getSearchContentType(store: Store) {
-        const v = await store?.get<ContentType[]>('search_content_type');
-        return v ?? ['text', 'image'];
+        const v = await store?.get<ContentType[]>(STORE.state.SEARCH_CONTENT_TYPE);
+        return v ?? [];
       }
 
       async function getSearchBookmark(store: Store) {
-        const v = await store?.get<boolean[]>('search_bookmark');
+        const v = await store?.get<boolean[]>(STORE.state.SEARCH_BOOKMARK);
         return v ?? [true, false];
       }
 
       async function getFont(store: Store) {
-        const v = await store?.get<string>('font');
+        const v = await store?.get<string>(STORE.appearance.FONT);
         return v ?? '';
       }
 
       async function getHistorySize(store: Store) {
-        const v = await store?.get<number>('history_size');
+        const v = await store?.get<number>(STORE.setting.HISTORY_SIZE);
         return v ?? 0;
       }
 
+      async function getGlobalShortcutToggleWindow(store: Store) {
+        const v = await store?.get<Shortcut>(STORE.global_shortcut.TOGGLE_WINDOW);
+        return v ?? defaultGlobalShortcutToggleWindow;
+      }
+      async function getShortcutSendAndPaste(store: Store) {
+        const v = await store?.get<Shortcut>(STORE.app_shortcut.SEND_AND_PASTE);
+        return v ?? defaultShortcutSendAndPaste;
+      }
+      async function getShortcutSendClipboard(store: Store) {
+        const v = await store?.get<Shortcut>(STORE.app_shortcut.SEND_CLIPBOARD);
+        return v ?? defaultShortcutSendClipboard;
+      }
+      async function getShortcutDeleteClip(store: Store) {
+        const v = await store?.get<Shortcut>(STORE.app_shortcut.DELETE_CLIP);
+        return v ?? defaultShortcutDeleteClip;
+      }
+      async function getShortcutToggleClipBookmark(store: Store) {
+        const v = await store?.get<Shortcut>(STORE.app_shortcut.TOGGLE_CLIP_BOOKMARK);
+        return v ?? defaultShortcutToggleClipBookmark;
+      }
+      async function getShortcutToggleSearchContentTypeText(store: Store) {
+        const v = await store?.get<Shortcut>(STORE.app_shortcut.TOGGLE_SEARCH_CONTENT_TYPE_TEXT);
+        return v ?? defaultShortcutToggleSearchContentTypeText;
+      }
+      async function getShortcutToggleSearchContentTypeImage(store: Store) {
+        const v = await store?.get<Shortcut>(STORE.app_shortcut.TOGGLE_SEARCH_CONTENT_TYPE_IMAGE);
+        return v ?? defaultShortcutToggleSearchContentTypeImage;
+      }
+      async function getShortcutToggleSearchBookmark(store: Store) {
+        const v = await store?.get<Shortcut>(STORE.app_shortcut.TOGGLE_SEARCH_BOOKMARK);
+        return v ?? defaultShortcutToggleSearchBookmark;
+      }
+      async function getShortcutToggleSearchMode(store: Store) {
+        const v = await store?.get<Shortcut>(STORE.app_shortcut.TOGGLE_SEARCH_MODE);
+        return v ?? defaultShortcutToggleSearchMode;
+      }
+
       void getEnablePin(store).then(setEnablePin);
-      void getTheme(store).then(setTheme);
-      void getWindowToggleShortcut(store).then(setWindowToggleShortcut);
-      void getSelectAction(store).then(setSelectAction);
+      void getTheme(store).then((v) => {
+        setTheme(v);
+        applyTheme(v);
+      });
       void getSearchMode(store).then(setSearchMode);
       void getSearchContentType(store).then(setSearchContentType);
       void getSearchBookmark(store).then(setSearchBookmark);
@@ -107,46 +256,72 @@ export function useStore() {
       void getVersion().then(setVersion);
       void getAppLocalDataDir().then(setAppLocalDataDir);
       void getAppDataDir().then(setAppDataDir);
+
+      void getGlobalShortcutToggleWindow(store).then(setGlobalShortcutToggleWindow);
+      void getShortcutSendAndPaste(store).then(setShortcutSendAndPaste);
+      void getShortcutSendClipboard(store).then(setShortcutSendClipboard);
+      void getShortcutDeleteClip(store).then(setShortcutDeleteClip);
+      void getShortcutToggleClipBookmark(store).then(setShortcutToggleClipBookmark);
+      void getShortcutToggleSearchContentTypeText(store).then(
+        setShortcutToggleSearchContentTypeText,
+      );
+      void getShortcutToggleSearchContentTypeImage(store).then(
+        setShortcutToggleSearchContentTypeImage,
+      );
+      void getShortcutToggleSearchBookmark(store).then(setShortcutToggleSearchBookmark);
+      void getShortcutToggleSearchMode(store).then(setShortcutToggleSearchMode);
     })();
 
     return () => undefined;
   }, []);
 
-  async function saveEnablePin(v: boolean) {
+  async function saveEnablePin(v: SetStateAction<boolean>) {
     setEnablePin(v);
-    await store?.set('pin', v);
+    await store?.set(STORE.appearance.PIN, v);
     await store?.save();
   }
 
   async function saveTheme(v: Theme) {
     setTheme(v);
-    await store?.set('theme', v);
+    applyTheme(v);
+    await store?.set(STORE.appearance.THEME, v);
     await store?.save();
   }
 
-  async function saveSelectAction(v: SelectAction) {
-    setSelectAction(v);
-    await store?.set('clipboard_send_mode', v);
-    await store?.save();
+  function applyTheme(v: Theme) {
+    if (v === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
   }
 
-  async function saveSearchMode(v: SearchMode) {
-    setSearchMode(v);
-    await store?.set('search_mode', v);
-    await store?.save();
-  }
+  const saveSearchMode = useCallback(
+    async (v: SetStateAction<SearchMode>) => {
+      setSearchMode(v);
+      await store?.set(STORE.state.SEARCH_MODE, v);
+      await store?.save();
+    },
+    [store],
+  );
 
-  async function saveSearchContentType(v: ContentType[]) {
-    setSearchContentType(v);
-    await store?.set('search_content_type', v);
-    await store?.save();
-  }
+  const saveSearchContentType = useCallback(
+    async (v: SetStateAction<ContentType[]>) => {
+      setSearchContentType(v);
+      await store?.set(STORE.state.SEARCH_CONTENT_TYPE, v);
+      await store?.save();
+    },
+    [store],
+  );
 
-  async function saveSearchBookmark(v: boolean[]) {
-    setSearchBookmark(v);
-    await store?.set('search_bookmark', v);
-    await store?.save();
-  }
+  const saveSearchBookmark = useCallback(
+    async (v: SetStateAction<boolean[]>) => {
+      setSearchBookmark(v);
+      await store?.set(STORE.state.SEARCH_CONTENT_TYPE, v);
+      await store?.save();
+    },
+    [store],
+  );
 
   function applyFont(v: string) {
     if (v) {
@@ -159,13 +334,54 @@ export function useStore() {
   async function saveAndApplyFont(v: string) {
     setFont(v);
     applyFont(v);
-    await store?.set('font', v);
+    await store?.set(STORE.appearance.FONT, v);
     await store?.save();
   }
 
-  async function saveHistorySize(v: number) {
+  async function saveHistorySize(v: SetStateAction<number>) {
     setHistorySize(v);
-    await store?.set('history_size', v);
+    await store?.set(STORE.setting.HISTORY_SIZE, v);
+    await store?.save();
+  }
+
+  async function saveShortcutSendAndPaste(v: SetStateAction<Shortcut>) {
+    setShortcutSendAndPaste(v);
+    await store?.set(STORE.app_shortcut.SEND_AND_PASTE, v);
+    await store?.save();
+  }
+  async function saveShortcutSendClipboard(v: SetStateAction<Shortcut>) {
+    setShortcutSendClipboard(v);
+    await store?.set(STORE.app_shortcut.SEND_CLIPBOARD, v);
+    await store?.save();
+  }
+  async function saveShortcutDeleteClip(v: SetStateAction<Shortcut>) {
+    setShortcutDeleteClip(v);
+    await store?.set(STORE.app_shortcut.DELETE_CLIP, v);
+    await store?.save();
+  }
+  async function saveShortcutToggleClipBookmark(v: SetStateAction<Shortcut>) {
+    setShortcutToggleClipBookmark(v);
+    await store?.set(STORE.app_shortcut.TOGGLE_CLIP_BOOKMARK, v);
+    await store?.save();
+  }
+  async function saveShortcutToggleSearchContentTypeText(v: SetStateAction<Shortcut>) {
+    setShortcutToggleSearchContentTypeText(v);
+    await store?.set(STORE.app_shortcut.TOGGLE_SEARCH_CONTENT_TYPE_TEXT, v);
+    await store?.save();
+  }
+  async function saveShortcutToggleSearchContentTypeImage(v: SetStateAction<Shortcut>) {
+    setShortcutToggleSearchContentTypeImage(v);
+    await store?.set(STORE.app_shortcut.TOGGLE_SEARCH_CONTENT_TYPE_IMAGE, v);
+    await store?.save();
+  }
+  async function saveShortcutToggleSearchBookmark(v: SetStateAction<Shortcut>) {
+    setShortcutToggleSearchBookmark(v);
+    await store?.set(STORE.app_shortcut.TOGGLE_SEARCH_BOOKMARK, v);
+    await store?.save();
+  }
+  async function saveShortcutToggleSearchMode(v: SetStateAction<Shortcut>) {
+    setShortcutToggleSearchMode(v);
+    await store?.set(STORE.app_shortcut.TOGGLE_SEARCH_MODE, v);
     await store?.save();
   }
 
@@ -176,9 +392,8 @@ export function useStore() {
     saveTheme,
     page,
     setPage,
-    windowToggleShortcut,
-    selectAction,
-    saveSelectAction,
+    globalShortcutToggleWindow,
+    setGlobalShortcutToggleWindow,
     searchMode,
     saveSearchMode,
     searchContentType,
@@ -193,5 +408,21 @@ export function useStore() {
     version,
     appLocalDataDir,
     appDataDir,
+    shortcutSendAndPaste,
+    saveShortcutSendAndPaste,
+    shortcutSendClipboard,
+    saveShortcutSendClipboard,
+    shortcutDeleteClip,
+    saveShortcutDeleteClip,
+    shortcutToggleClipBookmark,
+    saveShortcutToggleClipBookmark,
+    shortcutToggleSearchContentTypeText,
+    saveShortcutToggleSearchContentTypeText,
+    shortcutToggleSearchContentTypeImage,
+    saveShortcutToggleSearchContentTypeImage,
+    shortcutToggleSearchBookmark,
+    saveShortcutToggleSearchBookmark,
+    shortcutToggleSearchMode,
+    saveShortcutToggleSearchMode,
   };
 }

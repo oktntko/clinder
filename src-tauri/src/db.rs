@@ -211,6 +211,7 @@ WHERE
     LIMIT
       ?1
   )
+  AND bookmark = FALSE
 RETURNING
     id
   , content_type

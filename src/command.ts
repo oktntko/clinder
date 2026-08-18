@@ -1,5 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 
+import type { Shortcut } from './plugin/useStore';
+
 //////////////////// ////////////////////
 // DB 関連
 //////////////////// ////////////////////
@@ -77,12 +79,8 @@ async function send_and_paste({ content, content_type: contentType }: Clip) {
 //////////////////// ////////////////////
 // グローバルショートカット関連
 //////////////////// ////////////////////
-async function update_window_toggle_shortcut(newShortcutStr: string) {
-  try {
-    await invoke('update_window_toggle_shortcut', { newShortcutStr });
-  } catch (err) {
-    console.error('Failed to update window toggle shortcut:', err);
-  }
+async function update_global_shortcut_toggle_window(newShortcutWebView: Shortcut) {
+  return invoke('update_global_shortcut_toggle_window', { newShortcutWebView });
 }
 
 //////////////////// ////////////////////
@@ -99,6 +97,6 @@ export default {
   update_clip,
   send_clipboard,
   send_and_paste,
-  update_window_toggle_shortcut,
+  update_global_shortcut_toggle_window,
   list_system_font,
 };

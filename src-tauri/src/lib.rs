@@ -2,6 +2,7 @@ mod clipboard_image;
 mod command;
 mod db;
 
+use std::str::FromStr;
 use std::time::Duration;
 use std::{path::Path, thread};
 use tauri::AppHandle;
@@ -11,9 +12,12 @@ use tauri::{
     Emitter, Manager,
 };
 use tauri_plugin_clipboard_manager::ClipboardExt;
+use tauri_plugin_global_shortcut::Shortcut;
 use tauri_plugin_log::log;
 use tauri_plugin_store::StoreExt;
 use tokio::time;
+
+use crate::command::WebViewShortcut;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -68,17 +72,16 @@ pub fn run() {
                 }
             };
 
-            let shortcut_str = match store
+            let shortcut: Shortcut = store
                 .as_ref()
-                .and_then(|store| store.get("window_toggle_shortcut"))
-            {
-                Some(value) => value.as_str().unwrap_or("Alt+V").to_string(),
-                None => "Alt+V".to_string(),
-            };
+                .and_then(|store| store.get("toggle_window"))
+                .and_then(|val| serde_json::from_value::<WebViewShortcut>(val.clone()).ok())
+                .and_then(|w| w.to_shortcut(1).ok())
+                .unwrap_or_else(|| Shortcut::from_str("Alt+V").unwrap());
 
             let app_handle = app.handle().clone();
 
-            if command::register_toggle_shortcut(&app_handle, &shortcut_str).is_none() {
+            if command::register_global_shortcut_toggle_window(&app_handle, &shortcut).is_none() {
                 log::warn!("Global shortcut registration skipped; continuing without it.");
             }
 
@@ -176,7 +179,7 @@ pub fn run() {
             command::update_clip,
             command::send_clipboard,
             command::send_and_paste,
-            command::update_window_toggle_shortcut,
+            command::update_global_shortcut_toggle_window,
             command::list_system_font
         ])
         .run(tauri::generate_context!())

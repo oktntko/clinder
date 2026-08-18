@@ -12,7 +12,7 @@ use std::str::FromStr;
 use tauri::image::Image;
 use tauri::{AppHandle, Manager, WebviewWindow};
 use tauri_plugin_clipboard_manager::ClipboardExt;
-use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
+use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 use tauri_plugin_log::log;
 use tauri_plugin_store::StoreExt;
 
@@ -292,35 +292,67 @@ pub async fn send_and_paste(
 //////////////////// ////////////////////
 // グローバルショートカット関連
 //////////////////// ////////////////////
-#[tauri::command]
-pub async fn update_window_toggle_shortcut(
-    app: AppHandle,
-    new_shortcut_str: String,
-) -> Result<(), String> {
-    log::debug!("update_window_toggle_shortcut");
-    let global_shortcut = app.global_shortcut();
 
-    let new_shortcut: Shortcut = new_shortcut_str
-        .parse()
-        .map_err(|_| format!("Invalid key.: {}", new_shortcut_str))?;
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct WebViewShortcut {
+    pub ctrl_key: bool,
+    pub shift_key: bool,
+    pub alt_key: bool,
+    pub meta_key: bool,
+    pub code: String,
+}
+
+impl WebViewShortcut {
+    pub fn to_shortcut(&self, id: u32) -> Result<Shortcut, String> {
+        let mut mods = Modifiers::empty();
+        if self.ctrl_key {
+            mods |= Modifiers::CONTROL;
+        }
+        if self.shift_key {
+            mods |= Modifiers::SHIFT;
+        }
+        if self.alt_key {
+            mods |= Modifiers::ALT;
+        }
+        if self.meta_key {
+            mods |= Modifiers::SUPER; // Tauri では Command / Windows キーは SUPER
+        }
+
+        let key =
+            Code::from_str(&self.code).map_err(|_| format!("Invalid key code: {}", self.code))?;
+
+        Ok(Shortcut { mods, key, id })
+    }
+}
+
+#[tauri::command]
+pub async fn update_global_shortcut_toggle_window(
+    app: AppHandle,
+    new_shortcut_web_view: WebViewShortcut,
+) -> Result<(), String> {
+    log::debug!("update_global_shortcut_toggle_window");
+
+    let new_shortcut = new_shortcut_web_view
+        .to_shortcut(1)
+        .map_err(|err| format!("Failed to load the configuration file.: {}", err))?;
 
     let store = app
         .store("settings.json")
         .map_err(|err| format!("Failed to load the configuration file.: {}", err))?;
 
-    let current_shortcut_str = match store.get("window_toggle_shortcut") {
-        Some(value) => value.as_str().unwrap_or("Alt+V").to_string(),
-        None => "Alt+V".to_string(),
-    };
-
-    let current_shortcut: Shortcut = current_shortcut_str
-        .parse()
-        .unwrap_or_else(|_| Shortcut::from_str("Alt+V").unwrap());
+    let current_shortcut = store
+        .get("toggle_window")
+        .and_then(|val| serde_json::from_value::<WebViewShortcut>(val).ok())
+        .and_then(|w| w.to_shortcut(1).ok())
+        .map(Shortcut::from)
+        .unwrap_or_else(|| Shortcut::from_str("Alt+V").unwrap());
 
     if current_shortcut == new_shortcut {
         return Ok(());
     }
 
+    let global_shortcut = app.global_shortcut();
     let _ = global_shortcut.unregister(current_shortcut.clone());
 
     let app_handle = app.clone();
@@ -336,10 +368,7 @@ pub async fn update_window_toggle_shortcut(
     match register_result {
         Ok(_) => {
             // 成功：設定ファイルに保存
-            store.set(
-                "window_toggle_shortcut",
-                serde_json::json!(new_shortcut_str),
-            );
+            store.set("toggle_window", serde_json::json!(new_shortcut_web_view));
             store
                 .save()
                 .map_err(|err| format!("Failed to save settings.: {}", err))?;
@@ -367,35 +396,22 @@ pub async fn update_window_toggle_shortcut(
     }
 }
 
-pub fn register_toggle_shortcut(app: &AppHandle, preferred_shortcut: &str) -> Option<Shortcut> {
-    let candidates = [preferred_shortcut, "Alt+V", "Alt+Shift+V", "Ctrl+Alt+V"];
+pub fn register_global_shortcut_toggle_window(
+    app: &AppHandle,
+    shortcut: &Shortcut,
+) -> Option<Shortcut> {
+    let app_handle = app.clone();
+    let shortcut_for_closure = shortcut.clone();
 
-    for candidate in candidates {
-        let shortcut = match Shortcut::from_str(candidate) {
-            Ok(shortcut) => shortcut,
-            Err(err) => {
-                log::warn!("Invalid shortcut candidate '{}': {}", candidate, err);
-                continue;
+    match app
+        .global_shortcut()
+        .on_shortcut(shortcut.clone(), move |_, shortcut, event| {
+            if shortcut == &shortcut_for_closure && event.state() == ShortcutState::Pressed {
+                toggle_window(&app_handle);
             }
-        };
-
-        let app_handle = app.clone();
-        let shortcut_for_closure = shortcut.clone();
-
-        match app
-            .global_shortcut()
-            .on_shortcut(shortcut.clone(), move |_, shortcut, event| {
-                if shortcut == &shortcut_for_closure && event.state() == ShortcutState::Pressed {
-                    toggle_window(&app_handle);
-                }
-            }) {
-            Ok(_) => return Some(shortcut_for_closure),
-            Err(err) => log::warn!(
-                "Failed to register global shortcut '{}': {}",
-                candidate,
-                err
-            ),
-        }
+        }) {
+        Ok(_) => return Some(shortcut_for_closure),
+        Err(err) => log::warn!("Failed to register global shortcut: {}", err),
     }
 
     None
