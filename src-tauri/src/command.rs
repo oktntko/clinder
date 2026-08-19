@@ -8,6 +8,7 @@ use nucleo_matcher::{Config, Matcher, Utf32Str};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 use std::path::Path;
+use std::path::PathBuf;
 use std::str::FromStr;
 use tauri::image::Image;
 use tauri::{AppHandle, Manager, WebviewWindow};
@@ -446,4 +447,100 @@ pub fn list_system_font() -> Vec<String> {
     }
 
     font_names.into_iter().collect()
+}
+
+#[tauri::command]
+pub fn get_app_local_data_dir(app_handle: AppHandle) -> Result<PathBuf, String> {
+    let standard_dir = app_handle
+        .path()
+        .app_local_data_dir()
+        .map_err(|e| e.to_string())?;
+
+    #[cfg(target_os = "windows")]
+    {
+        if let Some(windows_dir) = get_msix_data_dir(&app_handle, DataDirType::Local) {
+            return Ok(windows_dir);
+        }
+    }
+
+    Ok(standard_dir)
+}
+
+#[tauri::command]
+pub fn get_app_data_dir(app_handle: AppHandle) -> Result<PathBuf, String> {
+    let standard_dir = app_handle
+        .path()
+        .app_local_data_dir()
+        .map_err(|e| e.to_string())?;
+
+    #[cfg(target_os = "windows")]
+    {
+        if let Some(windows_dir) = get_msix_data_dir(&app_handle, DataDirType::Roaming) {
+            return Ok(windows_dir);
+        }
+    }
+
+    Ok(standard_dir)
+}
+
+#[cfg(target_os = "windows")]
+enum DataDirType {
+    Local,
+    Roaming,
+}
+
+#[cfg(target_os = "windows")]
+impl DataDirType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            DataDirType::Local => "Local",
+            DataDirType::Roaming => "Roaming",
+        }
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn get_msix_data_dir(app_handle: &AppHandle, data_dir_type: DataDirType) -> Option<PathBuf> {
+    let family_name = get_package_family_name()?;
+    let local_app_data = std::env::var("LOCALAPPDATA").ok()?;
+    let identifier = app_handle.config().identifier.clone();
+
+    let real_path = PathBuf::from(local_app_data)
+        .join("Packages")
+        .join(family_name)
+        .join("LocalCache")
+        .join(data_dir_type.as_str())
+        .join(identifier);
+
+    Some(real_path)
+}
+
+// Windows APIを使って PackageFamilyName を取得する関数
+#[cfg(target_os = "windows")]
+fn get_package_family_name() -> Option<String> {
+    use windows::core::PWSTR;
+    use windows::Win32::Foundation::WIN32_ERROR;
+    use windows::Win32::Storage::Packaging::Appx::GetCurrentPackageFamilyName;
+
+    let mut length = 0u32;
+    // バッファ長を取得
+    let _ = unsafe { GetCurrentPackageFamilyName(&mut length, None) };
+    if length == 0 {
+        return None; // パッケージ化されていない（通常のEXE実行時など）
+    }
+
+    let mut buffer = vec![0u16; length as usize];
+
+    let result =
+        unsafe { GetCurrentPackageFamilyName(&mut length, Some(PWSTR(buffer.as_mut_ptr()))) };
+
+    if result == WIN32_ERROR(0) {
+        // ERROR_SUCCESS
+        if let Some(null_pos) = buffer.iter().position(|&c| c == 0) {
+            buffer.truncate(null_pos);
+        }
+        String::from_utf16(&buffer).ok()
+    } else {
+        None
+    }
 }

@@ -180,7 +180,9 @@ pub fn run() {
             command::send_clipboard,
             command::send_and_paste,
             command::update_global_shortcut_toggle_window,
-            command::list_system_font
+            command::list_system_font,
+            command::get_app_local_data_dir,
+            command::get_app_data_dir
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

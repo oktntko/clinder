@@ -90,6 +90,18 @@ async function list_system_font(): Promise<string[]> {
   return invoke('list_system_font');
 }
 
+// MSIXパッケージの場合、WindowsのOSレベルでパスが仮想化されるため、
+// 実際に使用されるフォルダは app_handle.path().app_local_data_dir() で取れない
+// %LOCALAPPDATA%\Packages\<PackageFamilyName>\LocalCache\Local\<%LOCALAPPDATA%\Packages\<PackageFamilyName>\LocalCache\Local\oktntko.clinder>
+async function get_app_local_data_dir(): Promise<string> {
+  return invoke('get_app_local_data_dir');
+}
+
+// %LOCALAPPDATA%\Packages\<PackageFamilyName>\LocalCache\Roaming\<%LOCALAPPDATA%\Packages\<PackageFamilyName>\LocalCache\Local\oktntko.clinder>
+async function get_app_data_dir(): Promise<string> {
+  return invoke('get_app_data_dir');
+}
+
 export default {
   search_clipboard,
   delete_clip,
@@ -99,4 +111,6 @@ export default {
   send_and_paste,
   update_global_shortcut_toggle_window,
   list_system_font,
+  get_app_local_data_dir,
+  get_app_data_dir,
 };

@@ -1,8 +1,4 @@
 import { getVersion } from '@tauri-apps/api/app';
-import {
-  appDataDir as getAppDataDir,
-  appLocalDataDir as getAppLocalDataDir,
-} from '@tauri-apps/api/path';
 import { Store } from '@tauri-apps/plugin-store';
 import { useCallback, useEffect, useState, type SetStateAction } from 'react';
 
@@ -254,8 +250,8 @@ export function useStore() {
       void invoke.list_system_font().then(setSystemFontList);
 
       void getVersion().then(setVersion);
-      void getAppLocalDataDir().then(setAppLocalDataDir);
-      void getAppDataDir().then(setAppDataDir);
+      void invoke.get_app_local_data_dir().then(setAppLocalDataDir);
+      void invoke.get_app_data_dir().then(setAppDataDir);
 
       void getGlobalShortcutToggleWindow(store).then(setGlobalShortcutToggleWindow);
       void getShortcutSendAndPaste(store).then(setShortcutSendAndPaste);
