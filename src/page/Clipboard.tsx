@@ -101,6 +101,11 @@ export function Clipboard({
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
+      if (e.isComposing) {
+        // IME 変換中
+        return;
+      }
+
       if (matchShortcut(e, props.shortcutSendAndPaste)) {
         e.preventDefault();
         const selected = clipboard[cursor];
