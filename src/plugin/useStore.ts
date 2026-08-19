@@ -23,6 +23,8 @@ const STORE = {
     PIN: 'pin',
     THEME: 'theme',
     FONT: 'font',
+    MIN_HEIGHT: 'min_height',
+    MAX_HEIGHT: 'max_height',
   },
   global_shortcut: {
     TOGGLE_WINDOW: 'toggle_window',
@@ -117,6 +119,8 @@ export function useStore() {
   const [page, setPage] = useState<Page>('clipboard');
   const [font, setFont] = useState<string>('');
   const [systemFontList, setSystemFontList] = useState<string[]>([]);
+  const [minHeight, setMinHeight] = useState(100);
+  const [maxHeight, setMaxHeight] = useState(800);
 
   // search input
   const [searchMode, setSearchMode] = useState<SearchMode>('fuzzy');
@@ -191,6 +195,15 @@ export function useStore() {
         return v ?? '';
       }
 
+      async function getMinHeight(store: Store) {
+        const v = await store?.get<number>(STORE.appearance.MIN_HEIGHT);
+        return v ?? 100;
+      }
+      async function getMaxHeight(store: Store) {
+        const v = await store?.get<number>(STORE.appearance.MAX_HEIGHT);
+        return v ?? 800;
+      }
+
       async function getHistorySize(store: Store) {
         const v = await store?.get<number>(STORE.setting.HISTORY_SIZE);
         return v ?? 0;
@@ -245,6 +258,8 @@ export function useStore() {
         setFont(v);
         applyFont(v);
       });
+      void getMinHeight(store).then(setMinHeight);
+      void getMaxHeight(store).then(setMaxHeight);
       void getHistorySize(store).then(setHistorySize);
 
       void invoke.list_system_font().then(setSystemFontList);
@@ -334,6 +349,17 @@ export function useStore() {
     await store?.save();
   }
 
+  async function saveMinHeight(v: SetStateAction<number>) {
+    setMinHeight(v);
+    await store?.set(STORE.appearance.MIN_HEIGHT, v);
+    await store?.save();
+  }
+  async function saveMaxHeight(v: SetStateAction<number>) {
+    setMaxHeight(v);
+    await store?.set(STORE.appearance.MAX_HEIGHT, v);
+    await store?.save();
+  }
+
   async function saveHistorySize(v: SetStateAction<number>) {
     setHistorySize(v);
     await store?.set(STORE.setting.HISTORY_SIZE, v);
@@ -388,6 +414,11 @@ export function useStore() {
     saveTheme,
     page,
     setPage,
+    minHeight,
+    saveMinHeight,
+    maxHeight,
+    saveMaxHeight,
+
     globalShortcutToggleWindow,
     setGlobalShortcutToggleWindow,
     searchMode,

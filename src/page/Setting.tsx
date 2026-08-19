@@ -1,7 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 
 import invoke from '~/command';
-import { Footer } from '~/component/Footer';
 import { useDialog } from '~/plugin/useDialog';
 import {
   defaultGlobalShortcutToggleWindow,
@@ -25,7 +24,7 @@ export function Setting(props: SettingProps) {
   const $dialog = useDialog();
 
   return (
-    <div className="flex max-h-198 flex-col">
+    <>
       <div className="flex flex-col gap-8 overflow-y-auto px-12 py-8 focus:outline-none">
         <div className="text-lg font-bold text-gray-700 capitalize dark:text-zinc-300">setting</div>
 
@@ -63,6 +62,73 @@ export function Setting(props: SettingProps) {
                 </datalist>
               </div>
             </div>
+
+            <form
+              className="flex flex-col gap-0.5"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const value = (document.getElementById('min height') as HTMLInputElement).value;
+
+                await props.saveMinHeight(Number(value));
+                return $toast.success('Min Height updated successfully.');
+              }}
+            >
+              <div>
+                <label htmlFor="min height" className="text-xs capitalize">
+                  min height (min: 100px)
+                </label>
+              </div>
+              <div className="flex flex-row items-center gap-2">
+                <input
+                  id="min height"
+                  type="number"
+                  min={100}
+                  defaultValue={props.minHeight}
+                  className="rounded-md border border-gray-300 bg-white p-2 outline-none dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                  required
+                />
+                <button
+                  type="submit"
+                  className="inline-flex items-center rounded bg-gray-200 p-2 transition-colors hover:bg-gray-300 focus:bg-gray-300 focus:outline-none dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
+                >
+                  <span className="icon-[material-symbols--check-rounded] size-4"></span>
+                </button>
+              </div>
+            </form>
+            <form
+              className="flex flex-col gap-0.5"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const value = (document.getElementById('max height') as HTMLInputElement).value;
+
+                await props.saveMaxHeight(Number(value));
+                return $toast.success('Max Height updated successfully.');
+              }}
+            >
+              <div>
+                <label htmlFor="max height" className="text-xs capitalize">
+                  max height (min: 150px)
+                </label>
+              </div>
+              <div className="flex flex-row items-center gap-2">
+                <input
+                  id="max height"
+                  type="number"
+                  min={150}
+                  defaultValue={props.maxHeight}
+                  className="rounded-md border border-gray-300 bg-white p-2 outline-none dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                  required
+                />
+                <button
+                  type="submit"
+                  className="inline-flex items-center rounded bg-gray-200 p-2 transition-colors hover:bg-gray-300 focus:bg-gray-300 focus:outline-none dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
+                >
+                  <span className="icon-[material-symbols--check-rounded] size-4"></span>
+                </button>
+              </div>
+            </form>
 
             <form
               className="flex flex-col gap-0.5"
@@ -243,9 +309,7 @@ export function Setting(props: SettingProps) {
           </div>
         </section>
       </div>
-
-      <Footer {...props}></Footer>
-    </div>
+    </>
   );
 }
 

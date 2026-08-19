@@ -1,6 +1,7 @@
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useEffect, useState } from 'react';
 
+import { Footer } from '~/component/Footer';
 import { Clipboard } from '~/page/Clipboard';
 import { Information } from '~/page/Information';
 import { Setting } from '~/page/Setting';
@@ -106,10 +107,13 @@ function App() {
 
   return (
     <>
-      <div className="max-h-200 w-150 rounded-lg bg-white text-sm text-gray-900 shadow-md dark:bg-zinc-900 dark:text-zinc-100">
-        {/* data-tauri-drag-region */}
-        <div className="block h-2 cursor-move select-none" onMouseDown={handleMouseDown}></div>
-
+      <div
+        className="flex w-150 flex-col rounded-lg bg-white text-sm text-gray-900 shadow-md dark:bg-zinc-900 dark:text-zinc-100"
+        style={{
+          minHeight: store.minHeight,
+          maxHeight: store.maxHeight,
+        }}
+      >
         {store.page === 'clipboard' ? (
           <Clipboard {...store} />
         ) : store.page === 'setting' ? (
@@ -117,6 +121,18 @@ function App() {
         ) : (
           <Information {...store} />
         )}
+
+        <Footer {...store}>
+          {/* data-tauri-drag-region */}
+          <button
+            title="clear all"
+            type="button"
+            className="inline-flex items-center justify-center rounded-full bg-gray-200 p-2 transition-colors hover:bg-gray-300 focus:bg-gray-300 focus:outline-none dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
+            onMouseDown={handleMouseDown}
+          >
+            <span className="icon-[mynaui--move] size-4"></span>
+          </button>
+        </Footer>
       </div>
     </>
   );

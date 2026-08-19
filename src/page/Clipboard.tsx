@@ -5,7 +5,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Shortcut, useStore } from '~/plugin/useStore';
 
 import invoke, { type Clip, type Searched } from '~/command';
-import { Footer } from '~/component/Footer';
 import { R } from '~/lib/remeda';
 
 type ClipboardProps = ReturnType<typeof useStore> & {};
@@ -60,10 +59,11 @@ export function Clipboard({
     void invoke.delete_clip(clip);
   }, []);
 
-  const clearClipboard = useCallback(async function () {
-    setClipboard([]);
-    void invoke.clear_clipboard();
-  }, []);
+  // TODO:
+  // const clearClipboard = useCallback(async function () {
+  //   setClipboard([]);
+  //   void invoke.clear_clipboard();
+  // }, []);
 
   const toggleClipBookmark = useCallback(async function (clip: Clip) {
     const updatedClip = { ...clip, bookmark: !clip.bookmark };
@@ -219,8 +219,8 @@ export function Clipboard({
   }, [cursor]);
 
   return (
-    <div className={`flex max-h-198 flex-col`}>
-      <div className="flex shrink-0 flex-row items-center gap-1 border-b border-b-gray-300 px-2 pt-px pb-2 select-none dark:border-b-zinc-700 dark:bg-zinc-900">
+    <>
+      <div className="flex shrink-0 flex-row items-center gap-1 border-b border-b-gray-300 p-2 select-none dark:border-b-zinc-700 dark:bg-zinc-900">
         <input
           type="text"
           className="w-full transition focus:outline-none dark:bg-transparent dark:text-zinc-100"
@@ -374,26 +374,25 @@ export function Clipboard({
             );
           })
         ) : (
-          <div className="flex h-60 w-full items-center justify-center text-gray-500 dark:text-zinc-400">
+          <div className="flex w-full grow items-center justify-center py-1 text-gray-500 dark:text-zinc-400">
             No matches found
           </div>
         )}
       </div>
 
-      <Footer {...{ saveSearchContentType, saveSearchBookmark, saveSearchMode, ...props }}>
-        <button
-          title="clear all"
-          type="button"
-          className="inline-flex items-center justify-center rounded-full bg-gray-200 p-2 transition-colors hover:bg-gray-300 focus:bg-gray-300 focus:outline-none dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
-          onClick={(e) => {
-            e.stopPropagation();
-            void clearClipboard();
-          }}
-        >
-          <span className="icon-[tabler--trash] size-4"></span>
-        </button>
-      </Footer>
-    </div>
+      {/* TODO: */}
+      {/* <button
+        title="clear all"
+        type="button"
+        className="inline-flex items-center justify-center rounded-full bg-gray-200 p-2 transition-colors hover:bg-gray-300 focus:bg-gray-300 focus:outline-none dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
+        onClick={(e) => {
+          e.stopPropagation();
+          void clearClipboard();
+        }}
+      >
+        <span className="icon-[tabler--trash] size-4"></span>
+      </button> */}
+    </>
   );
 }
 

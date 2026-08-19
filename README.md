@@ -45,7 +45,6 @@ Open it with the global shortcut `Alt + V` and use incremental fuzzy search to f
   - history size のフィードバック（ボタンいらないか？）
 - 機能
   - エクセルがテキストと画像どちらもコピーされるので、一つにまとめて画像・テキスト選択できるようにする
-  - 最小高さ・最大高さの設定
   - キーバインドの重複チェック
   - Ctrl+P(印刷)の無効化
   - フォルダ・ファイルのコピー
