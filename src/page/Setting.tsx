@@ -1,10 +1,21 @@
 import { useEffect, useState, type ReactNode } from 'react';
 
-import type { Shortcut, useStore } from '~/plugin/useStore';
-
 import invoke from '~/command';
 import { Footer } from '~/component/Footer';
 import { useDialog } from '~/plugin/useDialog';
+import {
+  defaultGlobalShortcutToggleWindow,
+  defaultShortcutDeleteClip,
+  defaultShortcutSendAndPaste,
+  defaultShortcutSendClipboard,
+  defaultShortcutToggleClipBookmark,
+  defaultShortcutToggleSearchBookmark,
+  defaultShortcutToggleSearchContentTypeImage,
+  defaultShortcutToggleSearchContentTypeText,
+  defaultShortcutToggleSearchMode,
+  type Shortcut,
+  type useStore,
+} from '~/plugin/useStore';
 import { useToast } from '~/plugin/useToast';
 
 type SettingProps = ReturnType<typeof useStore> & {};
@@ -119,46 +130,55 @@ export function Setting(props: SettingProps) {
                     .update_global_shortcut_toggle_window(shortcut)
                     .then(() => props.setGlobalShortcutToggleWindow(shortcut));
                 },
+                default: defaultGlobalShortcutToggleWindow,
               },
               {
                 title: 'send and paste',
                 shortcut: props.shortcutSendAndPaste,
                 save: props.saveShortcutSendAndPaste,
+                default: defaultShortcutSendAndPaste,
               },
               {
                 title: 'send clipboard',
                 shortcut: props.shortcutSendClipboard,
                 save: props.saveShortcutSendClipboard,
+                default: defaultShortcutSendClipboard,
               },
               {
                 title: 'delete clip',
                 shortcut: props.shortcutDeleteClip,
                 save: props.saveShortcutDeleteClip,
+                default: defaultShortcutDeleteClip,
               },
               {
                 title: 'toggle clip bookmark',
                 shortcut: props.shortcutToggleClipBookmark,
                 save: props.saveShortcutToggleClipBookmark,
+                default: defaultShortcutToggleClipBookmark,
               },
               {
                 title: 'toggle search content type "text"',
                 shortcut: props.shortcutToggleSearchContentTypeText,
                 save: props.saveShortcutToggleSearchContentTypeText,
+                default: defaultShortcutToggleSearchContentTypeText,
               },
               {
                 title: 'toggle search content type "image"',
                 shortcut: props.shortcutToggleSearchContentTypeImage,
                 save: props.saveShortcutToggleSearchContentTypeImage,
+                default: defaultShortcutToggleSearchContentTypeImage,
               },
               {
                 title: 'toggle search bookmark (bookmark only / all)',
                 shortcut: props.shortcutToggleSearchBookmark,
                 save: props.saveShortcutToggleSearchBookmark,
+                default: defaultShortcutToggleSearchBookmark,
               },
               {
                 title: 'toggle search mode (fuzzy / exact)',
                 shortcut: props.shortcutToggleSearchMode,
                 save: props.saveShortcutToggleSearchMode,
+                default: defaultShortcutToggleSearchMode,
               },
             ].map((x, i) => (
               <div key={i} className="flex flex-col gap-0.5">
@@ -168,6 +188,7 @@ export function Setting(props: SettingProps) {
                 <div className="flex flex-row items-center gap-2">
                   <ShortcutKey {...x.shortcut} />
                   <button
+                    title="save"
                     type="button"
                     className="inline-flex items-center rounded bg-gray-200 p-2 transition-colors hover:bg-gray-300 focus:bg-gray-300 focus:outline-none dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
                     onClick={async () => {
@@ -188,13 +209,33 @@ export function Setting(props: SettingProps) {
                         if (typeof err === 'function') {
                           err();
                         } else {
-                          console.error('Failed to update window toggle shortcut:', err);
+                          console.error('Failed to update shortcut:', err);
                           $toast.danger('Failed to update shortcut. Please try again.');
                         }
                       }
                     }}
                   >
                     <span className="icon-[mage--edit] size-4"></span>
+                  </button>
+                  <button
+                    title="reset"
+                    type="button"
+                    className="inline-flex items-center rounded bg-gray-200 p-2 transition-colors hover:bg-gray-300 focus:bg-gray-300 focus:outline-none dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
+                    onClick={async () => {
+                      try {
+                        await x.save(x.default);
+                        $toast.success('Shortcut updated successfully.');
+                      } catch (err) {
+                        if (typeof err === 'function') {
+                          err();
+                        } else {
+                          console.error('Failed to update shortcut:', err);
+                          $toast.danger('Failed to update shortcut. Please try again.');
+                        }
+                      }
+                    }}
+                  >
+                    <span className="icon-[system-uicons--reset] size-4"></span>
                   </button>
                 </div>
               </div>
@@ -300,7 +341,7 @@ function ShortcutKey(shortcut: Shortcut) {
 
 function Key(props: { children: ReactNode }) {
   return (
-    <kbd className="inline-block min-w-9 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-center text-sm font-bold text-gray-800 capitalize shadow-[0_4px_0_#b1b1b1,0_5px_0_#999,0_5px_3px_rgba(0,0,0,0.3)] transition-all duration-75 active:translate-y-1 active:shadow-[0_0px_0_#b1b1b1,0_1px_2px_rgba(0,0,0,0.2)]">
+    <kbd className="inline-block min-w-9 cursor-default rounded-md border border-gray-300 bg-white px-3 py-1.5 text-center text-sm font-bold text-gray-800 capitalize shadow-[0_4px_0_#b1b1b1,0_5px_0_#999,0_5px_3px_rgba(0,0,0,0.3)]">
       {props.children}
     </kbd>
   );

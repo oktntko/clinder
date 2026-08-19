@@ -44,63 +44,63 @@ const STORE = {
   },
 } as const;
 
-const defaultGlobalShortcutToggleWindow: Shortcut = {
+export const defaultGlobalShortcutToggleWindow: Shortcut = {
   ctrlKey: false,
   shiftKey: false,
   altKey: true,
   metaKey: false,
   code: 'KeyV',
 };
-const defaultShortcutSendAndPaste: Shortcut = {
+export const defaultShortcutSendAndPaste: Shortcut = {
   ctrlKey: false,
   shiftKey: false,
   altKey: false,
   metaKey: false,
   code: 'Enter',
 };
-const defaultShortcutSendClipboard: Shortcut = {
+export const defaultShortcutSendClipboard: Shortcut = {
   ctrlKey: true,
   shiftKey: false,
   altKey: false,
   metaKey: false,
   code: 'Enter',
 };
-const defaultShortcutDeleteClip: Shortcut = {
+export const defaultShortcutDeleteClip: Shortcut = {
   ctrlKey: true,
   shiftKey: false,
   altKey: false,
   metaKey: false,
   code: 'KeyD',
 };
-const defaultShortcutToggleClipBookmark: Shortcut = {
+export const defaultShortcutToggleClipBookmark: Shortcut = {
   ctrlKey: true,
   shiftKey: false,
   altKey: false,
   metaKey: false,
   code: 'KeyB',
 };
-const defaultShortcutToggleSearchContentTypeText: Shortcut = {
+export const defaultShortcutToggleSearchContentTypeText: Shortcut = {
   ctrlKey: false,
   shiftKey: false,
   altKey: true,
   metaKey: false,
   code: 'KeyT',
 };
-const defaultShortcutToggleSearchContentTypeImage: Shortcut = {
+export const defaultShortcutToggleSearchContentTypeImage: Shortcut = {
   ctrlKey: false,
   shiftKey: false,
   altKey: true,
   metaKey: false,
   code: 'KeyI',
 };
-const defaultShortcutToggleSearchBookmark: Shortcut = {
+export const defaultShortcutToggleSearchBookmark: Shortcut = {
   ctrlKey: false,
   shiftKey: false,
   altKey: true,
   metaKey: false,
   code: 'KeyB',
 };
-const defaultShortcutToggleSearchMode: Shortcut = {
+export const defaultShortcutToggleSearchMode: Shortcut = {
   ctrlKey: false,
   shiftKey: false,
   altKey: true,
