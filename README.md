@@ -37,7 +37,6 @@ Open it with the global shortcut `Alt + V` and use incremental fuzzy search to f
 
 - Improve UI
   - 全体的にとりあえず置いた感からの脱却を図る
-  - ドラッグアンドドロップの場所
   - 全件削除は設定に置く
   - ダークモード切替はスイッチ
   - ページのボタンのところ

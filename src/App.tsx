@@ -67,16 +67,41 @@ function App() {
   });
 
   const [isDragging, setIsDragging] = useState(false);
-  async function handleMouseDown() {
-    setIsDragging(true);
-    try {
-      await getCurrentWindow().startDragging();
-    } catch (err) {
-      console.error('Failed to start dragging:', err);
-    } finally {
-      setIsDragging(false);
+  async function startDragging(e: React.MouseEvent<HTMLDivElement>) {
+    if (e.button === 0 && e.altKey) {
+      setIsDragging(true);
+      try {
+        await getCurrentWindow().startDragging();
+      } catch (err) {
+        console.error('Failed to start dragging:', err);
+      } finally {
+        setIsDragging(false);
+      }
     }
   }
+
+  const [pressingAlt, setPressingAlt] = useState(false);
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Alt') {
+        setPressingAlt(true);
+      }
+    }
+
+    function handleKeyUp(e: KeyboardEvent) {
+      if (e.key === 'Alt') {
+        setPressingAlt(false);
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, []);
 
   // ウィンドウのフォーカス変化を監視
   // フォーカスされたら input をフォーカスする
@@ -94,8 +119,11 @@ function App() {
           }
         });
       } else {
-        if (!isDragging && !store.enablePin) {
-          void appWindow.hide();
+        if (!isDragging) {
+          setPressingAlt(false);
+          if (!store.enablePin) {
+            void appWindow.hide();
+          }
         }
       }
     });
@@ -107,12 +135,20 @@ function App() {
 
   return (
     <>
+      {pressingAlt && (
+        <style>{`
+          div * { cursor: move !important; }
+        `}</style>
+      )}
       <div
-        className="flex w-150 flex-col rounded-lg bg-white text-sm text-gray-900 shadow-md dark:bg-zinc-900 dark:text-zinc-100"
+        className={`flex w-150 flex-col rounded-lg bg-white text-sm text-gray-900 shadow-md select-none dark:bg-zinc-900 dark:text-zinc-100 ${
+          pressingAlt ? 'cursor-move!' : ''
+        }`}
         style={{
           minHeight: store.minHeight,
           maxHeight: store.maxHeight,
         }}
+        onMouseDown={startDragging}
       >
         {store.page === 'clipboard' ? (
           <Clipboard {...store} />
@@ -122,17 +158,7 @@ function App() {
           <Information {...store} />
         )}
 
-        <Footer {...store}>
-          {/* data-tauri-drag-region */}
-          <button
-            title="clear all"
-            type="button"
-            className="inline-flex items-center justify-center rounded-full bg-gray-200 p-2 transition-colors hover:bg-gray-300 focus:bg-gray-300 focus:outline-none dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
-            onMouseDown={handleMouseDown}
-          >
-            <span className="icon-[mynaui--move] size-4"></span>
-          </button>
-        </Footer>
+        <Footer {...store} />
       </div>
     </>
   );

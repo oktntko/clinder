@@ -1,8 +1,6 @@
-import type { ReactNode } from 'react';
-
 import type { useStore } from '~/plugin/useStore';
 
-type FooterProps = ReturnType<typeof useStore> & { children?: ReactNode };
+type FooterProps = ReturnType<typeof useStore> & {};
 
 export function Footer(props: FooterProps) {
   return (
@@ -112,8 +110,6 @@ export function Footer(props: FooterProps) {
           </div>
         </div>
       </div>
-
-      <div className="flex flex-row items-center gap-2">{props.children}</div>
     </div>
   );
 }
