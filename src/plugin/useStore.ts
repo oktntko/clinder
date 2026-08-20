@@ -110,24 +110,30 @@ export const defaultShortcutToggleSearchMode: Shortcut = {
   code: 'KeyF',
 };
 
+export const defaultTheme = 'dark';
+export const defaultFont = '';
+export const defaultMinHeight = 100;
+export const defaultMaxHeight = 800;
+export const defaultHistorySize = 10000;
+
 export function useStore() {
   const [store, setStore] = useState<Store>();
 
   // window setting
   const [enablePin, setEnablePin] = useState(false);
-  const [theme, setTheme] = useState<Theme>('dark');
-  const [page, setPage] = useState<Page>('clipboard');
-  const [font, setFont] = useState<string>('');
+  const [theme, setTheme] = useState<Theme>(defaultTheme);
+  const [font, setFont] = useState<string>(defaultFont);
   const [systemFontList, setSystemFontList] = useState<string[]>([]);
-  const [minHeight, setMinHeight] = useState(100);
-  const [maxHeight, setMaxHeight] = useState(800);
+  const [minHeight, setMinHeight] = useState(defaultMinHeight);
+  const [maxHeight, setMaxHeight] = useState(defaultMaxHeight);
 
-  // search input
+  // state
+  const [page, setPage] = useState<Page>('clipboard');
   const [searchMode, setSearchMode] = useState<SearchMode>('fuzzy');
   const [searchContentType, setSearchContentType] = useState<ContentType[]>([]);
   const [searchBookmark, setSearchBookmark] = useState<boolean[]>([true, false]);
 
-  const [historySize, setHistorySize] = useState<number>(0);
+  const [historySize, setHistorySize] = useState<number>(defaultHistorySize);
 
   // information
   const [version, setVersion] = useState<string>('');
@@ -172,7 +178,7 @@ export function useStore() {
 
       async function getTheme(store: Store) {
         const v = await store?.get<Theme>(STORE.appearance.THEME);
-        return v ?? 'dark';
+        return v ?? defaultTheme;
       }
 
       async function getSearchMode(store: Store) {
@@ -192,21 +198,21 @@ export function useStore() {
 
       async function getFont(store: Store) {
         const v = await store?.get<string>(STORE.appearance.FONT);
-        return v ?? '';
+        return v ?? defaultFont;
       }
 
       async function getMinHeight(store: Store) {
         const v = await store?.get<number>(STORE.appearance.MIN_HEIGHT);
-        return v ?? 100;
+        return v ?? defaultMinHeight;
       }
       async function getMaxHeight(store: Store) {
         const v = await store?.get<number>(STORE.appearance.MAX_HEIGHT);
-        return v ?? 800;
+        return v ?? defaultMaxHeight;
       }
 
       async function getHistorySize(store: Store) {
         const v = await store?.get<number>(STORE.setting.HISTORY_SIZE);
-        return v ?? 0;
+        return v ?? defaultHistorySize;
       }
 
       async function getGlobalShortcutToggleWindow(store: Store) {

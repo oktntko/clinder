@@ -3,7 +3,11 @@ import { useEffect, useState, type ReactNode } from 'react';
 import invoke from '~/command';
 import { useDialog } from '~/plugin/useDialog';
 import {
+  defaultFont,
   defaultGlobalShortcutToggleWindow,
+  defaultHistorySize,
+  defaultMaxHeight,
+  defaultMinHeight,
   defaultShortcutDeleteClip,
   defaultShortcutSendAndPaste,
   defaultShortcutSendClipboard,
@@ -39,7 +43,7 @@ export function Setting(props: SettingProps) {
                   font
                 </label>
               </div>
-              <div>
+              <div className="flex flex-row items-center gap-2">
                 <input
                   id="font"
                   type="text"
@@ -60,6 +64,19 @@ export function Setting(props: SettingProps) {
                     </option>
                   ))}
                 </datalist>
+                <button
+                  title="reset"
+                  type="button"
+                  className="inline-flex items-center rounded bg-gray-200 p-2 transition-colors hover:bg-gray-300 focus:bg-gray-300 focus:outline-none dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
+                  onClick={async () => {
+                    await props.saveAndApplyFont(defaultFont);
+
+                    const input = document.getElementById('font') as HTMLInputElement;
+                    input.value = `${defaultFont}`;
+                  }}
+                >
+                  <span className="icon-[system-uicons--reset] size-4"></span>
+                </button>
               </div>
             </div>
 
@@ -94,6 +111,21 @@ export function Setting(props: SettingProps) {
                 >
                   <span className="icon-[material-symbols--check-rounded] size-4"></span>
                 </button>
+                <button
+                  title="reset"
+                  type="button"
+                  className="inline-flex items-center rounded bg-gray-200 p-2 transition-colors hover:bg-gray-300 focus:bg-gray-300 focus:outline-none dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
+                  onClick={async () => {
+                    await props.saveMinHeight(defaultMinHeight);
+
+                    const input = document.getElementById('min height') as HTMLInputElement;
+                    input.value = `${defaultMinHeight}`;
+
+                    return $toast.success('Min Height updated successfully.');
+                  }}
+                >
+                  <span className="icon-[system-uicons--reset] size-4"></span>
+                </button>
               </div>
             </form>
             <form
@@ -126,6 +158,21 @@ export function Setting(props: SettingProps) {
                   className="inline-flex items-center rounded bg-gray-200 p-2 transition-colors hover:bg-gray-300 focus:bg-gray-300 focus:outline-none dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
                 >
                   <span className="icon-[material-symbols--check-rounded] size-4"></span>
+                </button>
+                <button
+                  title="reset"
+                  type="button"
+                  className="inline-flex items-center rounded bg-gray-200 p-2 transition-colors hover:bg-gray-300 focus:bg-gray-300 focus:outline-none dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
+                  onClick={async () => {
+                    await props.saveMaxHeight(defaultMaxHeight);
+
+                    const input = document.getElementById('max height') as HTMLInputElement;
+                    input.value = `${defaultMaxHeight}`;
+
+                    return $toast.success('Max Height updated successfully.');
+                  }}
+                >
+                  <span className="icon-[system-uicons--reset] size-4"></span>
                 </button>
               </div>
             </form>
@@ -164,6 +211,21 @@ export function Setting(props: SettingProps) {
                   className="inline-flex items-center rounded bg-gray-200 p-2 transition-colors hover:bg-gray-300 focus:bg-gray-300 focus:outline-none dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
                 >
                   <span className="icon-[material-symbols--check-rounded] size-4"></span>
+                </button>
+                <button
+                  title="reset"
+                  type="button"
+                  className="inline-flex items-center rounded bg-gray-200 p-2 transition-colors hover:bg-gray-300 focus:bg-gray-300 focus:outline-none dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
+                  onClick={async () => {
+                    await props.saveHistorySize(defaultHistorySize);
+
+                    const input = document.getElementById('history size') as HTMLInputElement;
+                    input.value = `${defaultHistorySize}`;
+
+                    return $toast.success('History Size updated successfully.');
+                  }}
+                >
+                  <span className="icon-[system-uicons--reset] size-4"></span>
                 </button>
               </div>
             </form>
