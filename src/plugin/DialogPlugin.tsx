@@ -1,8 +1,9 @@
-import React, { Suspense, useState, type ComponentProps, type ReactNode } from 'react';
+import React, { Suspense, useEffect, useState, type ComponentProps, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import {
   DialogContext,
+  type ColorType,
   type ReactComponent,
   type WindowDialogOptions,
   type WindowDialogProps,
@@ -21,44 +22,22 @@ function WindowDialog({
 }: WindowDialogProps) {
   const [modelValue, setModelValue] = useState('');
 
-  const getIconClass = () => {
-    switch (color) {
-      case 'green':
-        return 'icon-[qlementine-icons--success-12]';
-      case 'blue':
-        return 'icon-[material-symbols--info-outline-rounded]';
-      case 'yellow':
-        return 'icon-[material-symbols--warning-outline-rounded]';
-      case 'red':
-        return 'icon-[material-symbols--dangerous-outline-rounded]';
-      case 'white':
-      case 'gray':
-      default:
-        return 'icon-[solar--dialog-line-duotone]';
+  useEffect(() => {
+    function closeDialog(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        e.stopPropagation(); // App.tsx の hideWindow に突き抜けないようにする
+      }
     }
-  };
 
-  const getColorClass = () => {
-    switch (color) {
-      case 'white':
-        return 'bg-gray-100 text-gray-400';
-      case 'gray':
-        return 'bg-gray-100 text-gray-800';
-      case 'green':
-        return 'bg-green-100 text-green-800';
-      case 'red':
-        return 'bg-red-100 text-red-800';
-      case 'blue':
-        return 'bg-blue-100 text-blue-800';
-      case 'yellow':
-        return 'bg-yellow-100 text-yellow-800';
-      default:
-        return 'bg-gray-100 text-gray-400';
-    }
-  };
+    window.addEventListener('keydown', closeDialog, true);
+
+    return () => {
+      window.removeEventListener('keydown', closeDialog, true);
+    };
+  });
 
   return (
-    <div className="max-w-md rounded-lg bg-gray-100 p-8 text-gray-700 shadow-xl">
+    <div className="rounded-lg bg-white p-8 text-sm text-gray-900 shadow-md dark:bg-zinc-900 dark:text-zinc-100">
       <form
         className="flex flex-col gap-6"
         onSubmit={(e) => {
@@ -68,9 +47,9 @@ function WindowDialog({
       >
         <main className="flex items-center gap-4">
           <div
-            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${getColorClass()}`}
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${colorClass(color)}`}
           >
-            <span className={`${getIconClass()} h-6 w-6`} />
+            <span className={`${iconClass(color)} h-6 w-6`} />
           </div>
 
           <div className="flex flex-col gap-2">
@@ -90,11 +69,20 @@ function WindowDialog({
         </main>
 
         <footer className="flex items-center justify-center gap-4">
-          <button type="submit" autoFocus color={color ?? 'white'}>
+          <button
+            type="submit"
+            autoFocus
+            className={`inline-flex w-24 items-center justify-center rounded-lg border-2 px-4 py-2 capitalize shadow transition-colors ${colorClass(color)}`}
+          >
             <span className="capitalize">{confirmText}</span>
           </button>
           {cancelText && (
-            <button type="button" color="white" onClick={() => onCancel()}>
+            <button
+              type="button"
+              color="white"
+              className="inline-flex w-24 items-center justify-center rounded-lg border-2 border-gray-300 bg-gray-200 px-4 py-2 capitalize shadow transition-colors hover:bg-gray-300 focus:bg-gray-300 focus:outline-none dark:border-zinc-600 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
+              onClick={() => onCancel()}
+            >
               <span className="capitalize">{cancelText}</span>
             </button>
           )}
@@ -102,6 +90,42 @@ function WindowDialog({
       </form>
     </div>
   );
+}
+
+function iconClass(color: ColorType) {
+  switch (color) {
+    case 'green':
+      return 'icon-[qlementine-icons--success-12]';
+    case 'blue':
+      return 'icon-[material-symbols--info-outline-rounded]';
+    case 'yellow':
+      return 'icon-[material-symbols--warning-outline-rounded]';
+    case 'red':
+      return 'icon-[material-symbols--dangerous-outline-rounded]';
+    case 'white':
+    case 'gray':
+    default:
+      return 'icon-[solar--dialog-line-duotone]';
+  }
+}
+
+function colorClass(color: ColorType) {
+  switch (color) {
+    case 'white':
+      return 'bg-gray-100 text-gray-400';
+    case 'gray':
+      return 'bg-gray-100 text-gray-800';
+    case 'green':
+      return 'bg-green-100 text-green-800';
+    case 'red':
+      return 'bg-red-100 text-red-800';
+    case 'blue':
+      return 'bg-blue-100 text-blue-800';
+    case 'yellow':
+      return 'bg-yellow-100 text-yellow-800';
+    default:
+      return 'bg-gray-100 text-gray-400';
+  }
 }
 
 // --- Loading Component ---

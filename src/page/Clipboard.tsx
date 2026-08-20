@@ -58,12 +58,6 @@ export function Clipboard({
     void invoke.delete_clip(clip);
   }, []);
 
-  // TODO:
-  // const clearClipboard = useCallback(async function () {
-  //   setClipboard([]);
-  //   void invoke.clear_clipboard();
-  // }, []);
-
   const toggleClipBookmark = useCallback(async function (clip: Clip) {
     const updatedClip = { ...clip, bookmark: !clip.bookmark };
     setClipboard((clipboard) =>
@@ -337,21 +331,6 @@ export function Clipboard({
                     <ShrinkImage {...item} />
                   )}
                 </button>
-
-                <div className="pointer-events-none absolute top-1/2 right-5 hidden -translate-y-1/2 items-center justify-center gap-1 rounded-full bg-gray-200 p-0.5 transition-all transition-discrete group-hover:inline-flex dark:bg-zinc-700">
-                  <button
-                    title="delete"
-                    type="button"
-                    tabIndex={-1}
-                    className="pointer-events-auto inline-flex size-5 items-center justify-center rounded-full bg-gray-100 transition-colors hover:bg-gray-300 dark:bg-zinc-800 dark:hover:bg-zinc-600"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      return deleteClip(item.clip);
-                    }}
-                  >
-                    <span className="icon-[mingcute--close-fill] size-4"></span>
-                  </button>
-                </div>
 
                 <div className="pointer-events-none absolute top-0 right-0">
                   <button

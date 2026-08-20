@@ -376,6 +376,34 @@ export function Setting(props: SettingProps) {
             })}
           </div>
         </section>
+
+        <section className="flex flex-col gap-2">
+          <div className="text-base font-semibold text-gray-700 capitalize dark:text-zinc-300">
+            Danger Zone
+          </div>
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-0.5">
+              <div>
+                <label className="text-xs capitalize">clear clipboard</label>
+              </div>
+              <div className="flex flex-row items-center gap-2">
+                <button
+                  type="button"
+                  className="inline-flex w-24 items-center justify-center rounded-lg border-2 border-yellow-300 bg-yellow-200 px-4 py-2 text-yellow-700 capitalize shadow transition-colors hover:bg-yellow-300 focus:bg-yellow-300 focus:outline-none"
+                  onClick={async () => {
+                    await $dialog.confirm.warn(
+                      'Are you sure you want to clear all clipboard history?',
+                    );
+                    await invoke.clear_clipboard();
+                    return $toast.success('Clipboard history cleared!');
+                  }}
+                >
+                  clear
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
     </>
   );
