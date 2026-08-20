@@ -2,10 +2,9 @@ import { convertFileSrc } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { Shortcut, useStore } from '~/plugin/useStore';
-
 import invoke, { type Clip, type Searched } from '~/command';
 import { R } from '~/lib/remeda';
+import { matchShortcut, type useStore } from '~/plugin/useStore';
 
 type ClipboardProps = ReturnType<typeof useStore> & {};
 
@@ -450,14 +449,4 @@ function ShrinkImage({ clip: { content } }: Searched) {
   const imageUrl = convertFileSrc(content);
 
   return <img src={imageUrl} alt="clipboard image" className="h-auto max-h-32 w-auto max-w-150" />;
-}
-
-function matchShortcut(e: KeyboardEvent, shortcut: Shortcut) {
-  return (
-    e.ctrlKey === shortcut.ctrlKey &&
-    e.shiftKey === shortcut.shiftKey &&
-    e.altKey === shortcut.altKey &&
-    e.metaKey === shortcut.metaKey &&
-    e.code === shortcut.code
-  );
 }

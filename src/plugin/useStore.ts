@@ -459,3 +459,13 @@ export function useStore() {
     saveShortcutToggleSearchMode,
   };
 }
+
+export function matchShortcut(e: Shortcut, shortcut: Shortcut) {
+  return (
+    e.ctrlKey === shortcut.ctrlKey &&
+    e.shiftKey === shortcut.shiftKey &&
+    e.altKey === shortcut.altKey &&
+    e.metaKey === shortcut.metaKey &&
+    e.code === shortcut.code
+  );
+}

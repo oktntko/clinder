@@ -16,6 +16,7 @@ import {
   defaultShortcutToggleSearchContentTypeImage,
   defaultShortcutToggleSearchContentTypeText,
   defaultShortcutToggleSearchMode,
+  matchShortcut,
   type Shortcut,
   type useStore,
 } from '~/plugin/useStore';
@@ -308,66 +309,71 @@ export function Setting(props: SettingProps) {
                 save: props.saveShortcutToggleSearchMode,
                 default: defaultShortcutToggleSearchMode,
               },
-            ].map((x, i) => (
-              <div key={i} className="flex flex-col gap-0.5">
-                <div>
-                  <label className="text-xs capitalize">{x.title}</label>
-                </div>
-                <div className="flex flex-row items-center gap-2">
-                  <ShortcutKey {...x.shortcut} />
-                  <button
-                    title="save"
-                    type="button"
-                    className="inline-flex items-center rounded bg-gray-200 p-2 transition-colors hover:bg-gray-300 focus:bg-gray-300 focus:outline-none dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
-                    onClick={async () => {
-                      const newShortcut: Shortcut = await $dialog.showModal(
-                        EditShortcutDialog,
-                        (resolve, reject) => ({
-                          title: x.title,
-                          initValue: x.shortcut,
-                          onSave: (v) => resolve(v),
-                          onCancel: () => reject(),
-                        }),
-                      );
+            ].map((x, i, arr) => {
+              const duplicate = arr
+                .filter((_, ii) => ii !== i)
+                .some((y) => matchShortcut(x.shortcut, y.shortcut));
+              return (
+                <div key={i} className="flex flex-col gap-0.5">
+                  <div>
+                    <label className="text-xs capitalize">{x.title}</label>
+                  </div>
+                  <div className="flex flex-row items-center gap-2">
+                    <ShortcutKey shortcut={x.shortcut} duplicate={duplicate} />
+                    <button
+                      title="save"
+                      type="button"
+                      className="inline-flex items-center rounded bg-gray-200 p-2 transition-colors hover:bg-gray-300 focus:bg-gray-300 focus:outline-none dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
+                      onClick={async () => {
+                        const newShortcut: Shortcut = await $dialog.showModal(
+                          EditShortcutDialog,
+                          (resolve, reject) => ({
+                            title: x.title,
+                            initValue: x.shortcut,
+                            onSave: (v) => resolve(v),
+                            onCancel: () => reject(),
+                          }),
+                        );
 
-                      try {
-                        await x.save(newShortcut);
-                        $toast.success('Shortcut updated successfully.');
-                      } catch (err) {
-                        if (typeof err === 'function') {
-                          err();
-                        } else {
-                          console.error('Failed to update shortcut:', err);
-                          $toast.danger('Failed to update shortcut. Please try again.');
+                        try {
+                          await x.save(newShortcut);
+                          $toast.success('Shortcut updated successfully.');
+                        } catch (err) {
+                          if (typeof err === 'function') {
+                            err();
+                          } else {
+                            console.error('Failed to update shortcut:', err);
+                            $toast.danger('Failed to update shortcut. Please try again.');
+                          }
                         }
-                      }
-                    }}
-                  >
-                    <span className="icon-[mage--edit] size-4"></span>
-                  </button>
-                  <button
-                    title="reset"
-                    type="button"
-                    className="inline-flex items-center rounded bg-gray-200 p-2 transition-colors hover:bg-gray-300 focus:bg-gray-300 focus:outline-none dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
-                    onClick={async () => {
-                      try {
-                        await x.save(x.default);
-                        $toast.success('Shortcut updated successfully.');
-                      } catch (err) {
-                        if (typeof err === 'function') {
-                          err();
-                        } else {
-                          console.error('Failed to update shortcut:', err);
-                          $toast.danger('Failed to update shortcut. Please try again.');
+                      }}
+                    >
+                      <span className="icon-[mage--edit] size-4"></span>
+                    </button>
+                    <button
+                      title="reset"
+                      type="button"
+                      className="inline-flex items-center rounded bg-gray-200 p-2 transition-colors hover:bg-gray-300 focus:bg-gray-300 focus:outline-none dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
+                      onClick={async () => {
+                        try {
+                          await x.save(x.default);
+                          $toast.success('Shortcut updated successfully.');
+                        } catch (err) {
+                          if (typeof err === 'function') {
+                            err();
+                          } else {
+                            console.error('Failed to update shortcut:', err);
+                            $toast.danger('Failed to update shortcut. Please try again.');
+                          }
                         }
-                      }
-                    }}
-                  >
-                    <span className="icon-[system-uicons--reset] size-4"></span>
-                  </button>
+                      }}
+                    >
+                      <span className="icon-[system-uicons--reset] size-4"></span>
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       </div>
@@ -428,7 +434,7 @@ function EditShortcutDialog(props: {
             });
           }}
         >
-          <ShortcutKey {...value} />
+          <ShortcutKey shortcut={value} />
         </button>
         <section className="flex flex-row items-center justify-center gap-4">
           <button
@@ -451,23 +457,31 @@ function EditShortcutDialog(props: {
   );
 }
 
-function ShortcutKey(shortcut: Shortcut) {
+function ShortcutKey({ shortcut, duplicate }: { shortcut: Shortcut; duplicate?: boolean }) {
   return (
     <div className="inline-flex flex-row gap-1 pb-1">
-      {shortcut.metaKey && <Key>win</Key>}
-      {shortcut.altKey && <Key>alt</Key>}
-      {shortcut.ctrlKey && <Key>ctrl</Key>}
-      {shortcut.shiftKey && <Key>shift</Key>}
+      {shortcut.metaKey /*   */ && <Key duplicate={duplicate}>win</Key>}
+      {shortcut.altKey /*    */ && <Key duplicate={duplicate}>alt</Key>}
+      {shortcut.ctrlKey /*   */ && <Key duplicate={duplicate}>ctrl</Key>}
+      {shortcut.shiftKey /*  */ && <Key duplicate={duplicate}>shift</Key>}
       {shortcut.code && (
-        <Key>{shortcut.code.startsWith('Key') ? shortcut.code.substring(3) : shortcut.code}</Key>
+        <Key duplicate={duplicate}>
+          {shortcut.code.startsWith('Key') ? shortcut.code.substring(3) : shortcut.code}
+        </Key>
       )}
     </div>
   );
 }
 
-function Key(props: { children: ReactNode }) {
+function Key(props: { children: ReactNode; duplicate?: boolean }) {
   return (
-    <kbd className="inline-block min-w-9 cursor-default rounded-md border border-gray-300 bg-white px-3 py-1.5 text-center text-sm font-bold text-gray-800 capitalize shadow-[0_4px_0_#b1b1b1,0_5px_0_#999,0_5px_3px_rgba(0,0,0,0.3)]">
+    <kbd
+      className={`inline-block min-w-9 cursor-default rounded-md border bg-white px-3 py-1.5 text-center text-sm font-bold text-gray-800 capitalize ${
+        props.duplicate
+          ? 'border-red-500 bg-red-100 shadow-[0_4px_0_#faa3a3,0_5px_0_#fb2c36,0_5px_3px_rgba(0,0,0,0.3)]'
+          : 'border-gray-300 bg-white shadow-[0_4px_0_#b1b1b1,0_5px_0_#999,0_5px_3px_rgba(0,0,0,0.3)]'
+      }`}
+    >
       {props.children}
     </kbd>
   );
