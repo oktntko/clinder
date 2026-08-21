@@ -7,6 +7,7 @@ import {
   defaultGlobalShortcutToggleWindow,
   defaultHistorySize,
   defaultMaxHeight,
+  defaultMaxItems,
   defaultMinHeight,
   defaultShortcutDeleteClip,
   defaultShortcutSendAndPaste,
@@ -35,7 +36,7 @@ export function Setting(props: SettingProps) {
 
         <section className="flex flex-col gap-2">
           <div className="text-base font-semibold text-gray-700 capitalize dark:text-zinc-300">
-            appearance & behavior
+            appearance
           </div>
           <div className="flex flex-col gap-2">
             <div className="flex flex-col gap-0.5">
@@ -177,7 +178,14 @@ export function Setting(props: SettingProps) {
                 </button>
               </div>
             </form>
+          </div>
+        </section>
 
+        <section className="flex flex-col gap-2">
+          <div className="text-base font-semibold text-gray-700 capitalize dark:text-zinc-300">
+            behavior
+          </div>
+          <div className="flex flex-col gap-2">
             <form
               className="flex flex-col gap-0.5"
               onSubmit={async (e) => {
@@ -230,6 +238,89 @@ export function Setting(props: SettingProps) {
                 </button>
               </div>
             </form>
+
+            <form
+              className="flex flex-col gap-0.5"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const value = (document.getElementById('max items') as HTMLInputElement).value;
+
+                await props.saveMaxItems(Number(value));
+                return $toast.success('Max Items updated successfully.');
+              }}
+            >
+              <div>
+                <label htmlFor="max items" className="text-xs capitalize">
+                  max items (min: 10, max: 100)
+                </label>
+              </div>
+              <div className="flex flex-row items-center gap-2">
+                <input
+                  id="max items"
+                  type="number"
+                  min={10}
+                  max={100}
+                  defaultValue={props.maxItems}
+                  className="rounded-md border border-gray-300 bg-white p-2 outline-none dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                  required
+                />
+                <button
+                  type="submit"
+                  className="inline-flex items-center rounded bg-gray-200 p-2 transition-colors hover:bg-gray-300 focus:bg-gray-300 focus:outline-none dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
+                >
+                  <span className="icon-[material-symbols--check-rounded] size-4"></span>
+                </button>
+                <button
+                  title="reset"
+                  type="button"
+                  className="inline-flex items-center rounded bg-gray-200 p-2 transition-colors hover:bg-gray-300 focus:bg-gray-300 focus:outline-none dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
+                  onClick={async () => {
+                    await props.saveMaxItems(defaultMaxItems);
+
+                    const input = document.getElementById('max items') as HTMLInputElement;
+                    input.value = `${defaultMaxItems}`;
+
+                    return $toast.success('Max Items updated successfully.');
+                  }}
+                >
+                  <span className="icon-[system-uicons--reset] size-4"></span>
+                </button>
+              </div>
+            </form>
+
+            <div className="flex flex-col gap-0.5">
+              <div>
+                <label htmlFor="trim final newlines" className="text-xs capitalize">
+                  trim final newlines (requires restart)
+                </label>
+              </div>
+              <div className="flex flex-row items-center gap-2">
+                <label
+                  htmlFor="trim final newlines"
+                  className="inline-flex justify-center gap-2 p-2"
+                >
+                  <input
+                    id="trim final newlines"
+                    type="checkbox"
+                    checked={props.trimFinalNewlines}
+                    className="peer size-4 rounded-md border border-gray-300 bg-white dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                    onChange={async (e) => {
+                      await props.saveTrimFinalNewlines(e.target.checked);
+
+                      await $dialog.confirm.success(
+                        'Trim Final Newlines updated successfully. Do you want to restart now?',
+                      );
+
+                      return invoke.restart_app();
+                    }}
+                  />
+                  <span className="capitalize transition-colors peer-not-checked:text-gray-500 dark:peer-not-checked:text-zinc-500">
+                    enabled
+                  </span>
+                </label>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -504,7 +595,7 @@ function ShortcutKey({ shortcut, duplicate }: { shortcut: Shortcut; duplicate?: 
 function Key(props: { children: ReactNode; duplicate?: boolean }) {
   return (
     <kbd
-      className={`inline-block min-w-9 cursor-default rounded-md border bg-white px-3 py-1.5 text-center text-sm font-bold text-gray-800 capitalize ${
+      className={`inline-block min-w-9 cursor-default rounded-md border bg-white px-3 py-1.5 text-center text-sm font-bold text-gray-800 capitalize select-none ${
         props.duplicate
           ? 'border-red-500 bg-red-100 shadow-[0_4px_0_#faa3a3,0_5px_0_#fb2c36,0_5px_3px_rgba(0,0,0,0.3)]'
           : 'border-gray-300 bg-white shadow-[0_4px_0_#b1b1b1,0_5px_0_#999,0_5px_3px_rgba(0,0,0,0.3)]'

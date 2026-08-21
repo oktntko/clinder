@@ -86,6 +86,10 @@ async function update_global_shortcut_toggle_window(newShortcutWebView: Shortcut
 //////////////////// ////////////////////
 // その他
 //////////////////// ////////////////////
+async function restart_app(): Promise<void> {
+  return invoke('restart_app');
+}
+
 async function list_system_font(): Promise<string[]> {
   return invoke('list_system_font');
 }
@@ -110,6 +114,7 @@ export default {
   send_clipboard,
   send_and_paste,
   update_global_shortcut_toggle_window,
+  restart_app,
   list_system_font,
   get_app_local_data_dir,
   get_app_data_dir,

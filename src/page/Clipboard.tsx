@@ -213,7 +213,7 @@ export function Clipboard({
 
   return (
     <>
-      <div className="flex shrink-0 flex-row items-center gap-1 border-b border-b-gray-300 p-2 select-none dark:border-b-zinc-700 dark:bg-zinc-900">
+      <div className="flex shrink-0 flex-row items-center gap-1 border-b border-b-gray-300 p-2 dark:border-b-zinc-700 dark:bg-zinc-900">
         <input
           type="text"
           className="w-full transition focus:outline-none dark:bg-transparent dark:text-zinc-100"
@@ -357,19 +357,6 @@ export function Clipboard({
           </div>
         )}
       </div>
-
-      {/* TODO: */}
-      {/* <button
-        title="clear all"
-        type="button"
-        className="inline-flex items-center justify-center rounded-full bg-gray-200 p-2 transition-colors hover:bg-gray-300 focus:bg-gray-300 focus:outline-none dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
-        onClick={(e) => {
-          e.stopPropagation();
-          void clearClipboard();
-        }}
-      >
-        <span className="icon-[tabler--trash] size-4"></span>
-      </button> */}
     </>
   );
 }

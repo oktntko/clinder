@@ -141,7 +141,7 @@ function App() {
         `}</style>
       )}
       <div
-        className={`flex w-150 flex-col rounded-lg bg-white text-sm text-gray-900 shadow-md select-none dark:bg-zinc-900 dark:text-zinc-100 ${
+        className={`flex w-150 flex-col rounded-lg bg-white text-sm text-gray-900 shadow-md dark:bg-zinc-900 dark:text-zinc-100 ${
           pressingAlt ? 'cursor-move!' : ''
         }`}
         style={{

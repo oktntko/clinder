@@ -16,15 +16,17 @@ export type Shortcut = {
 };
 
 const STORE = {
-  setting: {
-    HISTORY_SIZE: 'history_size',
-  },
   appearance: {
     PIN: 'pin',
     THEME: 'theme',
     FONT: 'font',
     MIN_HEIGHT: 'min_height',
     MAX_HEIGHT: 'max_height',
+  },
+  behavior: {
+    HISTORY_SIZE: 'history_size',
+    MAX_ITEMS: 'max_items',
+    TRIM_FINAL_NEWLINES: 'trim_final_newlines',
   },
   global_shortcut: {
     TOGGLE_WINDOW: 'toggle_window',
@@ -114,12 +116,15 @@ export const defaultTheme = 'dark';
 export const defaultFont = '';
 export const defaultMinHeight = 100;
 export const defaultMaxHeight = 800;
+
 export const defaultHistorySize = 10000;
+export const defaultMaxItems = 50;
+export const defaultTrimFinalNewlines = true;
 
 export function useStore() {
   const [store, setStore] = useState<Store>();
 
-  // window setting
+  // appearance
   const [enablePin, setEnablePin] = useState(false);
   const [theme, setTheme] = useState<Theme>(defaultTheme);
   const [font, setFont] = useState<string>(defaultFont);
@@ -127,13 +132,16 @@ export function useStore() {
   const [minHeight, setMinHeight] = useState(defaultMinHeight);
   const [maxHeight, setMaxHeight] = useState(defaultMaxHeight);
 
+  // behavior
+  const [historySize, setHistorySize] = useState(defaultHistorySize);
+  const [maxItems, setMaxItems] = useState(defaultMaxItems);
+  const [trimFinalNewlines, setTrimFinalNewlines] = useState(defaultTrimFinalNewlines);
+
   // state
   const [page, setPage] = useState<Page>('clipboard');
   const [searchMode, setSearchMode] = useState<SearchMode>('fuzzy');
   const [searchContentType, setSearchContentType] = useState<ContentType[]>([]);
   const [searchBookmark, setSearchBookmark] = useState<boolean[]>([true, false]);
-
-  const [historySize, setHistorySize] = useState<number>(defaultHistorySize);
 
   // information
   const [version, setVersion] = useState<string>('');
@@ -211,8 +219,16 @@ export function useStore() {
       }
 
       async function getHistorySize(store: Store) {
-        const v = await store?.get<number>(STORE.setting.HISTORY_SIZE);
+        const v = await store?.get<number>(STORE.behavior.HISTORY_SIZE);
         return v ?? defaultHistorySize;
+      }
+      async function getMaxItems(store: Store) {
+        const v = await store?.get<number>(STORE.behavior.MAX_ITEMS);
+        return v ?? defaultMaxItems;
+      }
+      async function getTrimFinalNewlines(store: Store) {
+        const v = await store?.get<boolean>(STORE.behavior.TRIM_FINAL_NEWLINES);
+        return v ?? defaultTrimFinalNewlines;
       }
 
       async function getGlobalShortcutToggleWindow(store: Store) {
@@ -266,7 +282,10 @@ export function useStore() {
       });
       void getMinHeight(store).then(setMinHeight);
       void getMaxHeight(store).then(setMaxHeight);
+
       void getHistorySize(store).then(setHistorySize);
+      void getMaxItems(store).then(setMaxItems);
+      void getTrimFinalNewlines(store).then(setTrimFinalNewlines);
 
       void invoke.list_system_font().then(setSystemFontList);
 
@@ -368,7 +387,19 @@ export function useStore() {
 
   async function saveHistorySize(v: SetStateAction<number>) {
     setHistorySize(v);
-    await store?.set(STORE.setting.HISTORY_SIZE, v);
+    await store?.set(STORE.behavior.HISTORY_SIZE, v);
+    await store?.save();
+  }
+
+  async function saveMaxItems(v: SetStateAction<number>) {
+    setMaxItems(v);
+    await store?.set(STORE.behavior.MAX_ITEMS, v);
+    await store?.save();
+  }
+
+  async function saveTrimFinalNewlines(v: SetStateAction<boolean>) {
+    setTrimFinalNewlines(v);
+    await store?.set(STORE.behavior.TRIM_FINAL_NEWLINES, v);
     await store?.save();
   }
 
@@ -425,6 +456,13 @@ export function useStore() {
     maxHeight,
     saveMaxHeight,
 
+    historySize,
+    saveHistorySize,
+    maxItems,
+    saveMaxItems,
+    trimFinalNewlines,
+    saveTrimFinalNewlines,
+
     globalShortcutToggleWindow,
     setGlobalShortcutToggleWindow,
     searchMode,
@@ -435,8 +473,6 @@ export function useStore() {
     saveSearchBookmark,
     font,
     saveAndApplyFont,
-    historySize,
-    saveHistorySize,
     systemFontList,
     version,
     appLocalDataDir,

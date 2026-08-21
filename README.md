@@ -36,7 +36,6 @@ Open it with the global shortcut `Alt + V` and use incremental fuzzy search to f
 ## TODO
 
 - Improve UI
-  - ダークモード切替はスイッチ
   - ページのボタンのところ
   - ボタンが見づらい
   - history size のフィードバック（ボタンいらないか？）
@@ -45,8 +44,6 @@ Open it with the global shortcut `Alt + V` and use incremental fuzzy search to f
 - 機能
   - フォルダ・ファイルのコピー
   - エクセルがテキストと画像どちらもコピーされるので、一つにまとめて画像・テキスト選択できるようにする
-  - 表示件数上限
-  - コピーするときに最後の空行を削除する設定
   - 画像コピー: OCRで文字抽出してテキスト検索可能にする
 - Mac version
 - Improve and expand this README

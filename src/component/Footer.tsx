@@ -73,41 +73,40 @@ export function Footer(props: FooterProps) {
           >
             <span className="icon-[mynaui--pin] size-4"></span>
           </button>
-          <div
+          <button
             title="theme"
-            className="inline-flex items-center justify-center gap-1 rounded-full border border-gray-300 bg-gray-100 p-1 transition-colors hover:bg-white focus:bg-white focus:outline-none dark:border-zinc-600 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
+            type="button"
+            className="relative inline-flex items-center rounded-full border border-gray-300 bg-gray-200 p-1 transition-colors dark:border-zinc-600 dark:bg-zinc-700"
+            onClick={(e) => {
+              e.stopPropagation();
+              void props.saveTheme(props.theme === 'dark' ? 'light' : 'dark');
+            }}
           >
-            <button
+            <div
               title="theme light"
-              type="button"
-              className={`inline-flex items-center justify-center rounded-full p-1 transition-colors focus:outline-none ${
+              aria-label="theme light"
+              aria-pressed={props.theme === 'light'}
+              className={`z-10 inline-flex size-6 items-center justify-center rounded-full transition-all focus:outline-none ${
                 props.theme === 'light'
-                  ? 'bg-green-200 hover:bg-green-300 focus:bg-green-300 dark:bg-emerald-900/60 dark:text-emerald-300 dark:hover:bg-emerald-800/80 dark:focus:bg-emerald-800/80'
-                  : 'bg-gray-200 hover:bg-gray-300 focus:bg-gray-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600'
+                  ? 'bg-white text-amber-500 shadow-sm hover:bg-gray-50 focus:bg-gray-50 dark:bg-zinc-100 dark:text-amber-500 dark:hover:bg-white dark:focus:bg-white'
+                  : 'text-gray-500 hover:text-gray-700 focus:text-gray-700 dark:text-zinc-400 dark:hover:text-zinc-200 dark:focus:text-zinc-200'
               }`}
-              onClick={(e) => {
-                e.stopPropagation();
-                void props.saveTheme('light');
-              }}
             >
               <span className="icon-[material-symbols--clear-day-outline-rounded] size-4"></span>
-            </button>
-            <button
+            </div>
+            <div
               title="theme dark"
-              type="button"
-              className={`inline-flex items-center justify-center rounded-full p-1 transition-colors focus:outline-none ${
+              aria-label="theme dark"
+              aria-pressed={props.theme === 'dark'}
+              className={`z-10 inline-flex size-6 items-center justify-center rounded-full transition-all focus:outline-none ${
                 props.theme === 'dark'
-                  ? 'bg-green-200 hover:bg-green-300 focus:bg-green-300 dark:bg-emerald-900/60 dark:text-emerald-300 dark:hover:bg-emerald-800/80 dark:focus:bg-emerald-800/80'
-                  : 'bg-gray-200 hover:bg-gray-300 focus:bg-gray-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600'
+                  ? 'bg-white text-indigo-500 shadow-sm hover:bg-gray-50 focus:bg-gray-50 dark:bg-zinc-100 dark:text-indigo-500 dark:hover:bg-white dark:focus:bg-white'
+                  : 'text-gray-500 hover:text-gray-700 focus:text-gray-700 dark:text-zinc-400 dark:hover:text-zinc-200 dark:focus:text-zinc-200'
               }`}
-              onClick={(e) => {
-                e.stopPropagation();
-                void props.saveTheme('dark');
-              }}
             >
               <span className="icon-[material-symbols--mode-night-outline-rounded] size-4"></span>
-            </button>
-          </div>
+            </div>
+          </button>
         </div>
       </div>
     </div>

@@ -64,16 +64,9 @@ pub fn run() {
                 })
                 .build(app)?;
 
-            let store = match app.store("settings.json") {
-                Ok(store) => Some(store),
-                Err(err) => {
-                    log::warn!("Failed to load settings store: {}", err);
-                    None
-                }
-            };
-
-            let shortcut: Shortcut = store
-                .as_ref()
+            let shortcut = app
+                .store("settings.json")
+                .ok()
                 .and_then(|store| store.get("toggle_window"))
                 .and_then(|val| serde_json::from_value::<WebViewShortcut>(val.clone()).ok())
                 .and_then(|w| w.to_shortcut(1).ok())
@@ -90,8 +83,21 @@ pub fn run() {
                 let mut last_text = String::new();
                 let mut last_image_hash = String::new();
 
+                let trim_final_newlines = app_handle
+                    .store("settings.json")
+                    .ok()
+                    .and_then(|store| store.get("trim_final_newlines"))
+                    .and_then(|val| val.as_bool())
+                    .unwrap_or(true /* defaultMaxItems */);
+
                 loop {
-                    if let Ok(current_text) = clipboard_handle.clipboard().read_text() {
+                    if let Ok(read_text) = clipboard_handle.clipboard().read_text() {
+                        let current_text = if trim_final_newlines {
+                            read_text.trim_end_matches(['\n', '\r']).to_string()
+                        } else {
+                            read_text
+                        };
+
                         if !current_text.is_empty() && current_text != last_text {
                             last_text = current_text.clone();
                             log::debug!("changed-clipboard {}", current_text);
@@ -109,10 +115,10 @@ pub fn run() {
                         }
                     }
 
-                    if let Ok(rgba_image) = clipboard_handle.clipboard().read_image() {
-                        let bytes = rgba_image.rgba();
-                        let width = rgba_image.width();
-                        let height = rgba_image.height();
+                    if let Ok(read_image) = clipboard_handle.clipboard().read_image() {
+                        let bytes = read_image.rgba();
+                        let width = read_image.width();
+                        let height = read_image.height();
 
                         let current_image_hash = clipboard_image::calculate_hash(bytes);
 
@@ -180,6 +186,7 @@ pub fn run() {
             command::send_clipboard,
             command::send_and_paste,
             command::update_global_shortcut_toggle_window,
+            command::restart_app,
             command::list_system_font,
             command::get_app_local_data_dir,
             command::get_app_data_dir

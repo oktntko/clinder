@@ -47,13 +47,22 @@ pub fn search_clipboard(
     bookmark: Vec<bool>,
 ) -> Result<Vec<Searched>, String> {
     log::debug!("search_clipboard");
+
+    let max_items = app_handle
+        .store("settings.json")
+        .ok()
+        .and_then(|store| store.get("max_items"))
+        .and_then(|val| val.as_u64())
+        .map(|v| v as usize)
+        .unwrap_or(50 /* defaultMaxItems */);
+
     let clipboard = db::find_many_clip(&app_handle, content_type, bookmark)?;
 
     // クエリが空の場合、先頭100件を返す
     if query.trim().is_empty() {
         return Ok(clipboard
             .iter()
-            .take(100)
+            .take(max_items)
             .map(|clip| {
                 let content = match clip.content_type {
                     db::ContentType::Text => clip.content.replace("\r\n", "\n"),
@@ -118,7 +127,7 @@ pub fn search_clipboard(
 
     matches.sort_by(|a, b| b.score.cmp(&a.score));
 
-    matches.truncate(30);
+    matches.truncate(max_items);
     Ok(matches)
 }
 
@@ -432,6 +441,11 @@ pub fn toggle_window(app_handle: &AppHandle) {
 //////////////////// ////////////////////
 // その他
 //////////////////// ////////////////////
+#[tauri::command]
+pub fn restart_app(app_handle: AppHandle) {
+    app_handle.restart();
+}
+
 #[tauri::command]
 pub fn list_system_font() -> Vec<String> {
     log::debug!("list_system_font");
