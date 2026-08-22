@@ -50,19 +50,19 @@ export function Information(props: InformationProps) {
         <div className="flex flex-col gap-2">
           <button
             type="button"
-            onClick={() => openPath(props.appLocalDataDir)}
+            onClick={() => openPath(props.realAppLocalDataDir)}
             className="after:icon-[proicons--folder-open] relative truncate rounded-lg border border-gray-300 bg-white px-4 py-2 text-left text-xs font-medium text-gray-700 transition-colors after:absolute after:top-1/2 after:right-1.5 after:inline-block after:size-4 after:-translate-y-1/2 after:content-[''] hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
-            title={props.appLocalDataDir}
+            title={props.realAppLocalDataDir}
           >
-            App Data: {props.appLocalDataDir}
+            App Data: {props.realAppLocalDataDir}
           </button>
           <button
             type="button"
-            onClick={() => openPath(props.appDataDir)}
+            onClick={() => openPath(props.realAppDataDir)}
             className="after:icon-[proicons--folder-open] relative truncate rounded-lg border border-gray-300 bg-white px-4 py-2 text-left text-xs font-medium text-gray-700 transition-colors after:absolute after:top-1/2 after:right-1.5 after:inline-block after:size-4 after:-translate-y-1/2 after:content-[''] hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
-            title={props.appDataDir}
+            title={props.realAppDataDir}
           >
-            App Setting: {props.appDataDir}
+            App Setting: {props.realAppDataDir}
           </button>
         </div>
       </section>

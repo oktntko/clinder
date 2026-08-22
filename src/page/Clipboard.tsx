@@ -1,9 +1,9 @@
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+import { join } from '@tauri-apps/api/path';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import invoke, { type Clip, type Searched } from '~/command';
-import { R } from '~/lib/remeda';
 import { matchShortcut, type useStore } from '~/plugin/useStore';
 
 type ClipboardProps = ReturnType<typeof useStore> & {};
@@ -63,22 +63,24 @@ export function Clipboard({
     setClipboard((clipboard) =>
       clipboard.map((item) => (item.clip.id === clip.id ? { ...item, clip: updatedClip } : item)),
     );
-    return invoke.update_clip({ ...updatedClip });
+    return invoke.update_clip_bookmark({ ...updatedClip });
   }, []);
 
   const toggleSearchContentTypeText = useCallback(async () => {
     return saveSearchContentType((prev) =>
-      prev.some((x) => x === 'text')
-        ? prev.filter((x) => x !== 'text')
-        : R.unique(prev.concat(['text'])),
+      prev.some((x) => x === 'text') ? prev.filter((x) => x !== 'text') : prev.concat(['text']),
     );
   }, [saveSearchContentType]);
 
   const toggleSearchContentTypeImage = useCallback(async () => {
     return saveSearchContentType((prev) =>
-      prev.some((x) => x === 'image')
-        ? prev.filter((x) => x !== 'image')
-        : R.unique(prev.concat(['image'])),
+      prev.some((x) => x === 'image') ? prev.filter((x) => x !== 'image') : prev.concat(['image']),
+    );
+  }, [saveSearchContentType]);
+
+  const toggleSearchContentTypeFiles = useCallback(async () => {
+    return saveSearchContentType((prev) =>
+      prev.some((x) => x === 'files') ? prev.filter((x) => x !== 'files') : prev.concat(['files']),
     );
   }, [saveSearchContentType]);
 
@@ -103,7 +105,13 @@ export function Clipboard({
         e.preventDefault();
         const selected = clipboard[cursor];
         if (selected != null) {
-          void invoke.send_and_paste(selected.clip);
+          if (selected.clip.content_type === 'text') {
+            void invoke.paste_text(selected.clip);
+          } else if (selected.clip.content_type === 'image') {
+            void invoke.paste_image(selected.clip);
+          } else {
+            void invoke.paste_files(selected.clip);
+          }
         }
         return;
       }
@@ -112,7 +120,13 @@ export function Clipboard({
         e.preventDefault();
         const selected = clipboard[cursor];
         if (selected != null) {
-          void invoke.send_clipboard(selected.clip);
+          if (selected.clip.content_type === 'text') {
+            void invoke.send_text(selected.clip);
+          } else if (selected.clip.content_type === 'image') {
+            void invoke.send_image(selected.clip);
+          } else {
+            void invoke.send_files(selected.clip);
+          }
         }
         return;
       }
@@ -145,6 +159,11 @@ export function Clipboard({
         return toggleSearchContentTypeImage();
       }
 
+      if (matchShortcut(e, props.shortcutToggleSearchContentTypeFiles)) {
+        e.preventDefault();
+        return toggleSearchContentTypeFiles();
+      }
+
       if (matchShortcut(e, props.shortcutToggleSearchBookmark)) {
         e.preventDefault();
         return toggleSearchBookmark();
@@ -175,10 +194,10 @@ export function Clipboard({
       }
     }
 
-    window.addEventListener('keydown', handleKeyDown, true);
+    window.addEventListener('keydown', handleKeyDown);
 
     return () => {
-      window.removeEventListener('keydown', handleKeyDown, true);
+      window.removeEventListener('keydown', handleKeyDown);
     };
   }, [
     cursor,
@@ -189,12 +208,14 @@ export function Clipboard({
     props.shortcutToggleClipBookmark,
     props.shortcutToggleSearchContentTypeText,
     props.shortcutToggleSearchContentTypeImage,
+    props.shortcutToggleSearchContentTypeFiles,
     props.shortcutToggleSearchBookmark,
     props.shortcutToggleSearchMode,
     deleteClip,
     toggleClipBookmark,
     toggleSearchContentTypeText,
     toggleSearchContentTypeImage,
+    toggleSearchContentTypeFiles,
     toggleSearchBookmark,
     toggleSearchMode,
   ]);
@@ -253,6 +274,21 @@ export function Clipboard({
           >
             <span className="icon-[humbleicons--image] size-4"></span>
           </button>
+          <button
+            title="files"
+            type="button"
+            className={`inline-flex items-center justify-center rounded-full p-2 transition-colors focus:outline-none ${
+              props.searchContentType.some((x) => x === 'files')
+                ? 'bg-green-200 hover:bg-green-300 focus:bg-green-300 dark:bg-emerald-900/60 dark:text-emerald-300 dark:hover:bg-emerald-800/80 dark:focus:bg-emerald-800/80'
+                : 'bg-gray-200 hover:bg-gray-300 focus:bg-gray-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600'
+            }`}
+            onClick={(e) => {
+              e.stopPropagation();
+              return toggleSearchContentTypeFiles();
+            }}
+          >
+            <span className="icon-[humbleicons--folder] size-4"></span>
+          </button>
 
           <button
             title="search_bookmark"
@@ -307,14 +343,18 @@ export function Clipboard({
                 <button
                   ref={isActive ? activeItemRef : null}
                   type="button"
-                  title={item.clip.content}
-                  className={`relative w-full shrink-0 cursor-pointer truncate py-1 text-start focus:outline-none ${
+                  title={item.clip.plain_text}
+                  className={`relative w-full shrink-0 cursor-pointer py-1 text-start outline-none ${
+                    props.wrapTextAutomatically
+                      ? 'wrap-anywhere whitespace-pre-wrap'
+                      : 'line-clamp-1 leading-6'
+                  } ${
                     item.trimmed_begin
-                      ? "before:icon-[lucide--ellipsis] pl-5 before:absolute before:top-1/2 before:left-0 before:inline-block before:size-4 before:-translate-y-1/2 before:bg-gray-300 before:content-[''] dark:before:bg-zinc-600"
+                      ? "before:icon-[lucide--ellipsis] pl-5 before:absolute before:top-0 before:left-0 before:inline-block before:size-4 before:translate-y-1/2 before:bg-gray-300 before:content-[''] dark:before:bg-zinc-600"
                       : ''
                   } ${
                     item.trimmed_end
-                      ? "after:icon-[lucide--ellipsis] pr-5 after:absolute after:top-1/2 after:right-0 after:inline-block after:size-4 after:-translate-y-1/2 after:bg-gray-300 after:content-[''] dark:after:bg-zinc-600"
+                      ? "after:icon-[lucide--ellipsis] pr-5 after:absolute after:right-0 after:bottom-0 after:inline-block after:size-4 after:-translate-y-1/2 after:bg-gray-300 after:content-[''] dark:after:bg-zinc-600"
                       : ''
                   }`}
                   onFocus={() => {
@@ -322,15 +362,61 @@ export function Clipboard({
                   }}
                   onClick={() => {
                     setCursor(i);
-                    return invoke.send_and_paste(item.clip);
+                    if (item.clip.content_type === 'text') {
+                      void invoke.paste_text(item.clip);
+                    } else if (item.clip.content_type === 'image') {
+                      void invoke.paste_image(item.clip);
+                    } else {
+                      void invoke.paste_files(item.clip);
+                    }
                   }}
                 >
                   {item.clip.content_type === 'text' ? (
-                    <HighlightText {...item} />
+                    <HighlightText {...{ ...props, item }} />
+                  ) : item.clip.content_type === 'image' ? (
+                    <ShrinkImage {...{ ...props, item }} />
                   ) : (
-                    <ShrinkImage {...item} />
+                    /* files */
+                    <FileList {...{ ...props, item }} />
                   )}
                 </button>
+
+                {item.clip.content_type === 'text' && item.clip.image_hash && (
+                  <button
+                    type="button"
+                    className="absolute top-0.5 right-3.5 z-10 inline-flex items-center justify-center rounded-full bg-gray-50 p-1 dark:bg-zinc-800"
+                    onClick={(e) => {
+                      console.log('paste_image');
+                      e.stopPropagation();
+                      void invoke.paste_image(item.clip);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.stopPropagation();
+                      }
+                    }}
+                  >
+                    <span className="icon-[humbleicons--image] size-4"></span>
+                  </button>
+                )}
+                {item.clip.content_type !== 'text' && item.clip.plain_text && (
+                  <button
+                    type="button"
+                    className="absolute top-0.5 right-3.5 z-10 inline-flex items-center justify-center rounded-full bg-gray-50 p-1 dark:bg-zinc-800"
+                    onClick={(e) => {
+                      console.log('paste_text');
+                      e.stopPropagation();
+                      void invoke.paste_text(item.clip);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.stopPropagation();
+                      }
+                    }}
+                  >
+                    <span className="icon-[humbleicons--text] size-4"></span>
+                  </button>
+                )}
 
                 <div className="pointer-events-none absolute top-0 right-0">
                   <button
@@ -352,7 +438,13 @@ export function Clipboard({
             );
           })
         ) : (
-          <div className="flex w-full grow items-center justify-center py-1 text-gray-500 dark:text-zinc-400">
+          <div
+            className={`flex w-full grow items-center justify-center py-1 text-gray-500 dark:text-zinc-400 ${
+              props.wrapTextAutomatically
+                ? 'wrap-anywhere whitespace-pre-wrap'
+                : 'line-clamp-1 leading-6'
+            }`}
+          >
             No matches found
           </div>
         )}
@@ -361,14 +453,16 @@ export function Clipboard({
   );
 }
 
-function HighlightText({ snippet, indices }: Searched) {
-  if (!indices || indices.length === 0) {
-    return <>{snippet}</>;
+type ClipContainerProps = Pick<ReturnType<typeof useStore>, 'appLocalDataDir'> & { item: Searched };
+
+function HighlightText(props: ClipContainerProps) {
+  if (!props.item.indices || props.item.indices.length === 0) {
+    return <>{props.item.snippet}</>;
   }
 
   // サロゲートペアや絵文字を考慮して文字単位の配列にする
-  const chars = Array.from(snippet);
-  const indexSet = new Set(indices);
+  const chars = Array.from(props.item.snippet);
+  const indexSet = new Set(props.item.indices);
 
   const elements: React.ReactNode[] = [];
   let currentChunk = '';
@@ -411,8 +505,42 @@ function HighlightText({ snippet, indices }: Searched) {
   return <>{elements}</>;
 }
 
-function ShrinkImage({ clip: { content } }: Searched) {
-  const imageUrl = convertFileSrc(content);
+function ShrinkImage(props: ClipContainerProps) {
+  const [imageSrc, setImageSrc] = useState('');
+  useEffect(() => {
+    void (async () => {
+      const path = await join(
+        props.appLocalDataDir,
+        'clipboard_image',
+        `${props.item.clip.image_hash}.png`,
+      );
+      setImageSrc(convertFileSrc(path));
+    })();
 
-  return <img src={imageUrl} alt="clipboard image" className="h-auto max-h-32 w-auto max-w-150" />;
+    return () => {
+      //
+    };
+  }, [props.item.clip.image_hash, props.appLocalDataDir]);
+
+  return (
+    imageSrc && (
+      <img
+        src={imageSrc}
+        alt="clipboard image"
+        className="h-auto max-h-32 w-auto max-w-140 border border-dotted border-gray-400 dark:border-zinc-400"
+      />
+    )
+  );
+}
+
+function FileList(props: ClipContainerProps) {
+  return (
+    <>
+      <div className="flex items-center gap-1">
+        <span className="icon-[glyphs-poly--folder] size-5"></span>
+        {props.item.clip.files.length} files
+      </div>
+      <HighlightText {...props} />
+    </>
+  );
 }

@@ -42,8 +42,8 @@ Open it with the global shortcut `Alt + V` and use incremental fuzzy search to f
   - コンポーネント化
   - 入力欄の色を変える
 - 機能
-  - フォルダ・ファイルのコピー
-  - エクセルがテキストと画像どちらもコピーされるので、一つにまとめて画像・テキスト選択できるようにする
   - 画像コピー: OCRで文字抽出してテキスト検索可能にする
+  - ペーストメニュー
+  - 設定：ドラッグで使えるキー（Alt, Ctrl, Shift）
 - Mac version
 - Improve and expand this README

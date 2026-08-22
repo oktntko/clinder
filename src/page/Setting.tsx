@@ -14,6 +14,7 @@ import {
   defaultShortcutSendClipboard,
   defaultShortcutToggleClipBookmark,
   defaultShortcutToggleSearchBookmark,
+  defaultShortcutToggleSearchContentTypeFiles,
   defaultShortcutToggleSearchContentTypeImage,
   defaultShortcutToggleSearchContentTypeText,
   defaultShortcutToggleSearchMode,
@@ -81,7 +82,6 @@ export function Setting(props: SettingProps) {
                 </button>
               </div>
             </div>
-
             <form
               className="flex flex-col gap-0.5"
               onSubmit={async (e) => {
@@ -130,6 +130,7 @@ export function Setting(props: SettingProps) {
                 </button>
               </div>
             </form>
+
             <form
               className="flex flex-col gap-0.5"
               onSubmit={async (e) => {
@@ -178,6 +179,35 @@ export function Setting(props: SettingProps) {
                 </button>
               </div>
             </form>
+
+            <div className="flex flex-col gap-0.5">
+              <div>
+                <label htmlFor="wrap text automatically" className="text-xs capitalize">
+                  wrap text automatically
+                </label>
+              </div>
+              <div className="flex flex-row items-center gap-2">
+                <label
+                  htmlFor="wrap text automatically"
+                  className="inline-flex justify-center gap-2 p-2"
+                >
+                  <input
+                    id="wrap text automatically"
+                    type="checkbox"
+                    checked={props.wrapTextAutomatically}
+                    className="peer size-4 rounded-md border border-gray-300 bg-white dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                    onChange={async (e) => {
+                      await props.saveWrapTextAutomatically(e.target.checked);
+
+                      return $toast.success('Wrap Text Automatically updated successfully.');
+                    }}
+                  />
+                  <span className="capitalize transition-colors peer-not-checked:text-gray-500 dark:peer-not-checked:text-zinc-500">
+                    enabled
+                  </span>
+                </label>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -387,6 +417,12 @@ export function Setting(props: SettingProps) {
                 shortcut: props.shortcutToggleSearchContentTypeImage,
                 save: props.saveShortcutToggleSearchContentTypeImage,
                 default: defaultShortcutToggleSearchContentTypeImage,
+              },
+              {
+                title: 'toggle search content type "files"',
+                shortcut: props.shortcutToggleSearchContentTypeFiles,
+                save: props.saveShortcutToggleSearchContentTypeFiles,
+                default: defaultShortcutToggleSearchContentTypeFiles,
               },
               {
                 title: 'toggle search bookmark (bookmark only / all)',

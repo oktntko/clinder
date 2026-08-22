@@ -1,4 +1,5 @@
 import { getVersion } from '@tauri-apps/api/app';
+import { appLocalDataDir as getAppLocalDataDir } from '@tauri-apps/api/path';
 import { Store } from '@tauri-apps/plugin-store';
 import { useCallback, useEffect, useState, type SetStateAction } from 'react';
 
@@ -22,6 +23,7 @@ const STORE = {
     FONT: 'font',
     MIN_HEIGHT: 'min_height',
     MAX_HEIGHT: 'max_height',
+    WRAP_TEXT_AUTOMATICALLY: 'wrap_text_automatically',
   },
   behavior: {
     HISTORY_SIZE: 'history_size',
@@ -38,6 +40,7 @@ const STORE = {
     TOGGLE_CLIP_BOOKMARK: 'toggle_clip_bookmark',
     TOGGLE_SEARCH_CONTENT_TYPE_TEXT: 'toggle_search_content_type_text',
     TOGGLE_SEARCH_CONTENT_TYPE_IMAGE: 'toggle_search_content_type_image',
+    TOGGLE_SEARCH_CONTENT_TYPE_FILES: 'toggle_search_content_type_files',
     TOGGLE_SEARCH_BOOKMARK: 'toggle_search_bookmark',
     TOGGLE_SEARCH_MODE: 'toggle_search_mode',
   },
@@ -97,6 +100,13 @@ export const defaultShortcutToggleSearchContentTypeImage: Shortcut = {
   metaKey: false,
   code: 'KeyI',
 };
+export const defaultShortcutToggleSearchContentTypeFiles: Shortcut = {
+  ctrlKey: false,
+  shiftKey: false,
+  altKey: true,
+  metaKey: false,
+  code: 'KeyF',
+};
 export const defaultShortcutToggleSearchBookmark: Shortcut = {
   ctrlKey: false,
   shiftKey: false,
@@ -109,13 +119,14 @@ export const defaultShortcutToggleSearchMode: Shortcut = {
   shiftKey: false,
   altKey: true,
   metaKey: false,
-  code: 'KeyF',
+  code: 'KeyS',
 };
 
 export const defaultTheme = 'dark';
 export const defaultFont = '';
 export const defaultMinHeight = 100;
 export const defaultMaxHeight = 800;
+export const defaultWrapTextAutomatically = true;
 
 export const defaultHistorySize = 10000;
 export const defaultMaxItems = 50;
@@ -131,6 +142,7 @@ export function useStore() {
   const [systemFontList, setSystemFontList] = useState<string[]>([]);
   const [minHeight, setMinHeight] = useState(defaultMinHeight);
   const [maxHeight, setMaxHeight] = useState(defaultMaxHeight);
+  const [wrapTextAutomatically, setWrapTextAutomatically] = useState(defaultWrapTextAutomatically);
 
   // behavior
   const [historySize, setHistorySize] = useState(defaultHistorySize);
@@ -145,8 +157,9 @@ export function useStore() {
 
   // information
   const [version, setVersion] = useState<string>('');
-  const [appLocalDataDir, setAppLocalDataDir] = useState<string>('');
-  const [appDataDir, setAppDataDir] = useState('');
+  const [realAppLocalDataDir, setRealAppLocalDataDir] = useState('');
+  const [realAppDataDir, setRealAppDataDir] = useState('');
+  const [appLocalDataDir, setAppLocalDataDir] = useState('');
 
   // shortcut
   const [globalShortcutToggleWindow, setGlobalShortcutToggleWindow] = useState<Shortcut>(
@@ -166,6 +179,8 @@ export function useStore() {
     useState<Shortcut>(defaultShortcutToggleSearchContentTypeText);
   const [shortcutToggleSearchContentTypeImage, setShortcutToggleSearchContentTypeImage] =
     useState<Shortcut>(defaultShortcutToggleSearchContentTypeImage);
+  const [shortcutToggleSearchContentTypeFiles, setShortcutToggleSearchContentTypeFiles] =
+    useState<Shortcut>(defaultShortcutToggleSearchContentTypeFiles);
   const [shortcutToggleSearchBookmark, setShortcutToggleSearchBookmark] = useState<Shortcut>(
     defaultShortcutToggleSearchBookmark,
   );
@@ -217,6 +232,10 @@ export function useStore() {
         const v = await store?.get<number>(STORE.appearance.MAX_HEIGHT);
         return v ?? defaultMaxHeight;
       }
+      async function getWrapTextAutomatically(store: Store) {
+        const v = await store?.get<boolean>(STORE.appearance.WRAP_TEXT_AUTOMATICALLY);
+        return v ?? defaultWrapTextAutomatically;
+      }
 
       async function getHistorySize(store: Store) {
         const v = await store?.get<number>(STORE.behavior.HISTORY_SIZE);
@@ -259,6 +278,10 @@ export function useStore() {
         const v = await store?.get<Shortcut>(STORE.app_shortcut.TOGGLE_SEARCH_CONTENT_TYPE_IMAGE);
         return v ?? defaultShortcutToggleSearchContentTypeImage;
       }
+      async function getShortcutToggleSearchContentTypeFiles(store: Store) {
+        const v = await store?.get<Shortcut>(STORE.app_shortcut.TOGGLE_SEARCH_CONTENT_TYPE_FILES);
+        return v ?? defaultShortcutToggleSearchContentTypeFiles;
+      }
       async function getShortcutToggleSearchBookmark(store: Store) {
         const v = await store?.get<Shortcut>(STORE.app_shortcut.TOGGLE_SEARCH_BOOKMARK);
         return v ?? defaultShortcutToggleSearchBookmark;
@@ -282,6 +305,7 @@ export function useStore() {
       });
       void getMinHeight(store).then(setMinHeight);
       void getMaxHeight(store).then(setMaxHeight);
+      void getWrapTextAutomatically(store).then(setWrapTextAutomatically);
 
       void getHistorySize(store).then(setHistorySize);
       void getMaxItems(store).then(setMaxItems);
@@ -290,8 +314,9 @@ export function useStore() {
       void invoke.list_system_font().then(setSystemFontList);
 
       void getVersion().then(setVersion);
-      void invoke.get_app_local_data_dir().then(setAppLocalDataDir);
-      void invoke.get_app_data_dir().then(setAppDataDir);
+      void invoke.get_real_app_local_data_dir().then(setRealAppLocalDataDir);
+      void invoke.get_real_app_data_dir().then(setRealAppDataDir);
+      void getAppLocalDataDir().then(setAppLocalDataDir);
 
       void getGlobalShortcutToggleWindow(store).then(setGlobalShortcutToggleWindow);
       void getShortcutSendAndPaste(store).then(setShortcutSendAndPaste);
@@ -303,6 +328,9 @@ export function useStore() {
       );
       void getShortcutToggleSearchContentTypeImage(store).then(
         setShortcutToggleSearchContentTypeImage,
+      );
+      void getShortcutToggleSearchContentTypeFiles(store).then(
+        setShortcutToggleSearchContentTypeFiles,
       );
       void getShortcutToggleSearchBookmark(store).then(setShortcutToggleSearchBookmark);
       void getShortcutToggleSearchMode(store).then(setShortcutToggleSearchMode);
@@ -384,6 +412,11 @@ export function useStore() {
     await store?.set(STORE.appearance.MAX_HEIGHT, v);
     await store?.save();
   }
+  async function saveWrapTextAutomatically(v: SetStateAction<boolean>) {
+    setWrapTextAutomatically(v);
+    await store?.set(STORE.appearance.WRAP_TEXT_AUTOMATICALLY, v);
+    await store?.save();
+  }
 
   async function saveHistorySize(v: SetStateAction<number>) {
     setHistorySize(v);
@@ -433,6 +466,11 @@ export function useStore() {
     await store?.set(STORE.app_shortcut.TOGGLE_SEARCH_CONTENT_TYPE_IMAGE, v);
     await store?.save();
   }
+  async function saveShortcutToggleSearchContentTypeFiles(v: SetStateAction<Shortcut>) {
+    setShortcutToggleSearchContentTypeFiles(v);
+    await store?.set(STORE.app_shortcut.TOGGLE_SEARCH_CONTENT_TYPE_FILES, v);
+    await store?.save();
+  }
   async function saveShortcutToggleSearchBookmark(v: SetStateAction<Shortcut>) {
     setShortcutToggleSearchBookmark(v);
     await store?.set(STORE.app_shortcut.TOGGLE_SEARCH_BOOKMARK, v);
@@ -455,6 +493,8 @@ export function useStore() {
     saveMinHeight,
     maxHeight,
     saveMaxHeight,
+    wrapTextAutomatically,
+    saveWrapTextAutomatically,
 
     historySize,
     saveHistorySize,
@@ -475,8 +515,10 @@ export function useStore() {
     saveAndApplyFont,
     systemFontList,
     version,
+    realAppLocalDataDir,
+    realAppDataDir,
     appLocalDataDir,
-    appDataDir,
+
     shortcutSendAndPaste,
     saveShortcutSendAndPaste,
     shortcutSendClipboard,
@@ -489,6 +531,8 @@ export function useStore() {
     saveShortcutToggleSearchContentTypeText,
     shortcutToggleSearchContentTypeImage,
     saveShortcutToggleSearchContentTypeImage,
+    shortcutToggleSearchContentTypeFiles,
+    saveShortcutToggleSearchContentTypeFiles,
     shortcutToggleSearchBookmark,
     saveShortcutToggleSearchBookmark,
     shortcutToggleSearchMode,

@@ -2,16 +2,18 @@ mod clipboard_image;
 mod command;
 mod db;
 
+use clipboard_rs::{
+    Clipboard, ClipboardContext, ClipboardHandler, ClipboardWatcher, ClipboardWatcherContext,
+    ContentFormat, RustImageData, common::RustImage,
+};
 use std::str::FromStr;
+use std::thread;
 use std::time::Duration;
-use std::{path::Path, thread};
-use tauri::AppHandle;
 use tauri::{
+    AppHandle, Emitter, Manager,
     menu::{Menu, MenuItem},
     tray::TrayIconBuilder,
-    Emitter, Manager,
 };
-use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_global_shortcut::Shortcut;
 use tauri_plugin_log::log;
 use tauri_plugin_store::StoreExt;
@@ -33,7 +35,6 @@ pub fn run() {
                 })
                 .build(),
         )
-        .plugin(tauri_plugin_clipboard_manager::init())
         .setup(move |app: &mut tauri::App| {
             let open_item = MenuItem::with_id(app, "open", "Open", true, None::<&str>)?;
             let hide_item = MenuItem::with_id(app, "hide", "Hide", true, None::<&str>)?;
@@ -78,86 +79,6 @@ pub fn run() {
                 log::warn!("Global shortcut registration skipped; continuing without it.");
             }
 
-            let clipboard_handle = app.handle().clone();
-            thread::spawn(move || {
-                let mut last_text = String::new();
-                let mut last_image_hash = String::new();
-
-                let trim_final_newlines = app_handle
-                    .store("settings.json")
-                    .ok()
-                    .and_then(|store| store.get("trim_final_newlines"))
-                    .and_then(|val| val.as_bool())
-                    .unwrap_or(true /* defaultMaxItems */);
-
-                loop {
-                    if let Ok(read_text) = clipboard_handle.clipboard().read_text() {
-                        let current_text = if trim_final_newlines {
-                            read_text.trim_end_matches(['\n', '\r']).to_string()
-                        } else {
-                            read_text
-                        };
-
-                        if !current_text.is_empty() && current_text != last_text {
-                            last_text = current_text.clone();
-                            log::debug!("changed-clipboard {}", current_text);
-
-                            if let Ok(clip_item) = db::upsert_clip(
-                                &clipboard_handle,
-                                db::ContentType::Text,
-                                current_text,
-                                "".to_string(),
-                                false,
-                            ) {
-                                log::debug!("clipboard-updated text");
-                                let _ = app_handle.emit("clipboard-updated", &clip_item);
-                            }
-                        }
-                    }
-
-                    if let Ok(read_image) = clipboard_handle.clipboard().read_image() {
-                        let bytes = read_image.rgba();
-                        let width = read_image.width();
-                        let height = read_image.height();
-
-                        let current_image_hash = clipboard_image::calculate_hash(bytes);
-
-                        if !current_image_hash.is_empty() && current_image_hash != last_image_hash {
-                            last_image_hash = current_image_hash.clone();
-                            log::debug!("changed-clipboard {}", current_image_hash);
-
-                            if let Ok(image_dir) =
-                                clipboard_image::get_clipboard_image_dir(&clipboard_handle)
-                            {
-                                let filename = format!("{}.png", &current_image_hash);
-                                let image_path = image_dir.join(&filename);
-
-                                // image クレートを使って RGBA データから PNG ファイルを作成
-                                if let Some(img_buf) =
-                                    image::RgbaImage::from_raw(width, height, bytes.to_vec())
-                                {
-                                    if img_buf.save(&image_path).is_ok() {
-                                        if let Ok(clip_item) = db::upsert_clip(
-                                            &clipboard_handle,
-                                            db::ContentType::Image,
-                                            image_path.to_string_lossy().into_owned(),
-                                            "".to_string(),
-                                            false,
-                                        ) {
-                                            log::debug!("clipboard-updated image");
-                                            let _ =
-                                                app_handle.emit("clipboard-updated", &clip_item);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    thread::sleep(Duration::from_millis(500));
-                }
-            });
-
             // 古いデータを削除する
             let cleanup_handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
@@ -175,6 +96,33 @@ pub fn run() {
                 }
             });
 
+            let clipboard_handle = app.handle().clone();
+
+            let trim_final_newlines = clipboard_handle
+                .store("settings.json")
+                .ok()
+                .and_then(|store| store.get("trim_final_newlines"))
+                .and_then(|val| val.as_bool())
+                .unwrap_or(true /* defaultMaxItems */);
+
+            thread::spawn(move || {
+                let ctx = ClipboardContext::new().unwrap();
+                let handler = WatcherHandler {
+                    ctx,
+                    last_clip: TempClip {
+                        plain_text: "".to_string(),
+                        image_hash: "".to_string(),
+                        files: Vec::new(),
+                    },
+                    app_handle: clipboard_handle,
+                    trim_final_newlines,
+                };
+
+                let mut watcher = ClipboardWatcherContext::new().unwrap();
+                watcher.add_handler(handler);
+                watcher.start_watch(); // 監視ループを開始（スレッドをブロックする）
+            });
+
             Ok(())
         })
         .plugin(tauri_plugin_opener::init())
@@ -182,14 +130,18 @@ pub fn run() {
             command::search_clipboard,
             command::delete_clip,
             command::clear_clipboard,
-            command::update_clip,
-            command::send_clipboard,
-            command::send_and_paste,
+            command::update_clip_bookmark,
+            command::send_text,
+            command::paste_text,
+            command::send_image,
+            command::paste_image,
+            command::send_files,
+            command::paste_files,
             command::update_global_shortcut_toggle_window,
             command::restart_app,
             command::list_system_font,
-            command::get_app_local_data_dir,
-            command::get_app_data_dir
+            command::get_real_app_local_data_dir,
+            command::get_real_app_data_dir
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -198,7 +150,6 @@ pub fn run() {
 fn cleanup(app_handle: &AppHandle) {
     log::info!("delete clipboard task started");
 
-    // 設定ストアから history_size を取得
     let store = match app_handle.store("settings.json") {
         Ok(store) => store,
         Err(err) => {
@@ -223,16 +174,121 @@ fn cleanup(app_handle: &AppHandle) {
     match db::delete_many_clip_offset(app_handle, history_size) {
         Ok(deleted_clipboard) => {
             for clip in deleted_clipboard {
-                if clip.content_type == db::ContentType::Image {
-                    let path = Path::new(&clip.content);
-                    if let Err(e) = std::fs::remove_file(path) {
-                        log::warn!("Failed to delete image file {:?}: {}", path, e);
-                    }
+                if !clip.image_hash.is_empty() {
+                    clipboard_image::delete_image(app_handle, clip.image_hash);
                 }
             }
         }
         Err(err) => {
             log::error!("Failed to delete clips from DB: {}", err);
         }
+    }
+}
+
+// クリップボードの変更を検知するハンドラ構造体
+struct WatcherHandler {
+    ctx: ClipboardContext,
+    app_handle: tauri::AppHandle,
+    last_clip: TempClip,
+    trim_final_newlines: bool,
+}
+
+#[derive(PartialEq, Eq, Debug, Clone)]
+struct TempClip {
+    plain_text: String,
+    image_hash: String,
+    files: Vec<String>,
+}
+
+impl ClipboardHandler for WatcherHandler {
+    fn on_clipboard_change(&mut self) {
+        let mut current_clip = TempClip {
+            plain_text: "".to_string(),
+            image_hash: "".to_string(),
+            files: Vec::new(),
+        };
+
+        let mut current_image: Option<RustImageData> = None;
+
+        if self.ctx.has(ContentFormat::Text) {
+            if let Ok(read_text) = self.ctx.get_text() {
+                let plain_text = if self.trim_final_newlines {
+                    read_text.trim_end_matches(['\n', '\r']).to_string()
+                } else {
+                    read_text
+                };
+
+                log::debug!("on_clipboard_change plain_text {}", plain_text);
+                current_clip.plain_text = plain_text;
+            }
+        }
+
+        if self.ctx.has(ContentFormat::Image) {
+            if let Ok(image) = self.ctx.get_image() {
+                if let Ok(png_bytes) = image.to_png() {
+                    let bytes = png_bytes.get_bytes();
+                    let image_hash = clipboard_image::calculate_hash(bytes);
+
+                    log::debug!("on_clipboard_change image {}", image_hash);
+                    current_clip.image_hash = image_hash;
+                    current_image = Some(image);
+                }
+            }
+        }
+
+        if self.ctx.has(ContentFormat::Files) {
+            if let Ok(files) = self.ctx.get_files() {
+                log::debug!("on_clipboard_change files {:?}", files);
+                current_clip.plain_text = files.join("\n");
+                current_clip.files = files;
+            }
+        }
+
+        let last_clip = current_clip.clone();
+        if (current_clip.plain_text.is_empty()
+            && current_clip.image_hash.is_empty()
+            && current_clip.files.is_empty())
+            || self.last_clip == current_clip
+        {
+            return;
+        }
+
+        log::debug!("clipboard changed {:?}", current_clip);
+
+        let image_hash = current_clip.image_hash.clone();
+        if let Some(current_image) = current_image
+            && !image_hash.is_empty()
+        {
+            clipboard_image::get_full_path(&self.app_handle, image_hash)
+                .ok()
+                .map(|path| {
+                    if let Err(e) = current_image.save_to_path(&path.to_string_lossy()) {
+                        log::warn!("Failed to save image file {:?}: {}", path, e);
+                    }
+                });
+        }
+
+        if let Ok(clip_item) = db::upsert_clip(
+            &self.app_handle,
+            if !current_clip.files.is_empty() {
+                // ファイルがある場合＝ファイル
+                db::ContentType::Files
+            } else if current_clip.plain_text.is_empty() {
+                // 画像のみ＝画像
+                db::ContentType::Image
+            } else {
+                // テキストのみ＝テキスト, 画像もテキストも両方ある＝テキスト
+                db::ContentType::Text
+            },
+            current_clip.plain_text,
+            current_clip.image_hash,
+            current_clip.files.clone(),
+            false,
+        ) {
+            log::debug!("clipboard-updated");
+            let _ = self.app_handle.emit("clipboard-updated", &clip_item);
+        }
+
+        self.last_clip = last_clip;
     }
 }

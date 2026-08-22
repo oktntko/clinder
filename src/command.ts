@@ -6,13 +6,14 @@ import type { Shortcut } from './plugin/useStore';
 // DB 関連
 //////////////////// ////////////////////
 export type SearchMode = 'fuzzy' | 'substring';
-export type ContentType = 'text' | 'image';
+export type ContentType = 'text' | 'image' | 'files';
 
 export type Clip = {
   readonly id: number;
   readonly content_type: ContentType;
-  readonly content: string;
-  readonly description: string;
+  readonly plain_text: string;
+  readonly image_hash: string;
+  readonly files: string[];
   readonly bookmark: boolean;
   readonly updated_at: string;
 };
@@ -28,8 +29,8 @@ export type Searched = {
 
 async function search_clipboard({
   query,
-  search_mode: searchMode,
-  content_type: contentType,
+  search_mode,
+  content_type,
   bookmark,
 }: {
   query: string;
@@ -39,43 +40,74 @@ async function search_clipboard({
 }) {
   return invoke<Searched[]>('search_clipboard', {
     query,
-    searchMode,
-    contentType,
+    search_mode,
+    content_type,
     bookmark,
   });
 }
 
-async function delete_clip({ id, content, content_type: contentType }: Clip) {
-  return invoke('delete_clip', { id, content, contentType });
+async function delete_clip({ id, image_hash }: Clip) {
+  return invoke('delete_clip', { id, image_hash });
 }
 
 async function clear_clipboard() {
   return invoke('clear_clipboard');
 }
 
-async function update_clip({ id, bookmark }: Clip) {
-  return invoke('update_clip', { id, bookmark });
+async function update_clip_bookmark({ id, bookmark }: Clip) {
+  return invoke('update_clip_bookmark', { id, bookmark });
 }
 
 //////////////////// ////////////////////
 // クリップボード関連
 //////////////////// ////////////////////
-async function send_clipboard({ content, content_type: contentType }: Clip) {
+async function send_text({ plain_text }: Clip) {
   try {
-    await invoke('send_clipboard', { content, contentType });
+    await invoke('send_text', { plain_text });
   } catch (err) {
-    console.error('Failed to paste content:', err);
+    console.error('Failed to send_text:', err);
   }
 }
 
-async function send_and_paste({ content, content_type: contentType }: Clip) {
+async function paste_text({ plain_text }: Clip) {
   try {
-    await invoke('send_and_paste', { content, contentType });
+    await invoke('paste_text', { plain_text });
   } catch (err) {
-    console.error('Failed to paste content:', err);
+    console.error('Failed to paste_text:', err);
   }
 }
 
+async function send_image({ image_hash }: Clip) {
+  try {
+    await invoke('send_image', { image_hash });
+  } catch (err) {
+    console.error('Failed to send_image:', err);
+  }
+}
+
+async function paste_image({ image_hash }: Clip) {
+  try {
+    await invoke('paste_image', { image_hash });
+  } catch (err) {
+    console.error('Failed to paste_image:', err);
+  }
+}
+
+async function send_files({ files }: Clip) {
+  try {
+    await invoke('send_files', { files });
+  } catch (err) {
+    console.error('Failed to send_files:', err);
+  }
+}
+
+async function paste_files({ files }: Clip) {
+  try {
+    await invoke('paste_files', { files });
+  } catch (err) {
+    console.error('Failed to paste_files:', err);
+  }
+}
 //////////////////// ////////////////////
 // グローバルショートカット関連
 //////////////////// ////////////////////
@@ -97,25 +129,29 @@ async function list_system_font(): Promise<string[]> {
 // MSIXパッケージの場合、WindowsのOSレベルでパスが仮想化されるため、
 // 実際に使用されるフォルダは app_handle.path().app_local_data_dir() で取れない
 // %LOCALAPPDATA%\Packages\<PackageFamilyName>\LocalCache\Local\<%LOCALAPPDATA%\Packages\<PackageFamilyName>\LocalCache\Local\oktntko.clinder>
-async function get_app_local_data_dir(): Promise<string> {
-  return invoke('get_app_local_data_dir');
+async function get_real_app_local_data_dir(): Promise<string> {
+  return invoke('get_real_app_local_data_dir');
 }
 
 // %LOCALAPPDATA%\Packages\<PackageFamilyName>\LocalCache\Roaming\<%LOCALAPPDATA%\Packages\<PackageFamilyName>\LocalCache\Local\oktntko.clinder>
-async function get_app_data_dir(): Promise<string> {
-  return invoke('get_app_data_dir');
+async function get_real_app_data_dir(): Promise<string> {
+  return invoke('get_real_app_data_dir');
 }
 
 export default {
   search_clipboard,
   delete_clip,
   clear_clipboard,
-  update_clip,
-  send_clipboard,
-  send_and_paste,
+  update_clip_bookmark,
+  send_text,
+  paste_text,
+  send_image,
+  paste_image,
+  send_files,
+  paste_files,
   update_global_shortcut_toggle_window,
   restart_app,
   list_system_font,
-  get_app_local_data_dir,
-  get_app_data_dir,
+  get_real_app_local_data_dir,
+  get_real_app_data_dir,
 };

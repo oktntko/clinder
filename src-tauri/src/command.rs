@@ -1,18 +1,16 @@
 use crate::clipboard_image;
 use crate::db;
 
+use clipboard_rs::{Clipboard, ClipboardContext, common::RustImage};
 use enigo::{Enigo, Key, Keyboard, Settings};
 use font_kit::source::SystemSource;
 use nucleo_matcher::pattern::{Atom, AtomKind, CaseMatching, Normalization};
 use nucleo_matcher::{Config, Matcher, Utf32Str};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
-use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
-use tauri::image::Image;
 use tauri::{AppHandle, Manager, WebviewWindow};
-use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 use tauri_plugin_log::log;
 use tauri_plugin_store::StoreExt;
@@ -38,7 +36,7 @@ pub struct Searched {
 }
 
 // 検索
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn search_clipboard(
     app_handle: AppHandle,
     search_mode: SearchMode,
@@ -64,10 +62,7 @@ pub fn search_clipboard(
             .iter()
             .take(max_items)
             .map(|clip| {
-                let content = match clip.content_type {
-                    db::ContentType::Text => clip.content.replace("\r\n", "\n"),
-                    db::ContentType::Image => clip.description.replace("\r\n", "\n"),
-                };
+                let content = clip.plain_text.replace("\r\n", "\n");
                 let (snippet, indices, trimmed_begin, trimmed_end) =
                     extract_around_index_with_indices(&content, &[]);
 
@@ -100,10 +95,7 @@ pub fn search_clipboard(
     for clip in clipboard.iter() {
         let mut buf = Vec::new();
         // 改行コード \r\n があると indices がずれるため、除去しておく
-        let content = match clip.content_type {
-            db::ContentType::Text => clip.content.replace("\r\n", "\n"),
-            db::ContentType::Image => clip.description.replace("\r\n", "\n"),
-        };
+        let content = clip.plain_text.replace("\r\n", "\n");
         let utf32 = Utf32Str::new(&content, &mut buf);
         let mut indices_origin: Vec<u32> = Vec::new();
 
@@ -131,6 +123,7 @@ pub fn search_clipboard(
     Ok(matches)
 }
 
+const MAX_LENGTH: usize = 160;
 fn extract_around_index_with_indices(
     content: &str,
     indices_origin: &[u32],
@@ -141,10 +134,10 @@ fn extract_around_index_with_indices(
 
     if indices_origin.is_empty() {
         return (
-            content.chars().take(80).collect(),
+            content.chars().take(MAX_LENGTH).collect(),
             Vec::new(),
             false,
-            content.chars().count() > 80,
+            content.chars().count() > MAX_LENGTH,
         );
     }
 
@@ -153,16 +146,16 @@ fn extract_around_index_with_indices(
     let first_match = indices_origin[0] as usize;
     if first_match >= total_chars {
         return (
-            content.chars().take(80).collect(),
+            content.chars().take(MAX_LENGTH).collect(),
             Vec::new(),
             false,
-            content.chars().count() > 80,
+            content.chars().count() > MAX_LENGTH,
         );
     }
 
-    // 1. 開始文字位置の決定 (indexより前)
+    // 開始文字位置の決定 (indexより前)
     let begin_char_idx = first_match.saturating_sub(20);
-    let end_char_idx = (first_match + 80).min(total_chars);
+    let end_char_idx = (first_match + MAX_LENGTH).min(total_chars);
 
     let begin_byte = chars[begin_char_idx].0;
     let end_byte = if end_char_idx < total_chars {
@@ -172,7 +165,7 @@ fn extract_around_index_with_indices(
     };
     let sliced_text = content[begin_byte..end_byte].to_string();
 
-    // 4. indices のオフセット補正とフィルタリング
+    // indices のオフセット補正とフィルタリング
     // 切り出した範囲 (begin_char_idx .. end_char_idx) に含まれるインデックスのみを残し、
     // 切り出し開始位置 (begin_char_idx) 分だけ引き算する
     let indices_adjusted: Vec<u32> = indices_origin
@@ -197,27 +190,20 @@ fn extract_around_index_with_indices(
 }
 
 // 指定IDの 1 行削除
-#[tauri::command]
-pub fn delete_clip(
-    app_handle: AppHandle,
-    id: i64,
-    content: String,
-    content_type: db::ContentType,
-) -> Result<(), String> {
+#[tauri::command(rename_all = "snake_case")]
+pub fn delete_clip(app_handle: AppHandle, id: i64, image_hash: String) -> Result<(), String> {
     log::debug!("delete_clip");
     db::delete_clip(&app_handle, id)?;
 
-    if content_type == db::ContentType::Image {
-        let path = Path::new(&content);
-        let _ = std::fs::remove_file(path);
-        log::debug!("delete_clip {}", content);
+    if !image_hash.is_empty() {
+        clipboard_image::delete_image(&app_handle, image_hash);
     }
 
     Ok(())
 }
 
 // 全件削除
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn clear_clipboard(app_handle: AppHandle) -> Result<(), String> {
     log::debug!("clear_clipboard");
     db::delete_all_clip(&app_handle)?;
@@ -230,10 +216,10 @@ pub fn clear_clipboard(app_handle: AppHandle) -> Result<(), String> {
 }
 
 // ブックマーク更新
-#[tauri::command]
-pub fn update_clip(app_handle: AppHandle, bookmark: bool, id: i64) -> Result<(), String> {
-    log::debug!("update_clip");
-    db::update_clip(&app_handle, bookmark, id)?;
+#[tauri::command(rename_all = "snake_case")]
+pub fn update_clip_bookmark(app_handle: AppHandle, bookmark: bool, id: i64) -> Result<(), String> {
+    log::debug!("update_clip_bookmark");
+    db::update_clip_bookmark(&app_handle, bookmark, id)?;
 
     Ok(())
 }
@@ -241,43 +227,8 @@ pub fn update_clip(app_handle: AppHandle, bookmark: bool, id: i64) -> Result<(),
 //////////////////// ////////////////////
 // クリップボード関連
 //////////////////// ////////////////////
-#[tauri::command]
-pub async fn send_clipboard(
-    app_handle: AppHandle,
-    window: WebviewWindow,
-    content: String,
-    content_type: db::ContentType,
-) -> Result<(), String> {
-    log::debug!("send_clipboard");
-    if content_type == db::ContentType::Text {
-        app_handle
-            .clipboard()
-            .write_text(content)
-            .map_err(|e| e.to_string())?;
-    } else {
-        let image = Image::from_path(&content).map_err(|e| e.to_string())?;
-        app_handle
-            .clipboard()
-            .write_image(&image)
-            .map_err(|e| e.to_string())?;
-    }
-
-    window.hide().map_err(|e| e.to_string())?;
-
-    Ok(())
-}
-
-#[tauri::command]
-pub async fn send_and_paste(
-    app_handle: AppHandle,
-    window: WebviewWindow,
-    content: String,
-    content_type: db::ContentType,
-) -> Result<(), String> {
-    log::debug!("send_and_paste");
-    let _ = send_clipboard(app_handle, window, content, content_type).await;
-
-    tokio::spawn(async move {
+fn paste() {
+    tauri::async_runtime::spawn(async move {
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
         if let Ok(mut enigo) = Enigo::new(&Settings::default()) {
@@ -295,6 +246,81 @@ pub async fn send_and_paste(
             }
         }
     });
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub fn send_text(window: WebviewWindow, plain_text: String) -> Result<(), String> {
+    log::debug!("send_text");
+
+    let ctx = ClipboardContext::new().map_err(|e| e.to_string())?;
+    ctx.set_text(plain_text).map_err(|e| e.to_string())?;
+
+    window.hide().map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub fn paste_text(window: WebviewWindow, plain_text: String) -> Result<(), String> {
+    log::debug!("paste_text");
+    let _ = send_text(window, plain_text);
+
+    paste();
+
+    Ok(())
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub fn send_image(
+    app_handle: AppHandle,
+    window: WebviewWindow,
+    image_hash: String,
+) -> Result<(), String> {
+    log::debug!("send_image");
+
+    let path =
+        clipboard_image::get_full_path(&app_handle, image_hash).map_err(|e| e.to_string())?;
+    let image_data = RustImage::from_path(&path.to_string_lossy()).map_err(|e| e.to_string())?;
+
+    let ctx = ClipboardContext::new().map_err(|e| e.to_string())?;
+    ctx.set_image(image_data).map_err(|e| e.to_string())?;
+
+    window.hide().map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub fn paste_image(
+    app_handle: AppHandle,
+    window: WebviewWindow,
+    image_hash: String,
+) -> Result<(), String> {
+    log::debug!("paste_image");
+    let _ = send_image(app_handle, window, image_hash);
+
+    paste();
+
+    Ok(())
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub fn send_files(window: WebviewWindow, files: Vec<String>) -> Result<(), String> {
+    log::debug!("send_files");
+    let ctx = ClipboardContext::new().map_err(|e| e.to_string())?;
+    ctx.set_files(files).map_err(|e| e.to_string())?;
+
+    window.hide().map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub fn paste_files(window: WebviewWindow, files: Vec<String>) -> Result<(), String> {
+    log::debug!("paste_files");
+    let _ = send_files(window, files);
+
+    paste();
 
     Ok(())
 }
@@ -336,8 +362,8 @@ impl WebViewShortcut {
     }
 }
 
-#[tauri::command]
-pub async fn update_global_shortcut_toggle_window(
+#[tauri::command(rename_all = "snake_case")]
+pub fn update_global_shortcut_toggle_window(
     app: AppHandle,
     new_shortcut_web_view: WebViewShortcut,
 ) -> Result<(), String> {
@@ -441,12 +467,12 @@ pub fn toggle_window(app_handle: &AppHandle) {
 //////////////////// ////////////////////
 // その他
 //////////////////// ////////////////////
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn restart_app(app_handle: AppHandle) {
     app_handle.restart();
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn list_system_font() -> Vec<String> {
     log::debug!("list_system_font");
     let source = SystemSource::new();
@@ -463,8 +489,8 @@ pub fn list_system_font() -> Vec<String> {
     font_names.into_iter().collect()
 }
 
-#[tauri::command]
-pub fn get_app_local_data_dir(app_handle: AppHandle) -> Result<PathBuf, String> {
+#[tauri::command(rename_all = "snake_case")]
+pub fn get_real_app_local_data_dir(app_handle: AppHandle) -> Result<PathBuf, String> {
     let standard_dir = app_handle
         .path()
         .app_local_data_dir()
@@ -480,8 +506,8 @@ pub fn get_app_local_data_dir(app_handle: AppHandle) -> Result<PathBuf, String> 
     Ok(standard_dir)
 }
 
-#[tauri::command]
-pub fn get_app_data_dir(app_handle: AppHandle) -> Result<PathBuf, String> {
+#[tauri::command(rename_all = "snake_case")]
+pub fn get_real_app_data_dir(app_handle: AppHandle) -> Result<PathBuf, String> {
     let standard_dir = app_handle
         .path()
         .app_local_data_dir()
@@ -532,9 +558,9 @@ fn get_msix_data_dir(app_handle: &AppHandle, data_dir_type: DataDirType) -> Opti
 // Windows APIを使って PackageFamilyName を取得する関数
 #[cfg(target_os = "windows")]
 fn get_package_family_name() -> Option<String> {
-    use windows::core::PWSTR;
     use windows::Win32::Foundation::WIN32_ERROR;
     use windows::Win32::Storage::Packaging::Appx::GetCurrentPackageFamilyName;
+    use windows::core::PWSTR;
 
     let mut length = 0u32;
     // バッファ長を取得
