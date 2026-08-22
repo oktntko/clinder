@@ -334,7 +334,7 @@ export function Clipboard({
             return (
               <div
                 key={i}
-                className={`group relative border-l-4 px-1 transition-colors hover:bg-gray-200/50 dark:hover:bg-zinc-700/50 ${
+                className={`relative border-l-4 px-1 transition-colors hover:bg-gray-200/50 dark:hover:bg-zinc-700/50 ${
                   isActive
                     ? 'border-l-red-500 bg-gray-200 dark:bg-zinc-700'
                     : 'border-l-transparent'
