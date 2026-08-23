@@ -1,8 +1,12 @@
-import React, { Suspense, useState, type ComponentProps, type ReactNode } from 'react';
+import { useEffect, useState, type ComponentProps, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
+
+import { Button } from '~/component/Button';
+import { cn } from '~/lib/utils';
 
 import {
   DialogContext,
+  type ColorSet,
   type ReactComponent,
   type WindowDialogOptions,
   type WindowDialogProps,
@@ -11,92 +15,78 @@ import {
 // --- WindowDialog Component ---
 function WindowDialog({
   message,
-  color = 'white',
+  set = 'default',
   confirmText = 'confirm',
   confirmValue = 'confirm',
   cancelText,
-  prompt,
   onConfirm,
   onCancel,
 }: WindowDialogProps) {
-  const [modelValue, setModelValue] = useState('');
-
-  const getIconClass = () => {
-    switch (color) {
-      case 'green':
-        return 'icon-[qlementine-icons--success-12]';
-      case 'blue':
-        return 'icon-[material-symbols--info-outline-rounded]';
-      case 'yellow':
-        return 'icon-[material-symbols--warning-outline-rounded]';
-      case 'red':
-        return 'icon-[material-symbols--dangerous-outline-rounded]';
-      case 'white':
-      case 'gray':
-      default:
-        return 'icon-[solar--dialog-line-duotone]';
+  useEffect(() => {
+    function closeDialog(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        e.stopPropagation(); // App.tsx の hideWindow に突き抜けないようにする
+      }
     }
-  };
 
-  const getColorClass = () => {
-    switch (color) {
-      case 'white':
-        return 'bg-gray-100 text-gray-400';
-      case 'gray':
-        return 'bg-gray-100 text-gray-800';
-      case 'green':
-        return 'bg-green-100 text-green-800';
-      case 'red':
-        return 'bg-red-100 text-red-800';
-      case 'blue':
-        return 'bg-blue-100 text-blue-800';
-      case 'yellow':
-        return 'bg-yellow-100 text-yellow-800';
-      default:
-        return 'bg-gray-100 text-gray-400';
-    }
-  };
+    window.addEventListener('keydown', closeDialog, true);
+
+    return () => {
+      window.removeEventListener('keydown', closeDialog, true);
+    };
+  });
 
   return (
-    <div className="max-w-md rounded-lg bg-gray-100 p-8 text-gray-700 shadow-xl">
+    <div
+      className={cn(
+        'max-w-80 rounded-lg p-8 shadow-md',
+        'text-sm',
+        'bg-gray-200 text-gray-900',
+        'dark:bg-zinc-900 dark:text-zinc-100',
+      )}
+    >
       <form
         className="flex flex-col gap-6"
         onSubmit={(e) => {
           e.preventDefault();
-          onConfirm(prompt ? `confirm:${modelValue}` : confirmValue);
+          onConfirm(confirmValue);
         }}
       >
         <main className="flex items-center gap-4">
-          <div
-            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${getColorClass()}`}
-          >
-            <span className={`${getIconClass()} h-6 w-6`} />
+          <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full`}>
+            <span
+              className={cn(
+                'size-6',
+                iconClass(set),
+                set === 'default'
+                  ? ['bg-white', 'dark:bg-zinc-700']
+                  : set === 'positive'
+                    ? ['bg-green-800 dark:bg-green-300']
+                    : set === 'warning'
+                      ? ['bg-amber-500 dark:bg-amber-300']
+                      : [],
+              )}
+            />
           </div>
 
           <div className="flex flex-col gap-2">
             <p className="text-sm whitespace-pre-wrap">{message}</p>
-            {prompt && (
-              <input
-                type="text"
-                value={modelValue}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setModelValue(e.target.value)}
-                className="w-full"
-                autoFocus
-                required
-                {...prompt}
-              />
-            )}
           </div>
         </main>
 
         <footer className="flex items-center justify-center gap-4">
-          <button type="submit" autoFocus color={color ?? 'white'}>
+          <Button type="submit" set={set} className="min-w-24 font-bold" autoFocus>
             <span className="capitalize">{confirmText}</span>
-          </button>
+          </Button>
           {cancelText && (
-            <button type="button" color="white" onClick={() => onCancel()}>
+            <Button
+              type="button"
+              set="default"
+              className="min-w-24 font-bold"
+              onClick={() => onCancel()}
+            >
               <span className="capitalize">{cancelText}</span>
-            </button>
+            </Button>
           )}
         </footer>
       </form>
@@ -104,49 +94,23 @@ function WindowDialog({
   );
 }
 
-// --- Loading Component ---
-function LoadingFallback() {
-  return (
-    <div className="flex flex-col items-center bg-transparent p-8">
-      <span className="icon-[eos-icons--bubble-loading] text-opacity-60 h-16 w-16 text-gray-600" />
-      <span className="sr-only">Loading...</span>
-      <input
-        autoFocus
-        name="loading"
-        className="h-0 w-0 border-none bg-transparent caret-transparent outline-hidden"
-      />
-    </div>
-  );
-}
-
-// --- Error Boundary ---
-class DialogErrorBoundary extends React.Component<
-  { children: ReactNode; onError: () => void },
-  { hasError: boolean }
-> {
-  constructor(props: { children: ReactNode; onError: () => void }) {
-    super(props);
-    this.state = { hasError: false };
-  }
-
-  static getDerivedStateFromError() {
-    return { hasError: true };
-  }
-
-  componentDidCatch(_: unknown) {
-    this.props.onError();
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return null;
-    }
-    return this.props.children;
+function iconClass(set: ColorSet) {
+  switch (set) {
+    case 'positive':
+      return 'icon-[qlementine-icons--success-12]';
+    case 'warning':
+      return 'icon-[material-symbols--warning-outline-rounded]';
+    case 'default':
+    default:
+      return 'icon-[solar--dialog-line-duotone]';
   }
 }
 
 // --- Helper Functions ---
-function createDialogElement(closedby: 'any' | 'closerequest' | 'none' = 'any') {
+function createDialogElement(
+  closedby: 'any' | 'closerequest' | 'none' = 'any',
+  anchor?: HTMLElement,
+) {
   const dialog = document.createElement('dialog');
   dialog.setAttribute('closedby', closedby);
   dialog.className = `
@@ -155,7 +119,8 @@ function createDialogElement(closedby: 'any' | 'closerequest' | 'none' = 'any') 
     scale-95 opacity-0
     starting:[[open]]:scale-95 starting:[[open]]:opacity-0
     [[open]]:scale-100 [[open]]:opacity-100
-    backdrop:bg-gray-500/20 backdrop:backdrop-blur-xs
+    backdrop:bg-gray-500/20
+    ${anchor ? 'backdrop:backdrop-grayscale-xs' : 'backdrop:backdrop-blur-xs'}
     backdrop:transition backdrop:transition-discrete backdrop:duration-200 backdrop:ease-out
     backdrop:opacity-0
     starting:[[open]]:backdrop:opacity-0
@@ -168,12 +133,16 @@ function createCloseButton() {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = `
-    absolute top-1 right-1 h-6 w-6 cursor-pointer rounded-full transition shadow
-    disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-300 disabled:text-gray-100 disabled:hover:bg-gray-400 disabled:hover:text-gray-200 disabled:hover:ring-gray-300 disabled:focus:ring-gray-300
-    dark:disabled:border-gray-700 dark:disabled:bg-gray-700 dark:disabled:text-gray-500
-    hover:ring-2 focus:ring-2 focus:outline-none outline-none
-    bg-transparent text-gray-400 hover:bg-gray-50 hover:ring-gray-300 focus:ring-gray-300
-    dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200 dark:hover:ring-gray-600 dark:focus:ring-gray-600
+    absolute top-1 right-1 size-6 cursor-pointer transition
+    inline-flex items-center justify-center
+    rounded-full outline-none hover:ring-1 focus:ring-2
+    bg-transparent shadow
+    text-gray-400
+    hover:bg-white hover:ring-gray-400
+    focus:bg-white focus:ring-gray-400
+    dark:text-zinc-500
+    dark:hover:bg-zinc-700 dark:hover:ring-zinc-500
+    dark:focus:bg-zinc-700 dark:focus:ring-zinc-500
   `;
   button.setAttribute('aria-label', 'Close');
   button.innerHTML = `<span class="icon-[bi--x] h-6 w-6"></span>`;
@@ -184,19 +153,23 @@ function createCloseButton() {
 function createDialogPlugin() {
   async function showModal<T, C extends ReactComponent>(
     Component: C,
-    getProps?: (
+    $props?: (
       resolve: (value: T | PromiseLike<T>) => void,
       reject: (reason?: unknown) => void,
     ) => ComponentProps<C>,
     {
       closedby = 'any',
       showCloseButton = true,
+      anchor,
+      anchorChildHeight,
     }: {
       closedby?: 'any' | 'closerequest' | 'none';
       showCloseButton?: boolean;
+      anchor?: HTMLElement;
+      anchorChildHeight?: number;
     } = {},
   ) {
-    const dialog = createDialogElement(closedby);
+    const dialog = createDialogElement(closedby, anchor);
 
     if (showCloseButton) {
       const closeButton = createCloseButton();
@@ -221,9 +194,7 @@ function createDialogPlugin() {
         reject(reason);
       };
 
-      const componentProps = getProps
-        ? getProps(trapResolve, trapReject)
-        : ({} as ComponentProps<C>);
+      const componentProps = $props ? $props(trapResolve, trapReject) : ({} as ComponentProps<C>);
 
       const handleClose = () => {
         const timerId = setTimeout(() => {
@@ -248,13 +219,24 @@ function createDialogPlugin() {
 
       dialog.addEventListener('close', handleClose, { once: true });
 
-      root.render(
-        <DialogErrorBoundary onError={() => dialog.close('cancel')}>
-          <Suspense fallback={<LoadingFallback />}>
-            <Component {...componentProps} />
-          </Suspense>
-        </DialogErrorBoundary>,
-      );
+      if (anchor) {
+        dialog.style.margin = '0'; // マージで中の要素を中央寄せしているので消す
+        dialog.style.insetInlineStart = 'unset'; // 消すと right: が効くようになる
+        dialog.style.insetBlockStart = 'unset'; // 消すと bottom: が効くようになる
+        dialog.style.position = 'fixed';
+        dialog.style.right = 'calc(4px + var(--spacing) * 1.5)'; // scrollbar 分
+
+        const rect = anchor.getBoundingClientRect();
+        const spaceBelow = window.innerHeight + anchor.clientHeight - rect.bottom;
+
+        if (spaceBelow >= (anchorChildHeight ?? 300)) {
+          dialog.style.top = `${rect.top}px`;
+        } else {
+          dialog.style.bottom = `${window.innerHeight - rect.bottom}px`;
+        }
+      }
+
+      root.render(<Component {...componentProps} />);
 
       document.body.appendChild(dialog);
       dialog.showModal();
@@ -277,28 +259,22 @@ function createDialogPlugin() {
     showModal,
 
     get alert() {
-      type O = Pick<WindowDialogOptions, 'color' | 'confirmText'>;
+      type O = Pick<WindowDialogOptions, 'set' | 'confirmText'>;
       return {
         async open(message: string, { confirmText = 'OK', ...options }: O = {}) {
           return showWindowDialog<'confirm' | 'cancel'>(message, { confirmText, ...options });
         },
-        async success(message: string, { color = 'green', ...options }: O = {}) {
-          return this.open(message, { color, ...options });
+        async success(message: string, { set = 'positive', ...options }: O = {}) {
+          return this.open(message, { set, ...options });
         },
-        async info(message: string, { color = 'blue', ...options }: O = {}) {
-          return this.open(message, { color, ...options });
-        },
-        async warn(message: string, { color = 'yellow', ...options }: O = {}) {
-          return this.open(message, { color, ...options });
-        },
-        async danger(message: string, { color = 'red', ...options }: O = {}) {
-          return this.open(message, { color, ...options });
+        async warn(message: string, { set = 'warning', ...options }: O = {}) {
+          return this.open(message, { set, ...options });
         },
       };
     },
 
     get confirm() {
-      type O = Pick<WindowDialogOptions, 'color' | 'confirmText' | 'cancelText'>;
+      type O = Pick<WindowDialogOptions, 'set' | 'confirmText' | 'cancelText'>;
       return {
         async open(
           message: string,
@@ -311,94 +287,12 @@ function createDialogPlugin() {
             ...options,
           });
         },
-        async success(message: string, { color = 'green', ...options }: O = {}) {
-          return this.open(message, { color, ...options });
+        async success(message: string, { set = 'positive', ...options }: O = {}) {
+          return this.open(message, { set, ...options });
         },
-        async info(message: string, { color = 'blue', ...options }: O = {}) {
-          return this.open(message, { color, ...options });
+        async warn(message: string, { set = 'warning', ...options }: O = {}) {
+          return this.open(message, { set, ...options });
         },
-        async warn(message: string, { color = 'yellow', ...options }: O = {}) {
-          return this.open(message, { color, ...options });
-        },
-        async danger(message: string, { color = 'red', ...options }: O = {}) {
-          return this.open(message, { color, ...options });
-        },
-      };
-    },
-
-    get prompt() {
-      type O = Pick<WindowDialogOptions, 'color' | 'confirmText' | 'cancelText' | 'prompt'>;
-      return {
-        async open(
-          message: string,
-          {
-            confirmText = 'confirm',
-            cancelText = 'cancel',
-            prompt = { type: 'text' },
-            ...options
-          }: O = {},
-        ) {
-          return showWindowDialog<`confirm:${string}` | 'cancel'>(message, {
-            confirmText,
-            cancelText,
-            prompt,
-            ...options,
-          });
-        },
-        async success(message: string, { color = 'green', ...options }: O = {}) {
-          return this.open(message, { color, ...options });
-        },
-        async info(message: string, { color = 'blue', ...options }: O = {}) {
-          return this.open(message, { color, ...options });
-        },
-        async warn(message: string, { color = 'yellow', ...options }: O = {}) {
-          return this.open(message, { color, ...options });
-        },
-        async danger(message: string, { color = 'red', ...options }: O = {}) {
-          return this.open(message, { color, ...options });
-        },
-      };
-    },
-
-    loading() {
-      const dialog = createDialogElement('none');
-
-      dialog.addEventListener('close', () => {
-        const timerId = setTimeout(() => {
-          document.body.removeChild(dialog);
-        }, 250);
-
-        dialog.addEventListener(
-          'transitionend',
-          (e) => {
-            if (e.target === dialog) {
-              clearTimeout(timerId);
-              document.body.removeChild(dialog);
-            }
-          },
-          { once: true },
-        );
-      });
-
-      dialog.insertAdjacentHTML(
-        'beforeend',
-        `
-<div className="flex flex-col items-center bg-transparent p-8">
-  <span className="icon-[eos-icons--bubble-loading] text-opacity-60 h-16 w-16 text-gray-600"></span>
-  <span className="sr-only">Loading...</span>
-  <input
-    autofocus
-    name="loading"
-    className="h-0 w-0 border-none bg-transparent caret-transparent outline-hidden"
-  />
-</div>`,
-      );
-
-      document.body.appendChild(dialog);
-      dialog.showModal();
-
-      return {
-        close: () => dialog.close('cancel'),
       };
     },
   };

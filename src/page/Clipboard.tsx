@@ -1,12 +1,15 @@
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { join } from '@tauri-apps/api/path';
+import { getCurrentWindow } from '@tauri-apps/api/window';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 
-import type { Shortcut, useStore } from '~/plugin/useStore';
-
+import { FOCUSABLE_SELECTOR } from '~/App';
 import invoke, { type Clip, type Searched } from '~/command';
-import { Footer } from '~/component/Footer';
-import { R } from '~/lib/remeda';
+import { ToggleButton } from '~/component/ToggleButton';
+import { cn } from '~/lib/utils';
+import { useDialog } from '~/plugin/useDialog';
+import { matchShortcut, type useStore } from '~/plugin/useStore';
 
 type ClipboardProps = ReturnType<typeof useStore> & {};
 
@@ -16,6 +19,8 @@ export function Clipboard({
   saveSearchMode,
   ...props
 }: ClipboardProps) {
+  const $dialog = useDialog();
+
   const [query, setQuery] = useState('');
   const [clipboard, setClipboard] = useState<Searched[]>([]);
   const [cursor, setCursor] = useState(0);
@@ -60,32 +65,43 @@ export function Clipboard({
     void invoke.delete_clip(clip);
   }, []);
 
-  const clearClipboard = useCallback(async function () {
-    setClipboard([]);
-    void invoke.clear_clipboard();
-  }, []);
-
   const toggleClipBookmark = useCallback(async function (clip: Clip) {
     const updatedClip = { ...clip, bookmark: !clip.bookmark };
     setClipboard((clipboard) =>
       clipboard.map((item) => (item.clip.id === clip.id ? { ...item, clip: updatedClip } : item)),
     );
-    return invoke.update_clip({ ...updatedClip });
+    return invoke.update_clip_bookmark({ ...updatedClip });
   }, []);
+
+  const showPasteMenu = useCallback(
+    async function (clip: Clip, anchor: HTMLButtonElement) {
+      const buttonCount =
+        (clip.plain_text ? 2 : 0) + (clip.image_hash ? 2 : 0) + (clip.files.length > 0 ? 2 : 0);
+      const height = buttonCount * 36 + (buttonCount - 1) + 8;
+      return $dialog.showModal(PasteMenu, (resolve) => ({ clip, onSuccess: () => resolve('ok') }), {
+        anchor,
+        anchorChildHeight: height,
+        showCloseButton: false,
+      });
+    },
+    [$dialog],
+  );
 
   const toggleSearchContentTypeText = useCallback(async () => {
     return saveSearchContentType((prev) =>
-      prev.some((x) => x === 'text')
-        ? prev.filter((x) => x !== 'text')
-        : R.unique(prev.concat(['text'])),
+      prev.some((x) => x === 'text') ? prev.filter((x) => x !== 'text') : prev.concat(['text']),
     );
   }, [saveSearchContentType]);
 
   const toggleSearchContentTypeImage = useCallback(async () => {
     return saveSearchContentType((prev) =>
-      prev.some((x) => x === 'image')
-        ? prev.filter((x) => x !== 'image')
-        : R.unique(prev.concat(['image'])),
+      prev.some((x) => x === 'image') ? prev.filter((x) => x !== 'image') : prev.concat(['image']),
+    );
+  }, [saveSearchContentType]);
+
+  const toggleSearchContentTypeFiles = useCallback(async () => {
+    return saveSearchContentType((prev) =>
+      prev.some((x) => x === 'files') ? prev.filter((x) => x !== 'files') : prev.concat(['files']),
     );
   }, [saveSearchContentType]);
 
@@ -101,11 +117,41 @@ export function Clipboard({
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
+      if (e.isComposing) {
+        // IME 変換中
+        return;
+      }
+
+      const modalDialog = document.querySelector('dialog:modal') as HTMLDialogElement | null;
+
+      if (matchShortcut(e, props.shortcutShowPasteMenu)) {
+        e.preventDefault();
+        if (modalDialog == null) {
+          const selected = clipboard[cursor];
+          if (selected != null && activeItemRef.current != null) {
+            void showPasteMenu(selected.clip, activeItemRef.current);
+          }
+        } else {
+          modalDialog.close();
+        }
+        return;
+      }
+
+      if (modalDialog) {
+        return;
+      }
+
       if (matchShortcut(e, props.shortcutSendAndPaste)) {
         e.preventDefault();
         const selected = clipboard[cursor];
         if (selected != null) {
-          void invoke.send_and_paste(selected.clip);
+          if (selected.clip.content_type === 'text') {
+            void invoke.paste_text(selected.clip);
+          } else if (selected.clip.content_type === 'image') {
+            void invoke.paste_image(selected.clip);
+          } else {
+            void invoke.paste_files(selected.clip);
+          }
         }
         return;
       }
@@ -114,7 +160,13 @@ export function Clipboard({
         e.preventDefault();
         const selected = clipboard[cursor];
         if (selected != null) {
-          void invoke.send_clipboard(selected.clip);
+          if (selected.clip.content_type === 'text') {
+            void invoke.send_text(selected.clip);
+          } else if (selected.clip.content_type === 'image') {
+            void invoke.send_image(selected.clip);
+          } else {
+            void invoke.send_files(selected.clip);
+          }
         }
         return;
       }
@@ -147,6 +199,11 @@ export function Clipboard({
         return toggleSearchContentTypeImage();
       }
 
+      if (matchShortcut(e, props.shortcutToggleSearchContentTypeFiles)) {
+        e.preventDefault();
+        return toggleSearchContentTypeFiles();
+      }
+
       if (matchShortcut(e, props.shortcutToggleSearchBookmark)) {
         e.preventDefault();
         return toggleSearchBookmark();
@@ -177,10 +234,10 @@ export function Clipboard({
       }
     }
 
-    window.addEventListener('keydown', handleKeyDown, true);
+    window.addEventListener('keydown', handleKeyDown);
 
     return () => {
-      window.removeEventListener('keydown', handleKeyDown, true);
+      window.removeEventListener('keydown', handleKeyDown);
     };
   }, [
     cursor,
@@ -189,14 +246,18 @@ export function Clipboard({
     props.shortcutSendClipboard,
     props.shortcutDeleteClip,
     props.shortcutToggleClipBookmark,
+    props.shortcutShowPasteMenu,
     props.shortcutToggleSearchContentTypeText,
     props.shortcutToggleSearchContentTypeImage,
+    props.shortcutToggleSearchContentTypeFiles,
     props.shortcutToggleSearchBookmark,
     props.shortcutToggleSearchMode,
     deleteClip,
     toggleClipBookmark,
+    showPasteMenu,
     toggleSearchContentTypeText,
     toggleSearchContentTypeImage,
+    toggleSearchContentTypeFiles,
     toggleSearchBookmark,
     toggleSearchMode,
   ]);
@@ -213,155 +274,238 @@ export function Clipboard({
     }
   }, [cursor]);
 
+  useEffect(() => {
+    const unlistenPromise = getCurrentWindow().onFocusChanged(({ payload: focused }) => {
+      if (focused) {
+        requestAnimationFrame(() => {
+          const input = document.getElementById('query');
+          input?.focus();
+        });
+      }
+    });
+
+    return () => {
+      void unlistenPromise.then((unlisten) => unlisten());
+    };
+  }, []);
+
   return (
-    <div className={`flex max-h-198 flex-col`}>
-      <div className="flex shrink-0 flex-row items-center gap-1 border-b border-b-gray-300 px-2 pt-px pb-2 select-none dark:border-b-zinc-700 dark:bg-zinc-900">
+    <>
+      <div
+        className={cn(
+          'flex shrink-0 flex-row items-center gap-2 px-2 py-3 transition',
+          'border-b-2',
+          'border-b-gray-400 has-[input:focus]:bg-gray-50',
+          'dark:border-b-zinc-600 dark:has-[input:focus]:bg-black',
+        )}
+      >
+        <ToggleButton
+          title="fuzzy search"
+          type="button"
+          isActive={props.searchMode === 'fuzzy'}
+          onClick={(e) => {
+            e.preventDefault();
+            return toggleSearchMode();
+          }}
+        >
+          <span className="icon-[codicon--search-fuzzy] size-4"></span>
+        </ToggleButton>
+
         <input
+          id="query"
           type="text"
-          className="w-full transition focus:outline-none dark:bg-transparent dark:text-zinc-100"
+          className="w-full transition outline-none"
           autoFocus={true}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+          autoComplete="off"
         />
 
-        <div className="inline-flex flex-row items-center gap-2">
-          <button
+        <div className="inline-flex flex-row items-center gap-1.5">
+          <ToggleButton
             title="text"
             type="button"
-            className={`inline-flex items-center justify-center rounded-full p-2 transition-colors focus:outline-none ${
-              props.searchContentType.some((x) => x === 'text')
-                ? 'bg-green-200 hover:bg-green-300 focus:bg-green-300 dark:bg-emerald-900/60 dark:text-emerald-300 dark:hover:bg-emerald-800/80 dark:focus:bg-emerald-800/80'
-                : 'bg-gray-200 hover:bg-gray-300 focus:bg-gray-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600'
-            }`}
+            isActive={props.searchContentType.some((x) => x === 'text')}
             onClick={(e) => {
-              e.stopPropagation();
+              e.preventDefault();
               return toggleSearchContentTypeText();
             }}
           >
             <span className="icon-[humbleicons--text] size-4"></span>
-          </button>
-          <button
+          </ToggleButton>
+          <ToggleButton
             title="image"
             type="button"
-            className={`inline-flex items-center justify-center rounded-full p-2 transition-colors focus:outline-none ${
-              props.searchContentType.some((x) => x === 'image')
-                ? 'bg-green-200 hover:bg-green-300 focus:bg-green-300 dark:bg-emerald-900/60 dark:text-emerald-300 dark:hover:bg-emerald-800/80 dark:focus:bg-emerald-800/80'
-                : 'bg-gray-200 hover:bg-gray-300 focus:bg-gray-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600'
-            }`}
+            isActive={props.searchContentType.some((x) => x === 'image')}
             onClick={(e) => {
-              e.stopPropagation();
+              e.preventDefault();
               return toggleSearchContentTypeImage();
             }}
           >
             <span className="icon-[humbleicons--image] size-4"></span>
-          </button>
+          </ToggleButton>
+          <ToggleButton
+            title="files"
+            type="button"
+            isActive={props.searchContentType.some((x) => x === 'files')}
+            onClick={(e) => {
+              e.preventDefault();
+              return toggleSearchContentTypeFiles();
+            }}
+          >
+            <span className="icon-[humbleicons--folder] size-4"></span>
+          </ToggleButton>
 
-          <button
+          <ToggleButton
             title="search_bookmark"
             type="button"
-            className={`inline-flex items-center justify-center rounded-full p-2 transition-colors focus:outline-none ${
-              props.searchBookmark.length === 1 && props.searchBookmark[0] === true
-                ? 'bg-green-200 hover:bg-green-300 focus:bg-green-300 dark:bg-emerald-900/60 dark:text-emerald-300 dark:hover:bg-emerald-800/80 dark:focus:bg-emerald-800/80'
-                : 'bg-gray-200 hover:bg-gray-300 focus:bg-gray-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600'
-            }`}
+            isActive={props.searchBookmark.length === 1 && props.searchBookmark[0] === true}
             onClick={(e) => {
-              e.stopPropagation();
+              e.preventDefault();
               return toggleSearchBookmark();
             }}
           >
-            <span className="icon-[material-symbols--bookmark-outline-rounded] size-4"></span>
-          </button>
-
-          <button
-            title="fuzzy search"
-            type="button"
-            className={`inline-flex items-center justify-center rounded-full p-2 transition-colors focus:outline-none ${
-              props.searchMode === 'fuzzy'
-                ? 'bg-green-200 hover:bg-green-300 focus:bg-green-300 dark:bg-emerald-900/60 dark:text-emerald-300 dark:hover:bg-emerald-800/80 dark:focus:bg-emerald-800/80'
-                : 'bg-gray-200 hover:bg-gray-300 focus:bg-gray-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600'
-            }`}
-            onClick={(e) => {
-              e.stopPropagation();
-              return toggleSearchMode();
-            }}
-          >
-            <span className="icon-[codicon--search-fuzzy] size-4"></span>
-          </button>
+            <span className="icon-[lucide--bookmark] size-4"></span>
+          </ToggleButton>
         </div>
       </div>
 
       <div
         tabIndex={-1}
-        className="flex min-h-0 w-full flex-1 flex-col divide-y divide-gray-300 overflow-y-auto focus:outline-none dark:divide-zinc-700"
+        className={cn(
+          'flex min-h-0 w-full flex-1 flex-col divide-y overflow-y-auto outline-none',
+          'divide-gray-300',
+          'dark:divide-zinc-600',
+        )}
       >
         {clipboard.length > 0 ? (
           clipboard.map((item, i) => {
             const isActive = cursor === i;
             return (
               <div
-                key={i}
-                className={`group relative border-l-4 px-1 transition-colors hover:bg-gray-200/50 dark:hover:bg-zinc-700/50 ${
+                key={item.clip.id}
+                className={cn(
+                  'relative border-l-6 px-1 transition-colors',
+                  'hover:bg-white',
+                  'dark:hover:bg-zinc-700',
                   isActive
-                    ? 'border-l-red-500 bg-gray-200 dark:bg-zinc-700'
-                    : 'border-l-transparent'
-                } `}
+                    ? ['border-l-red-500', 'bg-white', 'dark:bg-zinc-700']
+                    : 'border-l-transparent',
+                )}
               >
                 <button
                   ref={isActive ? activeItemRef : null}
                   type="button"
-                  title={item.clip.content}
-                  className={`relative w-full shrink-0 cursor-pointer truncate py-1 text-start focus:outline-none ${
+                  title={item.clip.plain_text}
+                  tabIndex={-1}
+                  className={cn(
+                    'relative w-full shrink-0 cursor-pointer py-1 text-start outline-none',
                     item.trimmed_begin
-                      ? "before:icon-[lucide--ellipsis] pl-5 before:absolute before:top-1/2 before:left-0 before:inline-block before:size-4 before:-translate-y-1/2 before:bg-gray-300 before:content-[''] dark:before:bg-zinc-600"
-                      : ''
-                  } ${
+                      ? [
+                          'pl-5 before:absolute before:top-0 before:left-0 before:translate-y-1/2',
+                          "before:content-['']",
+                          'before:icon-[lucide--ellipsis] before:inline-block before:size-4',
+                          'before:bg-gray-300',
+                          'dark:before:bg-zinc-600',
+                        ]
+                      : '',
                     item.trimmed_end
-                      ? "after:icon-[lucide--ellipsis] pr-5 after:absolute after:top-1/2 after:right-0 after:inline-block after:size-4 after:-translate-y-1/2 after:bg-gray-300 after:content-[''] dark:after:bg-zinc-600"
-                      : ''
-                  }`}
+                      ? [
+                          'pr-5 after:absolute after:right-0 after:bottom-0 after:-translate-y-1/2',
+                          "after:content-['']",
+                          'after:icon-[lucide--ellipsis] after:inline-block after:size-4',
+                          'after:bg-gray-300',
+                          'dark:after:bg-zinc-600',
+                        ]
+                      : '',
+                    props.wrapTextAutomatically
+                      ? 'wrap-anywhere whitespace-pre-wrap'
+                      : 'line-clamp-1 leading-6',
+                  )}
                   onFocus={() => {
                     setCursor(i);
                   }}
                   onClick={() => {
                     setCursor(i);
-                    return invoke.send_and_paste(item.clip);
+                    if (item.clip.content_type === 'text') {
+                      void invoke.paste_text(item.clip);
+                    } else if (item.clip.content_type === 'image') {
+                      void invoke.paste_image(item.clip);
+                    } else {
+                      void invoke.paste_files(item.clip);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    e.stopPropagation();
                   }}
                 >
                   {item.clip.content_type === 'text' ? (
-                    <HighlightText {...item} />
+                    <HighlightText {...{ ...props, item }} />
+                  ) : item.clip.content_type === 'image' ? (
+                    <ShrinkImage {...{ ...props, item }} />
                   ) : (
-                    <ShrinkImage {...item} />
+                    /* files */
+                    <FileList {...{ ...props, item }} />
                   )}
                 </button>
 
-                <div className="pointer-events-none absolute top-1/2 right-5 hidden -translate-y-1/2 items-center justify-center gap-1 rounded-full bg-gray-200 p-0.5 transition-all transition-discrete group-hover:inline-flex dark:bg-zinc-700">
-                  <button
-                    title="delete"
+                {item.clip.content_type === 'text' && item.clip.image_hash && (
+                  <ToggleButton
+                    title="paste as image"
                     type="button"
+                    isActive={false}
                     tabIndex={-1}
-                    className="pointer-events-auto inline-flex size-5 items-center justify-center rounded-full bg-gray-100 transition-colors hover:bg-gray-300 dark:bg-zinc-800 dark:hover:bg-zinc-600"
+                    set="default"
+                    className="absolute top-0.5 right-3.5 z-10 bg-gray-50 dark:bg-zinc-800"
                     onClick={(e) => {
-                      e.stopPropagation();
-                      return deleteClip(item.clip);
+                      e.preventDefault();
+                      void invoke.paste_image(item.clip);
                     }}
                   >
-                    <span className="icon-[mingcute--close-fill] size-4"></span>
-                  </button>
-                </div>
+                    <span className="icon-[humbleicons--image] size-4"></span>
+                  </ToggleButton>
+                )}
+                {item.clip.content_type !== 'text' && item.clip.plain_text && (
+                  <ToggleButton
+                    title="paste as text"
+                    type="button"
+                    isActive={false}
+                    tabIndex={-1}
+                    set="default"
+                    className="absolute top-0.5 right-3.5 z-10 bg-gray-50 dark:bg-zinc-800"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      void invoke.paste_text(item.clip);
+                    }}
+                  >
+                    <span className="icon-[humbleicons--text] size-4"></span>
+                  </ToggleButton>
+                )}
 
                 <div className="pointer-events-none absolute top-0 right-0">
                   <button
                     title="bookmark"
                     type="button"
                     tabIndex={-1}
-                    className={`pointer-events-auto aspect-square size-5 transition-colors [clip-path:polygon(0_0,100%_0,100%_100%)] ${
+                    className={cn(
+                      'pointer-events-auto aspect-square size-5 transition-colors',
+                      '[clip-path:polygon(0_0,100%_0,100%_100%)]',
                       item.clip.bookmark
-                        ? 'bg-green-400 hover:bg-green-500 dark:bg-emerald-700 dark:hover:bg-emerald-800'
-                        : 'bg-gray-100/90 hover:bg-gray-300 dark:bg-zinc-800/50 dark:hover:bg-zinc-600'
-                    }`}
+                        ? [
+                            'bg-green-400 hover:bg-green-500',
+                            'dark:bg-emerald-600 dark:hover:bg-emerald-700',
+                          ]
+                        : [
+                            'bg-gray-300 hover:bg-green-200',
+                            'dark:bg-zinc-800 dark:hover:bg-emerald-800',
+                          ],
+                    )}
                     onClick={(e) => {
-                      e.stopPropagation();
+                      e.preventDefault();
                       return toggleClipBookmark(item.clip);
+                    }}
+                    onKeyDown={(e) => {
+                      e.stopPropagation();
                     }}
                   ></button>
                 </div>
@@ -369,37 +513,32 @@ export function Clipboard({
             );
           })
         ) : (
-          <div className="flex h-60 w-full items-center justify-center text-gray-500 dark:text-zinc-400">
+          <div
+            className={cn(
+              'flex h-full w-full grow items-center justify-center py-1',
+              'text-gray-500',
+              'dark:text-zinc-400',
+              props.wrapTextAutomatically ? 'wrap-anywhere whitespace-pre-wrap' : 'leading-6',
+            )}
+          >
             No matches found
           </div>
         )}
       </div>
-
-      <Footer {...{ saveSearchContentType, saveSearchBookmark, saveSearchMode, ...props }}>
-        <button
-          title="clear all"
-          type="button"
-          className="inline-flex items-center justify-center rounded-full bg-gray-200 p-2 transition-colors hover:bg-gray-300 focus:bg-gray-300 focus:outline-none dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
-          onClick={(e) => {
-            e.stopPropagation();
-            void clearClipboard();
-          }}
-        >
-          <span className="icon-[tabler--trash] size-4"></span>
-        </button>
-      </Footer>
-    </div>
+    </>
   );
 }
 
-function HighlightText({ snippet, indices }: Searched) {
-  if (!indices || indices.length === 0) {
-    return <>{snippet}</>;
+type ClipContainerProps = Pick<ReturnType<typeof useStore>, 'appLocalDataDir'> & { item: Searched };
+
+function HighlightText(props: ClipContainerProps) {
+  if (!props.item.indices || props.item.indices.length === 0) {
+    return <>{props.item.snippet}</>;
   }
 
   // サロゲートペアや絵文字を考慮して文字単位の配列にする
-  const chars = Array.from(snippet);
-  const indexSet = new Set(indices);
+  const chars = Array.from(props.item.snippet);
+  const indexSet = new Set(props.item.indices);
 
   const elements: React.ReactNode[] = [];
   let currentChunk = '';
@@ -442,18 +581,264 @@ function HighlightText({ snippet, indices }: Searched) {
   return <>{elements}</>;
 }
 
-function ShrinkImage({ clip: { content } }: Searched) {
-  const imageUrl = convertFileSrc(content);
+function ShrinkImage(props: ClipContainerProps) {
+  const [imageSrc, setImageSrc] = useState('');
+  useEffect(() => {
+    void (async () => {
+      const path = await join(
+        props.appLocalDataDir,
+        'clipboard_image',
+        `${props.item.clip.image_hash}.png`,
+      );
+      setImageSrc(convertFileSrc(path));
+    })();
 
-  return <img src={imageUrl} alt="clipboard image" className="h-auto max-h-32 w-auto max-w-150" />;
+    return () => {
+      //
+    };
+  }, [props.item.clip.image_hash, props.appLocalDataDir]);
+
+  return (
+    imageSrc && (
+      <img
+        src={imageSrc}
+        alt="clipboard image"
+        className={cn(
+          'h-auto max-h-32 w-auto max-w-140',
+          'border border-dotted',
+          'border-gray-400',
+          'dark:border-zinc-400',
+        )}
+      />
+    )
+  );
 }
 
-function matchShortcut(e: KeyboardEvent, shortcut: Shortcut) {
+function FileList(props: ClipContainerProps) {
   return (
-    e.ctrlKey === shortcut.ctrlKey &&
-    e.shiftKey === shortcut.shiftKey &&
-    e.altKey === shortcut.altKey &&
-    e.metaKey === shortcut.metaKey &&
-    e.code === shortcut.code
+    <>
+      <div className="flex items-center gap-1">
+        <span className="icon-[glyphs-poly--folder] size-5"></span>
+        {props.item.clip.files.length} files
+      </div>
+      <HighlightText {...props} />
+    </>
+  );
+}
+
+function PasteMenu(props: { clip: Clip; onSuccess: () => void }) {
+  useEffect(() => {
+    function closeDialog(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        e.stopPropagation(); // App.tsx の hideWindow に突き抜けないようにする
+      }
+    }
+
+    window.addEventListener('keydown', closeDialog, true);
+
+    return () => {
+      window.removeEventListener('keydown', closeDialog, true);
+    };
+  });
+
+  const cleanupRef = useRef<(() => void) | null>(null);
+
+  const refCallback = useCallback((menuRef: HTMLDivElement | null) => {
+    if (cleanupRef.current) {
+      cleanupRef.current();
+      cleanupRef.current = null;
+    }
+
+    if (menuRef !== null) {
+      function focusMove(e: KeyboardEvent) {
+        switch (e.key) {
+          case 'ArrowUp':
+            if (menuRef && document.activeElement) {
+              const focusable = Array.from(menuRef.querySelectorAll(FOCUSABLE_SELECTOR));
+              const index = focusable.indexOf(document.activeElement);
+
+              const nextIndex = (index - 1 + focusable.length) % focusable.length;
+              const nextElement = focusable[nextIndex];
+              if (nextElement instanceof HTMLElement) {
+                nextElement.focus();
+                e.preventDefault();
+              }
+            }
+            return;
+          case 'ArrowDown':
+            if (menuRef && document.activeElement) {
+              const focusable = Array.from(menuRef.querySelectorAll(FOCUSABLE_SELECTOR));
+              const index = focusable.indexOf(document.activeElement);
+
+              const nextIndex = (index + 1) % focusable.length;
+              const nextElement = focusable[nextIndex];
+              if (nextElement instanceof HTMLElement) {
+                nextElement.focus();
+                e.preventDefault();
+              }
+            }
+            return;
+        }
+      }
+
+      menuRef.addEventListener('keydown', focusMove);
+
+      cleanupRef.current = () => {
+        menuRef.removeEventListener('keydown', focusMove);
+      };
+    }
+  }, []);
+
+  return (
+    <div
+      ref={refCallback}
+      className={cn(
+        'bg-white text-gray-900',
+        'dark:bg-zinc-900 dark:text-zinc-100',
+        'rounded-lg shadow-md',
+        'text-sm',
+      )}
+    >
+      <div className={cn('grid grid-cols-4 gap-x-1 gap-y-px')}>
+        {props.clip.plain_text && (
+          <MenuButton
+            type="button"
+            autoFocus
+            onClick={() => {
+              void invoke.send_text(props.clip);
+              props.onSuccess();
+            }}
+          >
+            <span></span>
+            <span>send</span>
+            <span>text</span>
+            <div className="flex items-center justify-center">
+              <span className="icon-[humbleicons--text] size-4"></span>
+            </div>
+          </MenuButton>
+        )}
+        {props.clip.plain_text && (
+          <MenuButton
+            type="button"
+            onClick={() => {
+              void invoke.paste_text(props.clip);
+              props.onSuccess();
+            }}
+          >
+            <div className="flex items-center justify-center">
+              <span className="icon-[material-symbols--chat-paste-go-outline-rounded] size-4"></span>
+            </div>
+            <span>paste</span>
+            <span>text</span>
+            <span></span>
+          </MenuButton>
+        )}
+
+        {props.clip.image_hash && (
+          <MenuButton
+            type="button"
+            autoFocus={!props.clip.plain_text}
+            onClick={() => {
+              void invoke.send_image(props.clip);
+              props.onSuccess();
+            }}
+          >
+            <span></span>
+            <span>send</span>
+            <span>image</span>
+            <div className="flex items-center justify-center">
+              <span className="icon-[humbleicons--image] size-4"></span>
+            </div>
+          </MenuButton>
+        )}
+        {props.clip.image_hash && (
+          <MenuButton
+            type="button"
+            onClick={() => {
+              void invoke.paste_image(props.clip);
+              props.onSuccess();
+            }}
+          >
+            <div className="flex items-center justify-center">
+              <span className="icon-[material-symbols--chat-paste-go-outline-rounded] size-4"></span>
+            </div>
+            <span>paste</span>
+            <span>image</span>
+            <span></span>
+          </MenuButton>
+        )}
+
+        {props.clip.files.length > 0 && (
+          <MenuButton
+            type="button"
+            autoFocus={!props.clip.plain_text && !props.clip.image_hash}
+            onClick={() => {
+              void invoke.send_files(props.clip);
+              props.onSuccess();
+            }}
+          >
+            <span></span>
+            <span>send</span>
+            <span>files</span>
+            <div className="flex items-center justify-center">
+              <span className="icon-[humbleicons--folder] size-4"></span>
+            </div>
+          </MenuButton>
+        )}
+        {props.clip.files.length > 0 && (
+          <MenuButton
+            type="button"
+            onClick={() => {
+              void invoke.paste_files(props.clip);
+              props.onSuccess();
+            }}
+          >
+            <div className="flex items-center justify-center">
+              <span className="icon-[material-symbols--chat-paste-go-outline-rounded] size-4"></span>
+            </div>
+            <span>paste</span>
+            <span>files</span>
+            <span></span>
+          </MenuButton>
+        )}
+      </div>
+    </div>
+  );
+}
+
+type MenuButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  children?: ReactNode;
+};
+function MenuButton({
+  className,
+  children,
+  onKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.stopPropagation();
+    }
+  },
+  ...props
+}: MenuButtonProps) {
+  return (
+    <button
+      {...props}
+      onKeyDown={onKeyDown}
+      className={cn(
+        'inline-flex items-center justify-center capitalize transition',
+        'outline-none first:rounded-t-md last:rounded-b-md hover:ring-1 focus:ring-1',
+        'p-2',
+        'focus:font-bold',
+        'bg-white text-gray-900',
+        'dark:bg-zinc-900 dark:text-zinc-100',
+        'hover:bg-gray-100 focus:bg-gray-100',
+        'hover:ring-gray-400 focus:ring-gray-400',
+        'dark:hover:bg-black dark:focus:bg-black',
+        'dark:hover:ring-zinc-500 dark:focus:ring-zinc-500',
+        'col-span-4 grid grid-cols-subgrid',
+        className,
+      )}
+    >
+      {children}
+    </button>
   );
 }

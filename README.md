@@ -35,10 +35,8 @@ Open it with the global shortcut `Alt + V` and use incremental fuzzy search to f
 
 ## TODO
 
-- Improve UI
-  - 全体的にとりあえず置いた感からの脱却を図る
-- コピーするときに最後の空行を削除する設定
-- 画像コピー
-  - OCRで文字抽出してテキスト検索可能にする
+- 機能
+  - 画像コピー: OCRで文字抽出してテキスト検索可能にする
 - Mac version
 - Improve and expand this README
+- ファイルペースト時に変な挙動をする

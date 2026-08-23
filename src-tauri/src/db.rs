@@ -32,15 +32,32 @@ fn get_db_path(app_handle: &AppHandle) -> Result<PathBuf, Box<dyn std::error::Er
 }
 
 fn execute_ddl(conn: &Connection) -> Result<(), rusqlite::Error> {
+    /*
+    | Copy From        | Plain Text | Image | File/Folder | Rich Text | Html |                     |
+    | ---------------- | ---------- | ----- | ----------- | --------- | ---- | ------------------- |
+    | Excel(cell copy) | YES        | YES   |             | YES       |      |                     |
+    | Excel(edit copy) | YES        |       |             | YES       |      |                     |
+    | Word             | YES        |       |             | YES       |      |                     |
+    | Browser          | YES        |       |             |           | YES  |                     |
+    | Image            |            | YES   |             |           |      |                     |
+    | File/Folder      |            |       | YES         |           |      |                     |
+    Rich Text と HTML は対応しない
+
+    Plain Text & Image(hash=path)
+    Plain Text
+    Image
+    File/Folder
+     */
     const DDL: &str = "
 CREATE TABLE IF NOT EXISTS clip(
     id              INTEGER PRIMARY KEY AUTOINCREMENT
-  , content_type    TEXT NOT NULL CHECK(content_type IN ('text', 'image'))
-  , content         TEXT NOT NULL
-  , description     TEXT NOT NULL
+  , content_type    TEXT NOT NULL CHECK(content_type IN ('text', 'image', 'files'))
+  , plain_text      TEXT NOT NULL
+  , image_hash      TEXT NOT NULL
+  , files           TEXT NOT NULL
   , bookmark        BOOLEAN NOT NULL CHECK (bookmark IN (0, 1)) DEFAULT 0
   , updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP
-  , UNIQUE(content_type, content)
+  , UNIQUE(plain_text, image_hash, files)
 );
 
 CREATE INDEX IF NOT EXISTS idx_clip_updated_at ON clip(updated_at DESC);
@@ -55,8 +72,9 @@ CREATE INDEX IF NOT EXISTS idx_clip_updated_at ON clip(updated_at DESC);
 pub struct Clip {
     pub id: i64,
     pub content_type: ContentType,
-    pub content: String,
-    pub description: String,
+    pub plain_text: String,
+    pub image_hash: String,
+    pub files: Vec<String>,
     pub bookmark: bool,
     pub updated_at: String,
 }
@@ -66,6 +84,7 @@ pub struct Clip {
 pub enum ContentType {
     Text,
     Image,
+    Files,
 }
 
 impl ToSql for ContentType {
@@ -73,6 +92,7 @@ impl ToSql for ContentType {
         let val = match self {
             ContentType::Text => "text",
             ContentType::Image => "image",
+            ContentType::Files => "files",
         };
         Ok(ToSqlOutput::from(val))
     }
@@ -84,6 +104,7 @@ impl FromSql for ContentType {
         match text {
             "text" => Ok(ContentType::Text),
             "image" => Ok(ContentType::Image),
+            "files" => Ok(ContentType::Files),
             _ => Err(FromSqlError::Other(
                 format!("Invalid content_type: {}", text).into(),
             )),
@@ -98,7 +119,7 @@ pub fn find_many_clip(
 ) -> Result<Vec<Clip>, String> {
     let conn = ensure_db(app_handle).map_err(|e| e.to_string())?;
 
-    let default_content_type = vec![ContentType::Text, ContentType::Image];
+    let default_content_type = vec![ContentType::Text, ContentType::Image, ContentType::Files];
     let default_bookmark = vec![true, false];
 
     let content_type = if param_content_type.is_empty() {
@@ -117,8 +138,9 @@ pub fn find_many_clip(
 SELECT
     id
   , content_type
-  , content
-  , description
+  , plain_text
+  , image_hash
+  , files
   , bookmark
   , updated_at
 FROM
@@ -146,16 +168,7 @@ ORDER BY
     let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
 
     let rows = stmt
-        .query_map(params_from_iter(all_params), |row| {
-            Ok(Clip {
-                id: row.get(0)?,
-                content_type: row.get(1)?,
-                content: row.get(2)?,
-                description: row.get(3)?,
-                bookmark: row.get(4)?,
-                updated_at: row.get(5)?,
-            })
-        })
+        .query_map(params_from_iter(all_params), row_to_clip)
         .map_err(|e| e.to_string())?;
 
     rows.collect::<Result<Vec<_>, _>>()
@@ -215,24 +228,16 @@ WHERE
 RETURNING
     id
   , content_type
-  , content
-  , description
+  , plain_text
+  , image_hash
+  , files
   , bookmark
   , updated_at";
 
     let mut stmt = conn.prepare(SQL).map_err(|e| e.to_string())?;
 
     let deleted_clipboard = stmt
-        .query_map(params![history_size], |row| {
-            Ok(Clip {
-                id: row.get(0)?,
-                content_type: row.get(1)?,
-                content: row.get(2)?,
-                description: row.get(3)?,
-                bookmark: row.get(4)?,
-                updated_at: row.get(5)?,
-            })
-        })
+        .query_map(params![history_size], row_to_clip)
         .map_err(|e| e.to_string())?
         .collect::<Result<Vec<Clip>, _>>()
         .map_err(|e| e.to_string())?;
@@ -243,48 +248,53 @@ RETURNING
 pub fn upsert_clip(
     app_handle: &AppHandle,
     content_type: ContentType,
-    content: String,
-    description: String,
+    plain_text: String,
+    image_hash: String,
+    files: Vec<String>,
     bookmark: bool,
 ) -> Result<Clip, String> {
     let conn = ensure_db(app_handle).map_err(|e| e.to_string())?;
 
     const SQL: &str = "
 INSERT
-INTO clip(content_type, content, description, bookmark)
-VALUES (?1, ?2, ?3, ?4)
-ON CONFLICT(content_type, content) DO
+INTO clip(content_type, plain_text, image_hash, files, bookmark)
+VALUES (?1, ?2, ?3, ?4, ?5)
+ON CONFLICT(plain_text, image_hash, files) DO
 UPDATE 
 SET
-  description = ?3
-  , bookmark = ?4
+    plain_text = ?2
+  , image_hash = ?3
+  , files      = ?4
+  , bookmark   = ?5
   , updated_at = CURRENT_TIMESTAMP
 RETURNING
     id
   , content_type
-  , content
-  , description
+  , plain_text
+  , image_hash
+  , files
   , bookmark
   , updated_at";
 
     conn.query_row(
         SQL,
-        params![content_type, content, description, bookmark],
-        |row| {
-            Ok(Clip {
-                id: row.get(0)?,
-                content_type: row.get(1)?,
-                content: row.get(2)?,
-                description: row.get(3)?,
-                bookmark: row.get(4)?,
-                updated_at: row.get(5)?,
-            })
-        },
+        params![
+            content_type,
+            plain_text,
+            image_hash,
+            serde_json::to_string(&files).unwrap_or_default(),
+            bookmark
+        ],
+        row_to_clip,
     )
     .map_err(|e| e.to_string())
 }
 
-pub fn update_clip(app_handle: &AppHandle, bookmark: bool, id: i64) -> Result<Clip, String> {
+pub fn update_clip_bookmark(
+    app_handle: &AppHandle,
+    bookmark: bool,
+    id: i64,
+) -> Result<Clip, String> {
     let conn = ensure_db(app_handle).map_err(|e| e.to_string())?;
 
     const SQL: &str = "
@@ -297,20 +307,28 @@ WHERE
 RETURNING
     id
   , content_type
-  , content
-  , description
+  , plain_text
+  , image_hash
+  , files
   , bookmark
   , updated_at";
 
-    conn.query_row(SQL, params![bookmark, id], |row| {
-        Ok(Clip {
-            id: row.get(0)?,
-            content_type: row.get(1)?,
-            content: row.get(2)?,
-            description: row.get(3)?,
-            bookmark: row.get(4)?,
-            updated_at: row.get(5)?,
-        })
+    conn.query_row(SQL, params![bookmark, id], row_to_clip)
+        .map_err(|e| e.to_string())
+}
+
+fn row_to_clip(row: &rusqlite::Row<'_>) -> rusqlite::Result<Clip> {
+    Ok(Clip {
+        id: row.get(0)?,
+        content_type: row.get(1)?,
+        plain_text: row.get(2)?,
+        image_hash: row.get(3)?,
+        files: row
+            .get::<_, Option<String>>(4)?
+            .filter(|text| !text.trim().is_empty())
+            .and_then(|text| serde_json::from_str(&text).ok())
+            .unwrap_or_default(),
+        bookmark: row.get(5)?,
+        updated_at: row.get(6)?,
     })
-    .map_err(|e| e.to_string())
 }

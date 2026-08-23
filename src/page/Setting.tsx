@@ -1,10 +1,32 @@
 import { useEffect, useState, type ReactNode } from 'react';
 
-import type { Shortcut, useStore } from '~/plugin/useStore';
-
 import invoke from '~/command';
-import { Footer } from '~/component/Footer';
+import { Button } from '~/component/Button';
+import { Checkbox } from '~/component/Checkbox';
+import { Input } from '~/component/Input';
+import { cn } from '~/lib/utils';
 import { useDialog } from '~/plugin/useDialog';
+import {
+  defaultFont,
+  defaultGlobalShortcutToggleWindow,
+  defaultHistorySize,
+  defaultMaxHeight,
+  defaultMaxItems,
+  defaultMinHeight,
+  defaultShortcutDeleteClip,
+  defaultShortcutSendAndPaste,
+  defaultShortcutSendClipboard,
+  defaultShortcutShowPasteMenu,
+  defaultShortcutToggleClipBookmark,
+  defaultShortcutToggleSearchBookmark,
+  defaultShortcutToggleSearchContentTypeFiles,
+  defaultShortcutToggleSearchContentTypeImage,
+  defaultShortcutToggleSearchContentTypeText,
+  defaultShortcutToggleSearchMode,
+  matchShortcut,
+  type Shortcut,
+  type useStore,
+} from '~/plugin/useStore';
 import { useToast } from '~/plugin/useToast';
 
 type SettingProps = ReturnType<typeof useStore> & {};
@@ -14,14 +36,12 @@ export function Setting(props: SettingProps) {
   const $dialog = useDialog();
 
   return (
-    <div className="flex max-h-198 flex-col">
+    <>
       <div className="flex flex-col gap-8 overflow-y-auto px-12 py-8 focus:outline-none">
-        <div className="text-lg font-bold text-gray-700 capitalize dark:text-zinc-300">setting</div>
+        <div className="text-lg font-bold capitalize">setting</div>
 
         <section className="flex flex-col gap-2">
-          <div className="text-base font-semibold text-gray-700 capitalize dark:text-zinc-300">
-            appearance & behavior
-          </div>
+          <div className="text-base font-semibold capitalize">appearance</div>
           <div className="flex flex-col gap-2">
             <div className="flex flex-col gap-0.5">
               <div>
@@ -29,13 +49,12 @@ export function Setting(props: SettingProps) {
                   font
                 </label>
               </div>
-              <div>
-                <input
+              <div className="flex flex-row items-center gap-2">
+                <Input
                   id="font"
                   type="text"
                   list="systemFontList"
                   defaultValue={props.font}
-                  className="rounded-md border border-gray-300 bg-white p-2 outline-none dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
                   onChange={(e) => {
                     const newFont = e.target.value;
                     if (newFont === '' || props.systemFontList.includes(newFont)) {
@@ -50,14 +69,139 @@ export function Setting(props: SettingProps) {
                     </option>
                   ))}
                 </datalist>
+                <Button
+                  title="reset"
+                  type="button"
+                  set="default"
+                  onClick={async () => {
+                    await props.saveAndApplyFont(defaultFont);
+
+                    const input = document.getElementById('font') as HTMLInputElement;
+                    input.value = `${defaultFont}`;
+                  }}
+                >
+                  <span className="icon-[system-uicons--reset] size-4"></span>
+                </Button>
               </div>
             </div>
+            <form
+              className="flex flex-col gap-0.5"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const value = (document.getElementById('min height') as HTMLInputElement).value;
+
+                await props.saveMinHeight(Number(value));
+                return $toast.success('Min Height updated successfully.');
+              }}
+            >
+              <div>
+                <label htmlFor="min height" className="text-xs capitalize">
+                  min height (min: 100px)
+                </label>
+              </div>
+              <div className="flex flex-row items-center gap-2">
+                <Input
+                  id="min height"
+                  type="number"
+                  min={100}
+                  defaultValue={props.minHeight}
+                  required
+                />
+                <Button type="submit" set="default">
+                  <span className="icon-[material-symbols--check-rounded] size-4"></span>
+                </Button>
+                <Button
+                  title="reset"
+                  type="button"
+                  set="default"
+                  onClick={async () => {
+                    await props.saveMinHeight(defaultMinHeight);
+
+                    const input = document.getElementById('min height') as HTMLInputElement;
+                    input.value = `${defaultMinHeight}`;
+
+                    return $toast.success('Min Height updated successfully.');
+                  }}
+                >
+                  <span className="icon-[system-uicons--reset] size-4"></span>
+                </Button>
+              </div>
+            </form>
 
             <form
               className="flex flex-col gap-0.5"
               onSubmit={async (e) => {
                 e.preventDefault();
-                e.stopPropagation();
+                const value = (document.getElementById('max height') as HTMLInputElement).value;
+
+                await props.saveMaxHeight(Number(value));
+                return $toast.success('Max Height updated successfully.');
+              }}
+            >
+              <div>
+                <label htmlFor="max height" className="text-xs capitalize">
+                  max height (min: 150px)
+                </label>
+              </div>
+              <div className="flex flex-row items-center gap-2">
+                <Input
+                  id="max height"
+                  type="number"
+                  min={150}
+                  defaultValue={props.maxHeight}
+                  required
+                />
+                <Button type="submit" set="default">
+                  <span className="icon-[material-symbols--check-rounded] size-4"></span>
+                </Button>
+                <Button
+                  title="reset"
+                  type="button"
+                  set="default"
+                  onClick={async () => {
+                    await props.saveMaxHeight(defaultMaxHeight);
+
+                    const input = document.getElementById('max height') as HTMLInputElement;
+                    input.value = `${defaultMaxHeight}`;
+
+                    return $toast.success('Max Height updated successfully.');
+                  }}
+                >
+                  <span className="icon-[system-uicons--reset] size-4"></span>
+                </Button>
+              </div>
+            </form>
+
+            <div className="flex flex-col gap-0.5">
+              <div>
+                <label htmlFor="wrap text automatically" className="text-xs capitalize">
+                  wrap text automatically
+                </label>
+              </div>
+              <div className="flex flex-row items-center gap-2">
+                <Checkbox
+                  id="wrap text automatically"
+                  checked={props.wrapTextAutomatically}
+                  onChange={async (e) => {
+                    await props.saveWrapTextAutomatically(e.target.checked);
+
+                    return $toast.success('Wrap Text Automatically updated successfully.');
+                  }}
+                >
+                  enabled
+                </Checkbox>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="flex flex-col gap-2">
+          <div className="text-base font-semibold capitalize">behavior</div>
+          <div className="flex flex-col gap-2">
+            <form
+              className="flex flex-col gap-0.5"
+              onSubmit={async (e) => {
+                e.preventDefault();
                 const value = (document.getElementById('history size') as HTMLInputElement).value;
 
                 await props.saveHistorySize(Number(value));
@@ -74,29 +218,108 @@ export function Setting(props: SettingProps) {
                 </div>
               </div>
               <div className="flex flex-row items-center gap-2">
-                <input
+                <Input
                   id="history size"
                   type="number"
                   min={0}
                   defaultValue={props.historySize}
-                  className="rounded-md border border-gray-300 bg-white p-2 outline-none dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
                   required
                 />
-                <button
-                  type="submit"
-                  className="inline-flex items-center rounded bg-gray-200 p-2 transition-colors hover:bg-gray-300 focus:bg-gray-300 focus:outline-none dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
-                >
+                <Button type="submit" set="default">
                   <span className="icon-[material-symbols--check-rounded] size-4"></span>
-                </button>
+                </Button>
+                <Button
+                  title="reset"
+                  type="button"
+                  set="default"
+                  onClick={async () => {
+                    await props.saveHistorySize(defaultHistorySize);
+
+                    const input = document.getElementById('history size') as HTMLInputElement;
+                    input.value = `${defaultHistorySize}`;
+
+                    return $toast.success('History Size updated successfully.');
+                  }}
+                >
+                  <span className="icon-[system-uicons--reset] size-4"></span>
+                </Button>
               </div>
             </form>
+
+            <form
+              className="flex flex-col gap-0.5"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const value = (document.getElementById('max items') as HTMLInputElement).value;
+
+                await props.saveMaxItems(Number(value));
+                return $toast.success('Max Items updated successfully.');
+              }}
+            >
+              <div>
+                <label htmlFor="max items" className="text-xs capitalize">
+                  max items (min: 10, max: 100)
+                </label>
+              </div>
+              <div className="flex flex-row items-center gap-2">
+                <Input
+                  id="max items"
+                  type="number"
+                  min={10}
+                  max={100}
+                  defaultValue={props.maxItems}
+                  required
+                />
+                <Button type="submit" set="default">
+                  <span className="icon-[material-symbols--check-rounded] size-4"></span>
+                </Button>
+                <Button
+                  title="reset"
+                  type="button"
+                  set="default"
+                  onClick={async () => {
+                    await props.saveMaxItems(defaultMaxItems);
+
+                    const input = document.getElementById('max items') as HTMLInputElement;
+                    input.value = `${defaultMaxItems}`;
+
+                    return $toast.success('Max Items updated successfully.');
+                  }}
+                >
+                  <span className="icon-[system-uicons--reset] size-4"></span>
+                </Button>
+              </div>
+            </form>
+
+            <div className="flex flex-col gap-0.5">
+              <div>
+                <label htmlFor="trim final newlines" className="text-xs capitalize">
+                  trim final newlines (requires restart)
+                </label>
+              </div>
+              <div className="flex flex-row items-center gap-2">
+                <Checkbox
+                  id="trim final newlines"
+                  checked={props.trimFinalNewlines}
+                  onChange={async (e) => {
+                    await props.saveTrimFinalNewlines(e.target.checked);
+
+                    await $dialog.confirm.success(
+                      'Trim Final Newlines updated successfully. Do you want to restart now?',
+                    );
+
+                    return invoke.restart_app();
+                  }}
+                >
+                  enabled
+                </Checkbox>
+              </div>
+            </div>
           </div>
         </section>
 
         <section className="flex flex-col gap-2">
-          <div className="text-base font-semibold text-gray-700 capitalize dark:text-zinc-300">
-            Keybindings
-          </div>
+          <div className="text-base font-semibold capitalize">Keybindings</div>
           <div className="flex flex-col gap-2">
             {[
               {
@@ -119,92 +342,187 @@ export function Setting(props: SettingProps) {
                     .update_global_shortcut_toggle_window(shortcut)
                     .then(() => props.setGlobalShortcutToggleWindow(shortcut));
                 },
+                default: defaultGlobalShortcutToggleWindow,
               },
               {
                 title: 'send and paste',
                 shortcut: props.shortcutSendAndPaste,
                 save: props.saveShortcutSendAndPaste,
+                default: defaultShortcutSendAndPaste,
               },
               {
                 title: 'send clipboard',
                 shortcut: props.shortcutSendClipboard,
                 save: props.saveShortcutSendClipboard,
+                default: defaultShortcutSendClipboard,
               },
               {
                 title: 'delete clip',
                 shortcut: props.shortcutDeleteClip,
                 save: props.saveShortcutDeleteClip,
+                default: defaultShortcutDeleteClip,
               },
               {
                 title: 'toggle clip bookmark',
                 shortcut: props.shortcutToggleClipBookmark,
                 save: props.saveShortcutToggleClipBookmark,
+                default: defaultShortcutToggleClipBookmark,
+              },
+              {
+                title: 'show paste menu',
+                shortcut: props.shortcutShowPasteMenu,
+                save: props.saveShortcutShowPasteMenu,
+                default: defaultShortcutShowPasteMenu,
               },
               {
                 title: 'toggle search content type "text"',
                 shortcut: props.shortcutToggleSearchContentTypeText,
                 save: props.saveShortcutToggleSearchContentTypeText,
+                default: defaultShortcutToggleSearchContentTypeText,
               },
               {
                 title: 'toggle search content type "image"',
                 shortcut: props.shortcutToggleSearchContentTypeImage,
                 save: props.saveShortcutToggleSearchContentTypeImage,
+                default: defaultShortcutToggleSearchContentTypeImage,
+              },
+              {
+                title: 'toggle search content type "files"',
+                shortcut: props.shortcutToggleSearchContentTypeFiles,
+                save: props.saveShortcutToggleSearchContentTypeFiles,
+                default: defaultShortcutToggleSearchContentTypeFiles,
               },
               {
                 title: 'toggle search bookmark (bookmark only / all)',
                 shortcut: props.shortcutToggleSearchBookmark,
                 save: props.saveShortcutToggleSearchBookmark,
+                default: defaultShortcutToggleSearchBookmark,
               },
               {
                 title: 'toggle search mode (fuzzy / exact)',
                 shortcut: props.shortcutToggleSearchMode,
                 save: props.saveShortcutToggleSearchMode,
+                default: defaultShortcutToggleSearchMode,
               },
-            ].map((x, i) => (
-              <div key={i} className="flex flex-col gap-0.5">
-                <div>
-                  <label className="text-xs capitalize">{x.title}</label>
-                </div>
-                <div className="flex flex-row items-center gap-2">
-                  <ShortcutKey {...x.shortcut} />
-                  <button
-                    type="button"
-                    className="inline-flex items-center rounded bg-gray-200 p-2 transition-colors hover:bg-gray-300 focus:bg-gray-300 focus:outline-none dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
-                    onClick={async () => {
-                      const newShortcut: Shortcut = await $dialog.showModal(
-                        EditShortcutDialog,
-                        (resolve, reject) => ({
-                          title: x.title,
-                          initValue: x.shortcut,
-                          onSave: (v) => resolve(v),
-                          onCancel: () => reject(),
-                        }),
-                      );
+            ].map((x, i, arr) => {
+              const duplicate = arr
+                .filter((_, ii) => ii !== i)
+                .some((y) => matchShortcut(x.shortcut, y.shortcut));
+              return (
+                <div key={i} className="flex flex-col gap-0.5">
+                  <div>
+                    <label className="text-xs capitalize">{x.title}</label>
+                  </div>
+                  <div className="flex flex-row items-center gap-2">
+                    <ShortcutKey shortcut={x.shortcut} duplicate={duplicate} />
+                    <Button
+                      title="save"
+                      type="button"
+                      set="default"
+                      onClick={async () => {
+                        const newShortcut: Shortcut = await $dialog.showModal(
+                          EditShortcutDialog,
+                          (resolve, reject) => ({
+                            title: x.title,
+                            initValue: x.shortcut,
+                            onSave: (v) => resolve(v),
+                            onCancel: () => reject(),
+                          }),
+                        );
 
-                      try {
-                        await x.save(newShortcut);
-                        $toast.success('Shortcut updated successfully.');
-                      } catch (err) {
-                        if (typeof err === 'function') {
-                          err();
-                        } else {
-                          console.error('Failed to update window toggle shortcut:', err);
-                          $toast.danger('Failed to update shortcut. Please try again.');
+                        try {
+                          await x.save(newShortcut);
+                          $toast.success('Shortcut updated successfully.');
+                        } catch (err) {
+                          if (typeof err === 'function') {
+                            err();
+                          } else {
+                            console.error('Failed to update shortcut:', err);
+                            $toast.danger('Failed to update shortcut. Please try again.');
+                          }
                         }
-                      }
-                    }}
-                  >
-                    <span className="icon-[mage--edit] size-4"></span>
-                  </button>
+                      }}
+                    >
+                      <span className="icon-[mage--edit] size-4"></span>
+                    </Button>
+                    <Button
+                      title="reset"
+                      type="button"
+                      set="default"
+                      onClick={async () => {
+                        try {
+                          await x.save(x.default);
+                          $toast.success('Shortcut updated successfully.');
+                        } catch (err) {
+                          if (typeof err === 'function') {
+                            err();
+                          } else {
+                            console.error('Failed to update shortcut:', err);
+                            $toast.danger('Failed to update shortcut. Please try again.');
+                          }
+                        }
+                      }}
+                    >
+                      <span className="icon-[system-uicons--reset] size-4"></span>
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+
+            <div
+              className={cn(
+                'flex flex-col items-start gap-1 rounded-lg',
+                'border p-4',
+                'border-blue-800 bg-blue-200 text-blue-800',
+                'dark:border-blue-700 dark:bg-blue-900 dark:text-blue-100',
+              )}
+            >
+              <div>
+                <div className="flex items-center gap-1 capitalize">
+                  <div className="inline-flex items-center justify-center">
+                    <span className="icon-[material-symbols--info-outline-rounded] size-5"></span>
+                  </div>
+                  <div>move window</div>
                 </div>
               </div>
-            ))}
+              <div>
+                <div>
+                  <Key>Alt</Key> dragging anywhere in the window lets you move it.
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="flex flex-col gap-2">
+          <div className="text-base font-semibold capitalize">Danger Zone</div>
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-0.5">
+              <div>
+                <label className="text-xs capitalize">clear clipboard</label>
+              </div>
+              <div className="flex flex-row items-center gap-2">
+                <Button
+                  type="button"
+                  set="warning"
+                  className="min-w-24 font-bold"
+                  onClick={async () => {
+                    await $dialog.confirm.warn(
+                      'Are you sure you want to clear all clipboard history?',
+                    );
+                    await invoke.clear_clipboard();
+                    return $toast.success('Clipboard history cleared!');
+                  }}
+                >
+                  clear
+                </Button>
+              </div>
+            </div>
           </div>
         </section>
       </div>
-
-      <Footer {...props}></Footer>
-    </div>
+    </>
   );
 }
 
@@ -231,20 +549,26 @@ function EditShortcutDialog(props: {
   });
 
   return (
-    <div className="rounded-lg bg-white p-8 text-sm text-gray-900 shadow-md dark:bg-zinc-900 dark:text-zinc-100">
+    <div
+      className={cn(
+        'rounded-lg p-8 shadow-md',
+        'text-sm',
+        'bg-gray-200 text-gray-900',
+        'dark:bg-zinc-900 dark:text-zinc-100',
+      )}
+    >
       <div className="flex flex-col gap-6">
         <div>
-          <div className="text-base font-semibold text-gray-700 capitalize dark:text-zinc-300">
-            {props.title}
-          </div>
-          <div className="text-sm text-gray-700 capitalize dark:text-zinc-300">
+          <div className="text-base font-semibold capitalize">{props.title}</div>
+          <div className="text-sm text-gray-700 dark:text-zinc-300">
             Press the shortcut key you want to use.
           </div>
         </div>
-        <button
+        <Button
           type="button"
+          set="default"
           autoFocus
-          className="flex flex-row items-center justify-center gap-2 rounded-2xl border-2 border-gray-300 bg-gray-200 py-6 transition outline-none hover:bg-gray-300 hover:ring-2 hover:ring-gray-400 focus:bg-gray-300 focus:ring-2 focus:ring-gray-400 focus:outline-none dark:border-zinc-600 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:hover:ring-zinc-300 dark:focus:bg-zinc-600 dark:focus:ring-zinc-300"
+          className="flex rounded-2xl border-2 p-6"
           onKeyDown={(e) => {
             if (['Tab', 'Control', 'Alt', 'Shift', 'Meta'].includes(e.key)) {
               return;
@@ -261,46 +585,57 @@ function EditShortcutDialog(props: {
             });
           }}
         >
-          <ShortcutKey {...value} />
-        </button>
+          <ShortcutKey shortcut={value} />
+        </Button>
         <section className="flex flex-row items-center justify-center gap-4">
-          <button
+          <Button
             type="button"
-            className="inline-flex w-24 items-center justify-center rounded-lg border-2 border-green-300 bg-green-200 px-4 py-2 capitalize shadow transition-colors hover:bg-green-300 focus:bg-green-300 focus:outline-none dark:border-emerald-900 dark:bg-emerald-900/60 dark:text-emerald-300 dark:hover:bg-emerald-800/80 dark:focus:bg-emerald-800/80"
+            set="positive"
+            className="min-w-24 font-bold"
             onClick={() => props.onSave(value)}
           >
             save
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
-            className="inline-flex w-24 items-center justify-center rounded-lg border-2 border-gray-300 bg-gray-200 px-4 py-2 capitalize shadow transition-colors hover:bg-gray-300 focus:bg-gray-300 focus:outline-none dark:border-zinc-600 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
+            set="default"
+            className="min-w-24 font-bold"
             onClick={() => props.onCancel()}
           >
             cancel
-          </button>
+          </Button>
         </section>
       </div>
     </div>
   );
 }
 
-function ShortcutKey(shortcut: Shortcut) {
+function ShortcutKey({ shortcut, duplicate }: { shortcut: Shortcut; duplicate?: boolean }) {
   return (
     <div className="inline-flex flex-row gap-1 pb-1">
-      {shortcut.metaKey && <Key>win</Key>}
-      {shortcut.altKey && <Key>alt</Key>}
-      {shortcut.ctrlKey && <Key>ctrl</Key>}
-      {shortcut.shiftKey && <Key>shift</Key>}
+      {shortcut.metaKey /*   */ && <Key duplicate={duplicate}>win</Key>}
+      {shortcut.altKey /*    */ && <Key duplicate={duplicate}>alt</Key>}
+      {shortcut.ctrlKey /*   */ && <Key duplicate={duplicate}>ctrl</Key>}
+      {shortcut.shiftKey /*  */ && <Key duplicate={duplicate}>shift</Key>}
       {shortcut.code && (
-        <Key>{shortcut.code.startsWith('Key') ? shortcut.code.substring(3) : shortcut.code}</Key>
+        <Key duplicate={duplicate}>
+          {shortcut.code.startsWith('Key') ? shortcut.code.substring(3) : shortcut.code}
+        </Key>
       )}
     </div>
   );
 }
 
-function Key(props: { children: ReactNode }) {
+function Key(props: { children: ReactNode; duplicate?: boolean }) {
   return (
-    <kbd className="inline-block min-w-9 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-center text-sm font-bold text-gray-800 capitalize shadow-[0_4px_0_#b1b1b1,0_5px_0_#999,0_5px_3px_rgba(0,0,0,0.3)] transition-all duration-75 active:translate-y-1 active:shadow-[0_0px_0_#b1b1b1,0_1px_2px_rgba(0,0,0,0.2)]">
+    <kbd
+      className={cn(
+        `inline-block min-w-9 cursor-default rounded-md border bg-white px-3 py-1.5 text-center text-sm font-bold text-gray-700 capitalize select-none`,
+        props.duplicate
+          ? 'border-red-500 bg-red-100 shadow-[0_4px_0_#faa3a3,0_5px_0_#fb2c36,0_5px_3px_rgba(0,0,0,0.3)]'
+          : 'border-gray-300 bg-white shadow-[0_4px_0_#b1b1b1,0_5px_0_#999,0_5px_3px_rgba(0,0,0,0.3)]',
+      )}
+    >
       {props.children}
     </kbd>
   );

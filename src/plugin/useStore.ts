@@ -1,8 +1,5 @@
 import { getVersion } from '@tauri-apps/api/app';
-import {
-  appDataDir as getAppDataDir,
-  appLocalDataDir as getAppLocalDataDir,
-} from '@tauri-apps/api/path';
+import { appLocalDataDir as getAppLocalDataDir } from '@tauri-apps/api/path';
 import { Store } from '@tauri-apps/plugin-store';
 import { useCallback, useEffect, useState, type SetStateAction } from 'react';
 
@@ -20,13 +17,18 @@ export type Shortcut = {
 };
 
 const STORE = {
-  setting: {
-    HISTORY_SIZE: 'history_size',
-  },
   appearance: {
     PIN: 'pin',
     THEME: 'theme',
     FONT: 'font',
+    MIN_HEIGHT: 'min_height',
+    MAX_HEIGHT: 'max_height',
+    WRAP_TEXT_AUTOMATICALLY: 'wrap_text_automatically',
+  },
+  behavior: {
+    HISTORY_SIZE: 'history_size',
+    MAX_ITEMS: 'max_items',
+    TRIM_FINAL_NEWLINES: 'trim_final_newlines',
   },
   global_shortcut: {
     TOGGLE_WINDOW: 'toggle_window',
@@ -36,8 +38,10 @@ const STORE = {
     SEND_CLIPBOARD: 'send_clipboard',
     DELETE_CLIP: 'delete_clip',
     TOGGLE_CLIP_BOOKMARK: 'toggle_clip_bookmark',
+    SHOW_PASTE_MENU: 'show_paste_menu',
     TOGGLE_SEARCH_CONTENT_TYPE_TEXT: 'toggle_search_content_type_text',
     TOGGLE_SEARCH_CONTENT_TYPE_IMAGE: 'toggle_search_content_type_image',
+    TOGGLE_SEARCH_CONTENT_TYPE_FILES: 'toggle_search_content_type_files',
     TOGGLE_SEARCH_BOOKMARK: 'toggle_search_bookmark',
     TOGGLE_SEARCH_MODE: 'toggle_search_mode',
   },
@@ -48,239 +52,106 @@ const STORE = {
   },
 } as const;
 
-const defaultGlobalShortcutToggleWindow: Shortcut = {
+export const defaultGlobalShortcutToggleWindow: Shortcut = {
   ctrlKey: false,
   shiftKey: false,
   altKey: true,
   metaKey: false,
   code: 'KeyV',
 };
-const defaultShortcutSendAndPaste: Shortcut = {
+export const defaultShortcutSendAndPaste: Shortcut = {
   ctrlKey: false,
   shiftKey: false,
   altKey: false,
   metaKey: false,
   code: 'Enter',
 };
-const defaultShortcutSendClipboard: Shortcut = {
+export const defaultShortcutSendClipboard: Shortcut = {
   ctrlKey: true,
   shiftKey: false,
   altKey: false,
   metaKey: false,
   code: 'Enter',
 };
-const defaultShortcutDeleteClip: Shortcut = {
+export const defaultShortcutDeleteClip: Shortcut = {
   ctrlKey: true,
   shiftKey: false,
   altKey: false,
   metaKey: false,
   code: 'KeyD',
 };
-const defaultShortcutToggleClipBookmark: Shortcut = {
+export const defaultShortcutShowPasteMenu: Shortcut = {
+  ctrlKey: true,
+  shiftKey: false,
+  altKey: false,
+  metaKey: false,
+  code: 'KeyP',
+};
+export const defaultShortcutToggleClipBookmark: Shortcut = {
   ctrlKey: true,
   shiftKey: false,
   altKey: false,
   metaKey: false,
   code: 'KeyB',
 };
-const defaultShortcutToggleSearchContentTypeText: Shortcut = {
+export const defaultShortcutToggleSearchContentTypeText: Shortcut = {
   ctrlKey: false,
   shiftKey: false,
   altKey: true,
   metaKey: false,
   code: 'KeyT',
 };
-const defaultShortcutToggleSearchContentTypeImage: Shortcut = {
+export const defaultShortcutToggleSearchContentTypeImage: Shortcut = {
   ctrlKey: false,
   shiftKey: false,
   altKey: true,
   metaKey: false,
   code: 'KeyI',
 };
-const defaultShortcutToggleSearchBookmark: Shortcut = {
-  ctrlKey: false,
-  shiftKey: false,
-  altKey: true,
-  metaKey: false,
-  code: 'KeyB',
-};
-const defaultShortcutToggleSearchMode: Shortcut = {
+export const defaultShortcutToggleSearchContentTypeFiles: Shortcut = {
   ctrlKey: false,
   shiftKey: false,
   altKey: true,
   metaKey: false,
   code: 'KeyF',
 };
+export const defaultShortcutToggleSearchBookmark: Shortcut = {
+  ctrlKey: false,
+  shiftKey: false,
+  altKey: true,
+  metaKey: false,
+  code: 'KeyB',
+};
+export const defaultShortcutToggleSearchMode: Shortcut = {
+  ctrlKey: false,
+  shiftKey: false,
+  altKey: true,
+  metaKey: false,
+  code: 'KeyS',
+};
+
+export const defaultTheme = 'dark';
+export const defaultFont = '';
+export const defaultMinHeight = 100;
+export const defaultMaxHeight = 800;
+export const defaultWrapTextAutomatically = true;
+
+export const defaultHistorySize = 10000;
+export const defaultMaxItems = 50;
+export const defaultTrimFinalNewlines = true;
 
 export function useStore() {
   const [store, setStore] = useState<Store>();
 
-  // window setting
+  // appearance
   const [enablePin, setEnablePin] = useState(false);
-  const [theme, setTheme] = useState<Theme>('dark');
-  const [page, setPage] = useState<Page>('clipboard');
-  const [font, setFont] = useState<string>('');
-  const [systemFontList, setSystemFontList] = useState<string[]>([]);
-
-  // search input
-  const [searchMode, setSearchMode] = useState<SearchMode>('fuzzy');
-  const [searchContentType, setSearchContentType] = useState<ContentType[]>([]);
-  const [searchBookmark, setSearchBookmark] = useState<boolean[]>([true, false]);
-
-  const [historySize, setHistorySize] = useState<number>(0);
-
-  // information
-  const [version, setVersion] = useState<string>('');
-  const [appLocalDataDir, setAppLocalDataDir] = useState<string>('');
-  const [appDataDir, setAppDataDir] = useState('');
-
-  // shortcut
-  const [globalShortcutToggleWindow, setGlobalShortcutToggleWindow] = useState<Shortcut>(
-    defaultGlobalShortcutToggleWindow,
-  );
-  const [shortcutSendAndPaste, setShortcutSendAndPaste] = useState<Shortcut>(
-    defaultShortcutSendAndPaste,
-  );
-  const [shortcutSendClipboard, setShortcutSendClipboard] = useState<Shortcut>(
-    defaultShortcutSendClipboard,
-  );
-  const [shortcutDeleteClip, setShortcutDeleteClip] = useState<Shortcut>(defaultShortcutDeleteClip);
-  const [shortcutToggleClipBookmark, setShortcutToggleClipBookmark] = useState<Shortcut>(
-    defaultShortcutToggleClipBookmark,
-  );
-  const [shortcutToggleSearchContentTypeText, setShortcutToggleSearchContentTypeText] =
-    useState<Shortcut>(defaultShortcutToggleSearchContentTypeText);
-  const [shortcutToggleSearchContentTypeImage, setShortcutToggleSearchContentTypeImage] =
-    useState<Shortcut>(defaultShortcutToggleSearchContentTypeImage);
-  const [shortcutToggleSearchBookmark, setShortcutToggleSearchBookmark] = useState<Shortcut>(
-    defaultShortcutToggleSearchBookmark,
-  );
-  const [shortcutToggleSearchMode, setShortcutToggleSearchMode] = useState<Shortcut>(
-    defaultShortcutToggleSearchMode,
-  );
-
-  useEffect(() => {
-    void (async () => {
-      // %USERPROFILE%\AppData\Roaming\oktntko.clinder
-      const store = await Store.load('settings.json');
-      setStore(store);
-
-      async function getEnablePin(store: Store) {
-        const v = await store?.get<boolean>(STORE.appearance.PIN);
-        return v ?? false;
-      }
-
-      async function getTheme(store: Store) {
-        const v = await store?.get<Theme>(STORE.appearance.THEME);
-        return v ?? 'dark';
-      }
-
-      async function getSearchMode(store: Store) {
-        const v = await store?.get<SearchMode>(STORE.state.SEARCH_MODE);
-        return v ?? 'fuzzy';
-      }
-
-      async function getSearchContentType(store: Store) {
-        const v = await store?.get<ContentType[]>(STORE.state.SEARCH_CONTENT_TYPE);
-        return v ?? [];
-      }
-
-      async function getSearchBookmark(store: Store) {
-        const v = await store?.get<boolean[]>(STORE.state.SEARCH_BOOKMARK);
-        return v ?? [true, false];
-      }
-
-      async function getFont(store: Store) {
-        const v = await store?.get<string>(STORE.appearance.FONT);
-        return v ?? '';
-      }
-
-      async function getHistorySize(store: Store) {
-        const v = await store?.get<number>(STORE.setting.HISTORY_SIZE);
-        return v ?? 0;
-      }
-
-      async function getGlobalShortcutToggleWindow(store: Store) {
-        const v = await store?.get<Shortcut>(STORE.global_shortcut.TOGGLE_WINDOW);
-        return v ?? defaultGlobalShortcutToggleWindow;
-      }
-      async function getShortcutSendAndPaste(store: Store) {
-        const v = await store?.get<Shortcut>(STORE.app_shortcut.SEND_AND_PASTE);
-        return v ?? defaultShortcutSendAndPaste;
-      }
-      async function getShortcutSendClipboard(store: Store) {
-        const v = await store?.get<Shortcut>(STORE.app_shortcut.SEND_CLIPBOARD);
-        return v ?? defaultShortcutSendClipboard;
-      }
-      async function getShortcutDeleteClip(store: Store) {
-        const v = await store?.get<Shortcut>(STORE.app_shortcut.DELETE_CLIP);
-        return v ?? defaultShortcutDeleteClip;
-      }
-      async function getShortcutToggleClipBookmark(store: Store) {
-        const v = await store?.get<Shortcut>(STORE.app_shortcut.TOGGLE_CLIP_BOOKMARK);
-        return v ?? defaultShortcutToggleClipBookmark;
-      }
-      async function getShortcutToggleSearchContentTypeText(store: Store) {
-        const v = await store?.get<Shortcut>(STORE.app_shortcut.TOGGLE_SEARCH_CONTENT_TYPE_TEXT);
-        return v ?? defaultShortcutToggleSearchContentTypeText;
-      }
-      async function getShortcutToggleSearchContentTypeImage(store: Store) {
-        const v = await store?.get<Shortcut>(STORE.app_shortcut.TOGGLE_SEARCH_CONTENT_TYPE_IMAGE);
-        return v ?? defaultShortcutToggleSearchContentTypeImage;
-      }
-      async function getShortcutToggleSearchBookmark(store: Store) {
-        const v = await store?.get<Shortcut>(STORE.app_shortcut.TOGGLE_SEARCH_BOOKMARK);
-        return v ?? defaultShortcutToggleSearchBookmark;
-      }
-      async function getShortcutToggleSearchMode(store: Store) {
-        const v = await store?.get<Shortcut>(STORE.app_shortcut.TOGGLE_SEARCH_MODE);
-        return v ?? defaultShortcutToggleSearchMode;
-      }
-
-      void getEnablePin(store).then(setEnablePin);
-      void getTheme(store).then((v) => {
-        setTheme(v);
-        applyTheme(v);
-      });
-      void getSearchMode(store).then(setSearchMode);
-      void getSearchContentType(store).then(setSearchContentType);
-      void getSearchBookmark(store).then(setSearchBookmark);
-      void getFont(store).then((v) => {
-        setFont(v);
-        applyFont(v);
-      });
-      void getHistorySize(store).then(setHistorySize);
-
-      void invoke.list_system_font().then(setSystemFontList);
-
-      void getVersion().then(setVersion);
-      void getAppLocalDataDir().then(setAppLocalDataDir);
-      void getAppDataDir().then(setAppDataDir);
-
-      void getGlobalShortcutToggleWindow(store).then(setGlobalShortcutToggleWindow);
-      void getShortcutSendAndPaste(store).then(setShortcutSendAndPaste);
-      void getShortcutSendClipboard(store).then(setShortcutSendClipboard);
-      void getShortcutDeleteClip(store).then(setShortcutDeleteClip);
-      void getShortcutToggleClipBookmark(store).then(setShortcutToggleClipBookmark);
-      void getShortcutToggleSearchContentTypeText(store).then(
-        setShortcutToggleSearchContentTypeText,
-      );
-      void getShortcutToggleSearchContentTypeImage(store).then(
-        setShortcutToggleSearchContentTypeImage,
-      );
-      void getShortcutToggleSearchBookmark(store).then(setShortcutToggleSearchBookmark);
-      void getShortcutToggleSearchMode(store).then(setShortcutToggleSearchMode);
-    })();
-
-    return () => undefined;
-  }, []);
-
   async function saveEnablePin(v: SetStateAction<boolean>) {
     setEnablePin(v);
     await store?.set(STORE.appearance.PIN, v);
     await store?.save();
   }
 
+  const [theme, setTheme] = useState<Theme>(defaultTheme);
   async function saveTheme(v: Theme) {
     setTheme(v);
     applyTheme(v);
@@ -296,6 +167,70 @@ export function useStore() {
     }
   }
 
+  const [font, setFont] = useState<string>(defaultFont);
+  async function saveAndApplyFont(v: string) {
+    setFont(v);
+    applyFont(v);
+    await store?.set(STORE.appearance.FONT, v);
+    await store?.save();
+  }
+  function applyFont(v: string) {
+    if (v) {
+      document.documentElement.style.setProperty('--user-font', `"${v}"`);
+    } else {
+      document.documentElement.style.removeProperty('--user-font');
+    }
+  }
+
+  const [systemFontList, setSystemFontList] = useState<string[]>([]);
+
+  const [minHeight, setMinHeight] = useState(defaultMinHeight);
+  async function saveMinHeight(v: SetStateAction<number>) {
+    setMinHeight(v);
+    await store?.set(STORE.appearance.MIN_HEIGHT, v);
+    await store?.save();
+  }
+
+  const [maxHeight, setMaxHeight] = useState(defaultMaxHeight);
+  async function saveMaxHeight(v: SetStateAction<number>) {
+    setMaxHeight(v);
+    await store?.set(STORE.appearance.MAX_HEIGHT, v);
+    await store?.save();
+  }
+
+  const [wrapTextAutomatically, setWrapTextAutomatically] = useState(defaultWrapTextAutomatically);
+  async function saveWrapTextAutomatically(v: SetStateAction<boolean>) {
+    setWrapTextAutomatically(v);
+    await store?.set(STORE.appearance.WRAP_TEXT_AUTOMATICALLY, v);
+    await store?.save();
+  }
+
+  // behavior
+  const [historySize, setHistorySize] = useState(defaultHistorySize);
+  async function saveHistorySize(v: SetStateAction<number>) {
+    setHistorySize(v);
+    await store?.set(STORE.behavior.HISTORY_SIZE, v);
+    await store?.save();
+  }
+
+  const [maxItems, setMaxItems] = useState(defaultMaxItems);
+  async function saveMaxItems(v: SetStateAction<number>) {
+    setMaxItems(v);
+    await store?.set(STORE.behavior.MAX_ITEMS, v);
+    await store?.save();
+  }
+
+  const [trimFinalNewlines, setTrimFinalNewlines] = useState(defaultTrimFinalNewlines);
+  async function saveTrimFinalNewlines(v: SetStateAction<boolean>) {
+    setTrimFinalNewlines(v);
+    await store?.set(STORE.behavior.TRIM_FINAL_NEWLINES, v);
+    await store?.save();
+  }
+
+  // state
+  const [page, setPage] = useState<Page>('clipboard');
+
+  const [searchMode, setSearchMode] = useState<SearchMode>('fuzzy');
   const saveSearchMode = useCallback(
     async (v: SetStateAction<SearchMode>) => {
       setSearchMode(v);
@@ -305,6 +240,7 @@ export function useStore() {
     [store],
   );
 
+  const [searchContentType, setSearchContentType] = useState<ContentType[]>([]);
   const saveSearchContentType = useCallback(
     async (v: SetStateAction<ContentType[]>) => {
       setSearchContentType(v);
@@ -314,6 +250,7 @@ export function useStore() {
     [store],
   );
 
+  const [searchBookmark, setSearchBookmark] = useState<boolean[]>([true, false]);
   const saveSearchBookmark = useCallback(
     async (v: SetStateAction<boolean[]>) => {
       setSearchBookmark(v);
@@ -323,106 +260,268 @@ export function useStore() {
     [store],
   );
 
-  function applyFont(v: string) {
-    if (v) {
-      document.documentElement.style.setProperty('--user-font', `"${v}"`);
-    } else {
-      document.documentElement.style.removeProperty('--user-font');
-    }
-  }
+  // information
+  const [version, setVersion] = useState<string>('');
+  const [realAppLocalDataDir, setRealAppLocalDataDir] = useState('');
+  const [realAppDataDir, setRealAppDataDir] = useState('');
+  const [appLocalDataDir, setAppLocalDataDir] = useState('');
 
-  async function saveAndApplyFont(v: string) {
-    setFont(v);
-    applyFont(v);
-    await store?.set(STORE.appearance.FONT, v);
-    await store?.save();
-  }
-
-  async function saveHistorySize(v: SetStateAction<number>) {
-    setHistorySize(v);
-    await store?.set(STORE.setting.HISTORY_SIZE, v);
-    await store?.save();
-  }
-
+  // shortcut
+  const [globalShortcutToggleWindow, setGlobalShortcutToggleWindow] = useState<Shortcut>(
+    defaultGlobalShortcutToggleWindow,
+  );
   async function saveShortcutSendAndPaste(v: SetStateAction<Shortcut>) {
     setShortcutSendAndPaste(v);
     await store?.set(STORE.app_shortcut.SEND_AND_PASTE, v);
     await store?.save();
   }
+
+  const [shortcutSendAndPaste, setShortcutSendAndPaste] = useState<Shortcut>(
+    defaultShortcutSendAndPaste,
+  );
+  const [shortcutSendClipboard, setShortcutSendClipboard] = useState<Shortcut>(
+    defaultShortcutSendClipboard,
+  );
   async function saveShortcutSendClipboard(v: SetStateAction<Shortcut>) {
     setShortcutSendClipboard(v);
     await store?.set(STORE.app_shortcut.SEND_CLIPBOARD, v);
     await store?.save();
   }
+
+  const [shortcutDeleteClip, setShortcutDeleteClip] = useState<Shortcut>(defaultShortcutDeleteClip);
   async function saveShortcutDeleteClip(v: SetStateAction<Shortcut>) {
     setShortcutDeleteClip(v);
     await store?.set(STORE.app_shortcut.DELETE_CLIP, v);
     await store?.save();
   }
+
+  const [shortcutShowPasteMenu, setShortcutShowPasteMenu] = useState<Shortcut>(
+    defaultShortcutShowPasteMenu,
+  );
+  async function saveShortcutShowPasteMenu(v: SetStateAction<Shortcut>) {
+    setShortcutShowPasteMenu(v);
+    await store?.set(STORE.app_shortcut.SHOW_PASTE_MENU, v);
+    await store?.save();
+  }
+
+  const [shortcutToggleClipBookmark, setShortcutToggleClipBookmark] = useState<Shortcut>(
+    defaultShortcutToggleClipBookmark,
+  );
   async function saveShortcutToggleClipBookmark(v: SetStateAction<Shortcut>) {
     setShortcutToggleClipBookmark(v);
     await store?.set(STORE.app_shortcut.TOGGLE_CLIP_BOOKMARK, v);
     await store?.save();
   }
+
+  const [shortcutToggleSearchContentTypeText, setShortcutToggleSearchContentTypeText] =
+    useState<Shortcut>(defaultShortcutToggleSearchContentTypeText);
   async function saveShortcutToggleSearchContentTypeText(v: SetStateAction<Shortcut>) {
     setShortcutToggleSearchContentTypeText(v);
     await store?.set(STORE.app_shortcut.TOGGLE_SEARCH_CONTENT_TYPE_TEXT, v);
     await store?.save();
   }
+
+  const [shortcutToggleSearchContentTypeImage, setShortcutToggleSearchContentTypeImage] =
+    useState<Shortcut>(defaultShortcutToggleSearchContentTypeImage);
   async function saveShortcutToggleSearchContentTypeImage(v: SetStateAction<Shortcut>) {
     setShortcutToggleSearchContentTypeImage(v);
     await store?.set(STORE.app_shortcut.TOGGLE_SEARCH_CONTENT_TYPE_IMAGE, v);
     await store?.save();
   }
+
+  const [shortcutToggleSearchContentTypeFiles, setShortcutToggleSearchContentTypeFiles] =
+    useState<Shortcut>(defaultShortcutToggleSearchContentTypeFiles);
+  async function saveShortcutToggleSearchContentTypeFiles(v: SetStateAction<Shortcut>) {
+    setShortcutToggleSearchContentTypeFiles(v);
+    await store?.set(STORE.app_shortcut.TOGGLE_SEARCH_CONTENT_TYPE_FILES, v);
+    await store?.save();
+  }
+
+  const [shortcutToggleSearchBookmark, setShortcutToggleSearchBookmark] = useState<Shortcut>(
+    defaultShortcutToggleSearchBookmark,
+  );
   async function saveShortcutToggleSearchBookmark(v: SetStateAction<Shortcut>) {
     setShortcutToggleSearchBookmark(v);
     await store?.set(STORE.app_shortcut.TOGGLE_SEARCH_BOOKMARK, v);
     await store?.save();
   }
+
+  const [shortcutToggleSearchMode, setShortcutToggleSearchMode] = useState<Shortcut>(
+    defaultShortcutToggleSearchMode,
+  );
   async function saveShortcutToggleSearchMode(v: SetStateAction<Shortcut>) {
     setShortcutToggleSearchMode(v);
     await store?.set(STORE.app_shortcut.TOGGLE_SEARCH_MODE, v);
     await store?.save();
   }
 
+  useEffect(() => {
+    void (async () => {
+      // %USERPROFILE%\AppData\Roaming\oktntko.clinder
+      const store = await Store.load('settings.json');
+      setStore(store);
+
+      void store?.get<boolean>(STORE.appearance.PIN).then((v) => setEnablePin(v ?? false));
+      void store
+        ?.get<Theme>(STORE.appearance.THEME)
+        .then((v) => v ?? defaultTheme)
+        .then((v) => {
+          setTheme(v);
+          applyTheme(v);
+        });
+      void store
+        ?.get<string>(STORE.appearance.FONT)
+        .then((v) => v ?? defaultFont)
+        .then((v) => {
+          setFont(v);
+          applyFont(v);
+        });
+      void invoke.list_system_font().then(setSystemFontList);
+      void store
+        ?.get<number>(STORE.appearance.MIN_HEIGHT)
+        .then((v) => setMinHeight(v ?? defaultMinHeight));
+      void store
+        ?.get<number>(STORE.appearance.MAX_HEIGHT)
+        .then((v) => setMaxHeight(v ?? defaultMaxHeight));
+      void store
+        ?.get<boolean>(STORE.appearance.WRAP_TEXT_AUTOMATICALLY)
+        .then((v) => setWrapTextAutomatically(v ?? defaultWrapTextAutomatically));
+
+      void store
+        ?.get<number>(STORE.behavior.HISTORY_SIZE)
+        .then((v) => setHistorySize(v ?? defaultHistorySize));
+      void store
+        ?.get<number>(STORE.behavior.MAX_ITEMS)
+        .then((v) => setMaxItems(v ?? defaultMaxItems));
+      void store
+        ?.get<boolean>(STORE.behavior.TRIM_FINAL_NEWLINES)
+        .then((v) => setTrimFinalNewlines(v ?? defaultTrimFinalNewlines));
+
+      void store?.get<SearchMode>(STORE.state.SEARCH_MODE).then((v) => setSearchMode(v ?? 'fuzzy'));
+      void store
+        ?.get<ContentType[]>(STORE.state.SEARCH_CONTENT_TYPE)
+        .then((v) => setSearchContentType(v ?? []));
+      void store
+        ?.get<boolean[]>(STORE.state.SEARCH_BOOKMARK)
+        .then((v) => setSearchBookmark(v ?? [true, false]));
+
+      void getVersion().then(setVersion);
+      void invoke.get_real_app_local_data_dir().then(setRealAppLocalDataDir);
+      void invoke.get_real_app_data_dir().then(setRealAppDataDir);
+      void getAppLocalDataDir().then(setAppLocalDataDir);
+
+      await store
+        ?.get<Shortcut>(STORE.global_shortcut.TOGGLE_WINDOW)
+        .then((v) => setGlobalShortcutToggleWindow(v ?? defaultGlobalShortcutToggleWindow));
+      void store
+        ?.get<Shortcut>(STORE.app_shortcut.SEND_AND_PASTE)
+        .then((v) => setShortcutSendAndPaste(v ?? defaultShortcutSendAndPaste));
+      void store
+        ?.get<Shortcut>(STORE.app_shortcut.SEND_CLIPBOARD)
+        .then((v) => setShortcutSendClipboard(v ?? defaultShortcutSendClipboard));
+      void store
+        ?.get<Shortcut>(STORE.app_shortcut.DELETE_CLIP)
+        .then((v) => setShortcutDeleteClip(v ?? defaultShortcutDeleteClip));
+      void store
+        ?.get<Shortcut>(STORE.app_shortcut.SHOW_PASTE_MENU)
+        .then((v) => setShortcutShowPasteMenu(v ?? defaultShortcutShowPasteMenu));
+      void store
+        ?.get<Shortcut>(STORE.app_shortcut.TOGGLE_CLIP_BOOKMARK)
+        .then((v) => setShortcutToggleClipBookmark(v ?? defaultShortcutToggleClipBookmark));
+      void store
+        ?.get<Shortcut>(STORE.app_shortcut.TOGGLE_SEARCH_CONTENT_TYPE_TEXT)
+        .then((v) =>
+          setShortcutToggleSearchContentTypeText(v ?? defaultShortcutToggleSearchContentTypeText),
+        );
+      void store
+        ?.get<Shortcut>(STORE.app_shortcut.TOGGLE_SEARCH_CONTENT_TYPE_IMAGE)
+        .then((v) =>
+          setShortcutToggleSearchContentTypeImage(v ?? defaultShortcutToggleSearchContentTypeImage),
+        );
+      void store
+        ?.get<Shortcut>(STORE.app_shortcut.TOGGLE_SEARCH_CONTENT_TYPE_FILES)
+        .then((v) =>
+          setShortcutToggleSearchContentTypeFiles(v ?? defaultShortcutToggleSearchContentTypeFiles),
+        );
+      void store
+        ?.get<Shortcut>(STORE.app_shortcut.TOGGLE_SEARCH_BOOKMARK)
+        .then((v) => setShortcutToggleSearchBookmark(v ?? defaultShortcutToggleSearchBookmark));
+      void store
+        ?.get<Shortcut>(STORE.app_shortcut.TOGGLE_SEARCH_MODE)
+        .then((v) => setShortcutToggleSearchMode(v ?? defaultShortcutToggleSearchMode));
+    })();
+
+    return () => undefined;
+  }, []);
+
   return {
     enablePin,
     saveEnablePin,
     theme,
     saveTheme,
+    font,
+    saveAndApplyFont,
+    systemFontList,
+
+    minHeight,
+    saveMinHeight,
+    maxHeight,
+    saveMaxHeight,
+    wrapTextAutomatically,
+    saveWrapTextAutomatically,
+
+    historySize,
+    saveHistorySize,
+    maxItems,
+    saveMaxItems,
+    trimFinalNewlines,
+    saveTrimFinalNewlines,
+
     page,
     setPage,
-    globalShortcutToggleWindow,
-    setGlobalShortcutToggleWindow,
     searchMode,
     saveSearchMode,
     searchContentType,
     saveSearchContentType,
     searchBookmark,
     saveSearchBookmark,
-    font,
-    saveAndApplyFont,
-    historySize,
-    saveHistorySize,
-    systemFontList,
+
     version,
+    realAppLocalDataDir,
+    realAppDataDir,
     appLocalDataDir,
-    appDataDir,
+
+    globalShortcutToggleWindow,
+    setGlobalShortcutToggleWindow,
     shortcutSendAndPaste,
     saveShortcutSendAndPaste,
     shortcutSendClipboard,
     saveShortcutSendClipboard,
     shortcutDeleteClip,
     saveShortcutDeleteClip,
+    shortcutShowPasteMenu,
+    saveShortcutShowPasteMenu,
     shortcutToggleClipBookmark,
     saveShortcutToggleClipBookmark,
     shortcutToggleSearchContentTypeText,
     saveShortcutToggleSearchContentTypeText,
     shortcutToggleSearchContentTypeImage,
     saveShortcutToggleSearchContentTypeImage,
+    shortcutToggleSearchContentTypeFiles,
+    saveShortcutToggleSearchContentTypeFiles,
     shortcutToggleSearchBookmark,
     saveShortcutToggleSearchBookmark,
     shortcutToggleSearchMode,
     saveShortcutToggleSearchMode,
   };
+}
+
+export function matchShortcut(e: Shortcut, shortcut: Shortcut) {
+  return (
+    e.ctrlKey === shortcut.ctrlKey &&
+    e.shiftKey === shortcut.shiftKey &&
+    e.altKey === shortcut.altKey &&
+    e.metaKey === shortcut.metaKey &&
+    e.code === shortcut.code
+  );
 }
