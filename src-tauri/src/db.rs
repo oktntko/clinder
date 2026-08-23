@@ -1,7 +1,6 @@
 use rusqlite::{
-    params, params_from_iter,
+    Connection, Result, params, params_from_iter,
     types::{FromSql, FromSqlError, FromSqlResult, ToSql, ToSqlOutput, ValueRef},
-    Connection, Result,
 };
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -314,6 +313,32 @@ RETURNING
   , updated_at";
 
     conn.query_row(SQL, params![bookmark, id], row_to_clip)
+        .map_err(|e| e.to_string())
+}
+
+pub fn update_clip_text(
+    app_handle: &AppHandle,
+    plain_text: String,
+    id: i64,
+) -> Result<Clip, String> {
+    let conn = ensure_db(app_handle).map_err(|e| e.to_string())?;
+
+    const SQL: &str = "
+UPDATE clip
+SET
+  plain_text = ?1
+WHERE
+    id = ?2
+RETURNING
+    id
+  , content_type
+  , plain_text
+  , image_hash
+  , files
+  , bookmark
+  , updated_at";
+
+    conn.query_row(SQL, params![plain_text, id], row_to_clip)
         .map_err(|e| e.to_string())
 }
 

@@ -138,6 +138,10 @@ async function get_real_app_data_dir(): Promise<string> {
   return invoke('get_real_app_data_dir');
 }
 
+async function get_ocr_language(): Promise<string> {
+  return invoke('get_ocr_language');
+}
+
 export default {
   search_clipboard,
   delete_clip,
@@ -154,4 +158,5 @@ export default {
   list_system_font,
   get_real_app_local_data_dir,
   get_real_app_data_dir,
+  get_ocr_language,
 };

@@ -29,6 +29,7 @@ const STORE = {
     HISTORY_SIZE: 'history_size',
     MAX_ITEMS: 'max_items',
     TRIM_FINAL_NEWLINES: 'trim_final_newlines',
+    ENABLE_OCR: 'enable_ocr',
   },
   global_shortcut: {
     TOGGLE_WINDOW: 'toggle_window',
@@ -139,6 +140,7 @@ export const defaultWrapTextAutomatically = true;
 export const defaultHistorySize = 10000;
 export const defaultMaxItems = 50;
 export const defaultTrimFinalNewlines = true;
+export const defaultEnableOCR = false;
 
 export function useStore() {
   const [store, setStore] = useState<Store>();
@@ -224,6 +226,14 @@ export function useStore() {
   async function saveTrimFinalNewlines(v: SetStateAction<boolean>) {
     setTrimFinalNewlines(v);
     await store?.set(STORE.behavior.TRIM_FINAL_NEWLINES, v);
+    await store?.save();
+  }
+
+  const [ocr, setOCR] = useState('');
+  const [enableOCR, setEnableOCR] = useState(defaultEnableOCR);
+  async function saveEnableOCR(v: SetStateAction<boolean>) {
+    setEnableOCR(v);
+    await store?.set(STORE.behavior.ENABLE_OCR, v);
     await store?.save();
   }
 
@@ -397,6 +407,11 @@ export function useStore() {
         ?.get<boolean>(STORE.behavior.TRIM_FINAL_NEWLINES)
         .then((v) => setTrimFinalNewlines(v ?? defaultTrimFinalNewlines));
 
+      void invoke.get_ocr_language().then(setOCR);
+      void store
+        ?.get<boolean>(STORE.behavior.ENABLE_OCR)
+        .then((v) => setEnableOCR(v ?? defaultEnableOCR));
+
       void store?.get<SearchMode>(STORE.state.SEARCH_MODE).then((v) => setSearchMode(v ?? 'fuzzy'));
       void store
         ?.get<ContentType[]>(STORE.state.SEARCH_CONTENT_TYPE)
@@ -476,6 +491,9 @@ export function useStore() {
     saveMaxItems,
     trimFinalNewlines,
     saveTrimFinalNewlines,
+    ocr,
+    enableOCR,
+    saveEnableOCR,
 
     page,
     setPage,

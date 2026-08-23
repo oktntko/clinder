@@ -19,6 +19,8 @@
     "dtolnay",
     "enigo",
     "esbuild",
+    "hstr",
+    "HSTRING",
     "iconify",
     "libappindicator",
     "librsvg",
@@ -59,8 +61,6 @@
     "types",
     "*.svg"
   ],
-  "ignoreRegExpList": [
-    "icon-\\[[^\\]]+\\]"
-  ],
+  "ignoreRegExpList": ["icon-\\[[^\\]]+\\]"],
   "import": []
 }

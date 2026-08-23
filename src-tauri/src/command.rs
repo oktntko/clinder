@@ -584,3 +584,16 @@ fn get_package_family_name() -> Option<String> {
         None
     }
 }
+
+#[tauri::command(rename_all = "snake_case")]
+pub fn get_ocr_language() -> Result<String, String> {
+    if cfg!(target_os = "windows") {
+        use crate::ocr;
+
+        let language = ocr::get_ocr_language()?;
+        let tag = language.LanguageTag().unwrap_or_default().to_string_lossy();
+        Ok(tag)
+    } else {
+        Ok("".to_string())
+    }
+}

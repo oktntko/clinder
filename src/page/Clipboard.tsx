@@ -398,30 +398,7 @@ export function Clipboard({
                   type="button"
                   title={item.clip.plain_text}
                   tabIndex={-1}
-                  className={cn(
-                    'relative w-full shrink-0 cursor-pointer py-1 text-start outline-none',
-                    item.trimmed_begin
-                      ? [
-                          'pl-5 before:absolute before:top-0 before:left-0 before:translate-y-1/2',
-                          "before:content-['']",
-                          'before:icon-[lucide--ellipsis] before:inline-block before:size-4',
-                          'before:bg-gray-300',
-                          'dark:before:bg-zinc-600',
-                        ]
-                      : '',
-                    item.trimmed_end
-                      ? [
-                          'pr-5 after:absolute after:right-0 after:bottom-0 after:-translate-y-1/2',
-                          "after:content-['']",
-                          'after:icon-[lucide--ellipsis] after:inline-block after:size-4',
-                          'after:bg-gray-300',
-                          'dark:after:bg-zinc-600',
-                        ]
-                      : '',
-                    props.wrapTextAutomatically
-                      ? 'wrap-anywhere whitespace-pre-wrap'
-                      : 'line-clamp-1 leading-6',
-                  )}
+                  className={cn('w-full shrink-0 cursor-pointer py-1 text-start outline-none')}
                   onFocus={() => {
                     setCursor(i);
                   }}
@@ -440,9 +417,15 @@ export function Clipboard({
                   }}
                 >
                   {item.clip.content_type === 'text' ? (
-                    <HighlightText {...{ ...props, item }} />
+                    <>
+                      <HighlightText {...{ ...props, item }} />
+                      {item.clip.image_hash && <ShrinkImage {...{ ...props, item }} />}
+                    </>
                   ) : item.clip.content_type === 'image' ? (
-                    <ShrinkImage {...{ ...props, item }} />
+                    <>
+                      <ShrinkImage {...{ ...props, item }} />
+                      {item.clip.plain_text && <HighlightText {...{ ...props, item }} />}
+                    </>
                   ) : (
                     /* files */
                     <FileList {...{ ...props, item }} />
@@ -529,11 +512,25 @@ export function Clipboard({
   );
 }
 
-type ClipContainerProps = Pick<ReturnType<typeof useStore>, 'appLocalDataDir'> & { item: Searched };
+type ClipContainerProps = Pick<
+  ReturnType<typeof useStore>,
+  'wrapTextAutomatically' | 'appLocalDataDir'
+> & { item: Searched };
 
 function HighlightText(props: ClipContainerProps) {
   if (!props.item.indices || props.item.indices.length === 0) {
-    return <>{props.item.snippet}</>;
+    return (
+      <div
+        className={cn(
+          props.wrapTextAutomatically
+            ? 'wrap-anywhere whitespace-pre-wrap'
+            : 'line-clamp-1 leading-6',
+        )}
+      >
+        {props.item.trimmed_begin ? '... ' : ''}
+        {props.item.snippet}
+      </div>
+    );
   }
 
   // サロゲートペアや絵文字を考慮して文字単位の配列にする
@@ -578,7 +575,18 @@ function HighlightText(props: ClipContainerProps) {
     }
   }
 
-  return <>{elements}</>;
+  return (
+    <div
+      className={cn(
+        props.wrapTextAutomatically
+          ? 'wrap-anywhere whitespace-pre-wrap'
+          : 'line-clamp-1 leading-6',
+      )}
+    >
+      {props.item.trimmed_begin ? '... ' : ''}
+      {elements}
+    </div>
+  );
 }
 
 function ShrinkImage(props: ClipContainerProps) {

@@ -4,6 +4,7 @@ import invoke from '~/command';
 import { Button } from '~/component/Button';
 import { Checkbox } from '~/component/Checkbox';
 import { Input } from '~/component/Input';
+import { Radio } from '~/component/Radio';
 import { cn } from '~/lib/utils';
 import { useDialog } from '~/plugin/useDialog';
 import {
@@ -45,7 +46,7 @@ export function Setting(props: SettingProps) {
           <div className="flex flex-col gap-2">
             <div className="flex flex-col gap-0.5">
               <div>
-                <label htmlFor="font" className="text-xs capitalize">
+                <label htmlFor="font" className="capitalize">
                   font
                 </label>
               </div>
@@ -95,7 +96,7 @@ export function Setting(props: SettingProps) {
               }}
             >
               <div>
-                <label htmlFor="min height" className="text-xs capitalize">
+                <label htmlFor="min height" className="capitalize">
                   min height (min: 100px)
                 </label>
               </div>
@@ -139,7 +140,7 @@ export function Setting(props: SettingProps) {
               }}
             >
               <div>
-                <label htmlFor="max height" className="text-xs capitalize">
+                <label htmlFor="max height" className="capitalize">
                   max height (min: 150px)
                 </label>
               </div>
@@ -174,22 +175,35 @@ export function Setting(props: SettingProps) {
 
             <div className="flex flex-col gap-0.5">
               <div>
-                <label htmlFor="wrap text automatically" className="text-xs capitalize">
-                  wrap text automatically
-                </label>
+                <div className="capitalize">wrap text automatically</div>
               </div>
               <div className="flex flex-row items-center gap-2">
-                <Checkbox
-                  id="wrap text automatically"
+                <Radio
+                  id="wrap"
+                  name="wrap text automatically"
                   checked={props.wrapTextAutomatically}
+                  value="true"
                   onChange={async (e) => {
-                    await props.saveWrapTextAutomatically(e.target.checked);
+                    await props.saveWrapTextAutomatically(e.target.value === 'true');
 
                     return $toast.success('Wrap Text Automatically updated successfully.');
                   }}
                 >
-                  enabled
-                </Checkbox>
+                  wrap
+                </Radio>
+                <Radio
+                  id="one-line"
+                  name="wrap text automatically"
+                  checked={!props.wrapTextAutomatically}
+                  value="false"
+                  onChange={async (e) => {
+                    await props.saveWrapTextAutomatically(e.target.value === 'true');
+
+                    return $toast.success('Wrap Text Automatically updated successfully.');
+                  }}
+                >
+                  one-line
+                </Radio>
               </div>
             </div>
           </div>
@@ -209,10 +223,10 @@ export function Setting(props: SettingProps) {
               }}
             >
               <div>
-                <label htmlFor="history size" className="text-xs capitalize">
+                <label htmlFor="history size" className="capitalize">
                   history size (0 = unlimited)
                 </label>
-                <div className="text-[8px]">
+                <div className="text-xs">
                   Max history items to keep. Older items are deleted on startup and daily when
                   exceeding the limit.
                 </div>
@@ -257,7 +271,7 @@ export function Setting(props: SettingProps) {
               }}
             >
               <div>
-                <label htmlFor="max items" className="text-xs capitalize">
+                <label htmlFor="max items" className="capitalize">
                   max items (min: 10, max: 100)
                 </label>
               </div>
@@ -293,7 +307,7 @@ export function Setting(props: SettingProps) {
 
             <div className="flex flex-col gap-0.5">
               <div>
-                <label htmlFor="trim final newlines" className="text-xs capitalize">
+                <label htmlFor="trim final newlines" className="capitalize">
                   trim final newlines (requires restart)
                 </label>
               </div>
@@ -305,7 +319,7 @@ export function Setting(props: SettingProps) {
                     await props.saveTrimFinalNewlines(e.target.checked);
 
                     await $dialog.confirm.success(
-                      'Trim Final Newlines updated successfully. Do you want to restart now?',
+                      `Trim Final Newlines ${e.target.checked ? 'enabled' : 'disabled'} successfully.\nDo you want to restart now?'`,
                     );
 
                     return invoke.restart_app();
@@ -314,6 +328,59 @@ export function Setting(props: SettingProps) {
                   enabled
                 </Checkbox>
               </div>
+            </div>
+
+            <div className="flex flex-col gap-0.5">
+              <div>
+                <label htmlFor="enable OCR" className="capitalize">
+                  enable OCR (requires restart)
+                </label>
+                <div
+                  className={cn(
+                    'flex flex-col items-start gap-1 rounded-lg',
+                    'border px-4 py-2',
+                    'border-blue-800 bg-blue-200 text-blue-800',
+                    'dark:border-blue-700 dark:bg-blue-900 dark:text-blue-100',
+                  )}
+                >
+                  <div>
+                    Uses built-in OS features for OCR. Your images stay local and are never sent to
+                    external servers.
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-row items-center gap-2">
+                <Checkbox
+                  id="enable OCR"
+                  checked={props.enableOCR}
+                  disabled={!props.ocr}
+                  onChange={async (e) => {
+                    await props.saveEnableOCR(e.target.checked);
+
+                    await $dialog.confirm.success(
+                      `OCR ${e.target.checked ? 'enabled' : 'disabled'} successfully.\nDo you want to restart now?`,
+                    );
+
+                    return invoke.restart_app();
+                  }}
+                >
+                  enabled
+                </Checkbox>
+              </div>
+              {props.ocr ? (
+                <div className="text-xs">
+                  Detected OS Languages:
+                  <span className="font-mono font-bold text-blue-500"> {props.ocr}</span>
+                </div>
+              ) : (
+                <div className="text-xs text-red-500">
+                  <p className="font-bold">No OCR-compatible language packs found.</p>
+                  <span>
+                    Please install a supported language pack (e.g., English, Japanese) in Settings
+                    to use OCR.
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </section>
@@ -411,7 +478,7 @@ export function Setting(props: SettingProps) {
               return (
                 <div key={i} className="flex flex-col gap-0.5">
                   <div>
-                    <label className="text-xs capitalize">{x.title}</label>
+                    <label className="capitalize">{x.title}</label>
                   </div>
                   <div className="flex flex-row items-center gap-2">
                     <ShortcutKey shortcut={x.shortcut} duplicate={duplicate} />
@@ -500,7 +567,7 @@ export function Setting(props: SettingProps) {
           <div className="flex flex-col gap-2">
             <div className="flex flex-col gap-0.5">
               <div>
-                <label className="text-xs capitalize">clear clipboard</label>
+                <label className="capitalize">clear clipboard</label>
               </div>
               <div className="flex flex-row items-center gap-2">
                 <Button

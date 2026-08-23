@@ -6,7 +6,7 @@ export type InputProps = Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type
   children?: ReactNode;
 };
 
-export function Checkbox({ className, children, ...props }: InputProps) {
+export function Radio({ className, children, ...props }: InputProps) {
   return (
     <label
       htmlFor={props.id}
@@ -14,9 +14,9 @@ export function Checkbox({ className, children, ...props }: InputProps) {
     >
       <input
         {...props}
-        type="checkbox"
+        type="radio"
         className={cn(
-          'peer size-4 shrink-0 rounded-md transition outline-none hover:ring-2 focus:ring-3',
+          'peer size-4 shrink-0 rounded-full transition outline-none hover:ring-2 focus:ring-3',
           'hover:ring-gray-400',
           'focus:ring-gray-400',
           'dark:hover:ring-zinc-600',

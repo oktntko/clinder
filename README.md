@@ -35,8 +35,6 @@ Open it with the global shortcut `Alt + V` and use incremental fuzzy search to f
 
 ## TODO
 
-- 機能
-  - 画像コピー: OCRで文字抽出してテキスト検索可能にする
 - Mac version
 - Improve and expand this README
 - ファイルペースト時に変な挙動をする

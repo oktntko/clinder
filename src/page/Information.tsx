@@ -2,6 +2,7 @@ import { openPath, openUrl } from '@tauri-apps/plugin-opener';
 
 import Wide310x150Logo from '~/assets/Wide310x150Logo.png';
 import { Button } from '~/component/Button';
+import { cn } from '~/lib/utils';
 import { useStore } from '~/plugin/useStore';
 
 type InformationProps = ReturnType<typeof useStore> & {};
@@ -32,7 +33,7 @@ export function Information(props: InformationProps) {
             type="button"
             set="default"
             onClick={() => openUrl('https://github.com/oktntko/clinder')}
-            className="relative after:absolute after:top-1/2 after:right-1.5 after:icon-[majesticons--open-line] after:inline-block after:size-4 after:-translate-y-1/2 after:content-['']"
+            className={afterIcon('after:icon-[majesticons--open-line]')}
           >
             Repository
           </Button>
@@ -40,7 +41,7 @@ export function Information(props: InformationProps) {
             type="button"
             set="default"
             onClick={() => openUrl('https://oktntko.github.io/clinder/')}
-            className="relative after:absolute after:top-1/2 after:right-1.5 after:icon-[majesticons--open-line] after:inline-block after:size-4 after:-translate-y-1/2 after:content-['']"
+            className={afterIcon('after:icon-[majesticons--open-line]')}
           >
             Homepage
           </Button>
@@ -55,7 +56,7 @@ export function Information(props: InformationProps) {
             type="button"
             set="default"
             onClick={() => openPath(props.realAppLocalDataDir)}
-            className="relative justify-start text-xs after:absolute after:top-1/2 after:right-1.5 after:icon-[proicons--folder-open] after:inline-block after:size-4 after:-translate-y-1/2 after:content-['']"
+            className={cn('justify-start text-xs', afterIcon('after:icon-[proicons--folder-open]'))}
             title={props.realAppLocalDataDir}
           >
             <span className="truncate pr-4 pl-2">App Data: {props.realAppLocalDataDir}</span>
@@ -64,10 +65,10 @@ export function Information(props: InformationProps) {
             type="button"
             set="default"
             onClick={() => openPath(props.realAppDataDir)}
-            className="relative justify-start text-xs after:absolute after:top-1/2 after:right-1.5 after:icon-[proicons--folder-open] after:inline-block after:size-4 after:-translate-y-1/2 after:content-['']"
+            className={cn('justify-start text-xs', afterIcon('after:icon-[proicons--folder-open]'))}
             title={props.realAppDataDir}
           >
-            <span className="truncate pr-4 pl-2">App Data: {props.realAppDataDir}</span>
+            <span className="truncate pr-4 pl-2">App Setting: {props.realAppDataDir}</span>
           </Button>
         </div>
       </section>
@@ -105,5 +106,15 @@ export function Information(props: InformationProps) {
         </div>
       </section>
     </div>
+  );
+}
+
+function afterIcon(icon: string) {
+  return cn(
+    'relative',
+    "after:content-['']",
+    'after:absolute after:top-1/2 after:right-1.5 after:-translate-y-1/2',
+    'after:inline-block after:size-4',
+    icon,
   );
 }
