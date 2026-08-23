@@ -24,7 +24,7 @@ export function Footer(props: FooterProps) {
           type="button"
           isActive={props.enablePin}
           onClick={(e) => {
-            e.stopPropagation();
+            e.preventDefault();
             void props.saveEnablePin(!props.enablePin);
           }}
         >
@@ -41,7 +41,7 @@ export function Footer(props: FooterProps) {
               : 'border-indigo-600 bg-indigo-900 text-indigo-500',
           )}
           onClick={(e) => {
-            e.stopPropagation();
+            e.preventDefault();
             void props.saveTheme(props.theme === 'light' ? 'dark' : 'light');
           }}
         >
@@ -63,7 +63,7 @@ export function Footer(props: FooterProps) {
           isActive={props.page === 'clipboard'}
           set="default"
           onClick={(e) => {
-            e.stopPropagation();
+            e.preventDefault();
             props.setPage('clipboard');
           }}
         >
@@ -75,7 +75,7 @@ export function Footer(props: FooterProps) {
           isActive={props.page === 'setting'}
           set="default"
           onClick={(e) => {
-            e.stopPropagation();
+            e.preventDefault();
             props.setPage('setting');
           }}
         >
@@ -87,7 +87,7 @@ export function Footer(props: FooterProps) {
           isActive={props.page === 'information'}
           set="default"
           onClick={(e) => {
-            e.stopPropagation();
+            e.preventDefault();
             props.setPage('information');
           }}
         >

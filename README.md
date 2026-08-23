@@ -37,7 +37,6 @@ Open it with the global shortcut `Alt + V` and use incremental fuzzy search to f
 
 - 機能
   - 画像コピー: OCRで文字抽出してテキスト検索可能にする
-  - ペーストメニュー
-  - 設定：ドラッグで使えるキー（Alt, Ctrl, Shift）
 - Mac version
 - Improve and expand this README
+- ファイルペースト時に変な挙動をする

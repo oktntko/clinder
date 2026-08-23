@@ -84,7 +84,7 @@ function App() {
       window.removeEventListener('keydown', loopTabKey, true);
       window.removeEventListener('keydown', hideWindow);
     };
-  });
+  }, [store]);
 
   const [isDragging, setIsDragging] = useState(false);
   async function startDragging(e: React.MouseEvent<HTMLDivElement>) {
@@ -173,15 +173,5 @@ function App() {
 
 export default App;
 
-const FOCUSABLE_SELECTOR =
+export const FOCUSABLE_SELECTOR =
   'a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"]), [contenteditable]';
-
-// app
-//      | light    | dark     |
-//   bg | gray-100 | zinc-900 |
-// text | gray-900 | zinc-100 |
-
-// input
-//      | light    | dark     |
-//   bg | gray-50  | zinc-900 |
-// text | gray-900 | zinc-100 |

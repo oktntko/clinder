@@ -7,10 +7,21 @@ export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   set?: 'default' | 'positive' | 'warning';
 };
 
-export function Button({ className, children, set, ...props }: ButtonProps) {
+export function Button({
+  className,
+  children,
+  set,
+  onKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.stopPropagation();
+    }
+  },
+  ...props
+}: ButtonProps) {
   return (
     <button
       {...props}
+      onKeyDown={onKeyDown}
       className={cn(
         'inline-flex items-center justify-center capitalize transition',
         'rounded-md border outline-none hover:ring-1 focus:ring-2',

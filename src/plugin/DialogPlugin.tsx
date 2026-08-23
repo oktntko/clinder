@@ -107,7 +107,10 @@ function iconClass(set: ColorSet) {
 }
 
 // --- Helper Functions ---
-function createDialogElement(closedby: 'any' | 'closerequest' | 'none' = 'any') {
+function createDialogElement(
+  closedby: 'any' | 'closerequest' | 'none' = 'any',
+  anchor?: HTMLElement,
+) {
   const dialog = document.createElement('dialog');
   dialog.setAttribute('closedby', closedby);
   dialog.className = `
@@ -116,7 +119,8 @@ function createDialogElement(closedby: 'any' | 'closerequest' | 'none' = 'any') 
     scale-95 opacity-0
     starting:[[open]]:scale-95 starting:[[open]]:opacity-0
     [[open]]:scale-100 [[open]]:opacity-100
-    backdrop:bg-gray-500/20 backdrop:backdrop-blur-xs
+    backdrop:bg-gray-500/20
+    ${anchor ? 'backdrop:backdrop-grayscale-xs' : 'backdrop:backdrop-blur-xs'}
     backdrop:transition backdrop:transition-discrete backdrop:duration-200 backdrop:ease-out
     backdrop:opacity-0
     starting:[[open]]:backdrop:opacity-0
@@ -156,12 +160,16 @@ function createDialogPlugin() {
     {
       closedby = 'any',
       showCloseButton = true,
+      anchor,
+      anchorChildHeight,
     }: {
       closedby?: 'any' | 'closerequest' | 'none';
       showCloseButton?: boolean;
+      anchor?: HTMLElement;
+      anchorChildHeight?: number;
     } = {},
   ) {
-    const dialog = createDialogElement(closedby);
+    const dialog = createDialogElement(closedby, anchor);
 
     if (showCloseButton) {
       const closeButton = createCloseButton();
@@ -210,6 +218,23 @@ function createDialogPlugin() {
       };
 
       dialog.addEventListener('close', handleClose, { once: true });
+
+      if (anchor) {
+        dialog.style.margin = '0'; // マージで中の要素を中央寄せしているので消す
+        dialog.style.insetInlineStart = 'unset'; // 消すと right: が効くようになる
+        dialog.style.insetBlockStart = 'unset'; // 消すと bottom: が効くようになる
+        dialog.style.position = 'fixed';
+        dialog.style.right = 'calc(4px + var(--spacing) * 1.5)'; // scrollbar 分
+
+        const rect = anchor.getBoundingClientRect();
+        const spaceBelow = window.innerHeight + anchor.clientHeight - rect.bottom;
+
+        if (spaceBelow >= (anchorChildHeight ?? 300)) {
+          dialog.style.top = `${rect.top}px`;
+        } else {
+          dialog.style.bottom = `${window.innerHeight - rect.bottom}px`;
+        }
+      }
 
       root.render(<Component {...componentProps} />);
 

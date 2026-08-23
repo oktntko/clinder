@@ -16,6 +16,7 @@ import {
   defaultShortcutDeleteClip,
   defaultShortcutSendAndPaste,
   defaultShortcutSendClipboard,
+  defaultShortcutShowPasteMenu,
   defaultShortcutToggleClipBookmark,
   defaultShortcutToggleSearchBookmark,
   defaultShortcutToggleSearchContentTypeFiles,
@@ -87,7 +88,6 @@ export function Setting(props: SettingProps) {
               className="flex flex-col gap-0.5"
               onSubmit={async (e) => {
                 e.preventDefault();
-                e.stopPropagation();
                 const value = (document.getElementById('min height') as HTMLInputElement).value;
 
                 await props.saveMinHeight(Number(value));
@@ -132,7 +132,6 @@ export function Setting(props: SettingProps) {
               className="flex flex-col gap-0.5"
               onSubmit={async (e) => {
                 e.preventDefault();
-                e.stopPropagation();
                 const value = (document.getElementById('max height') as HTMLInputElement).value;
 
                 await props.saveMaxHeight(Number(value));
@@ -203,7 +202,6 @@ export function Setting(props: SettingProps) {
               className="flex flex-col gap-0.5"
               onSubmit={async (e) => {
                 e.preventDefault();
-                e.stopPropagation();
                 const value = (document.getElementById('history size') as HTMLInputElement).value;
 
                 await props.saveHistorySize(Number(value));
@@ -252,7 +250,6 @@ export function Setting(props: SettingProps) {
               className="flex flex-col gap-0.5"
               onSubmit={async (e) => {
                 e.preventDefault();
-                e.stopPropagation();
                 const value = (document.getElementById('max items') as HTMLInputElement).value;
 
                 await props.saveMaxItems(Number(value));
@@ -372,6 +369,12 @@ export function Setting(props: SettingProps) {
                 default: defaultShortcutToggleClipBookmark,
               },
               {
+                title: 'show paste menu',
+                shortcut: props.shortcutShowPasteMenu,
+                save: props.saveShortcutShowPasteMenu,
+                default: defaultShortcutShowPasteMenu,
+              },
+              {
                 title: 'toggle search content type "text"',
                 shortcut: props.shortcutToggleSearchContentTypeText,
                 save: props.saveShortcutToggleSearchContentTypeText,
@@ -466,6 +469,29 @@ export function Setting(props: SettingProps) {
                 </div>
               );
             })}
+
+            <div
+              className={cn(
+                'flex flex-col items-start gap-1 rounded-lg',
+                'border p-4',
+                'border-blue-800 bg-blue-200 text-blue-800',
+                'dark:border-blue-700 dark:bg-blue-900 dark:text-blue-100',
+              )}
+            >
+              <div>
+                <div className="flex items-center gap-1 capitalize">
+                  <div className="inline-flex items-center justify-center">
+                    <span className="icon-[material-symbols--info-outline-rounded] size-5"></span>
+                  </div>
+                  <div>move window</div>
+                </div>
+              </div>
+              <div>
+                <div>
+                  <Key>Alt</Key> dragging anywhere in the window lets you move it.
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 

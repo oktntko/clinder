@@ -35,6 +35,8 @@ export type DialogPlugin = {
     options?: {
       closedby?: 'any' | 'closerequest' | 'none';
       showCloseButton?: boolean;
+      anchor?: HTMLElement;
+      anchorChildHeight?: number;
     },
   ) => Promise<T>;
 
