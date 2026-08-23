@@ -1,9 +1,13 @@
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { join } from '@tauri-apps/api/path';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import invoke, { type Clip, type Searched } from '~/command';
+import { Button } from '~/component/Button';
+import { ToggleButton } from '~/component/ToggleButton';
+import { cn } from '~/lib/utils';
 import { matchShortcut, type useStore } from '~/plugin/useStore';
 
 type ClipboardProps = ReturnType<typeof useStore> & {};
@@ -232,131 +236,153 @@ export function Clipboard({
     }
   }, [cursor]);
 
+  useEffect(() => {
+    const unlistenPromise = getCurrentWindow().onFocusChanged(({ payload: focused }) => {
+      if (focused) {
+        requestAnimationFrame(() => {
+          const input = document.getElementById('query');
+          input?.focus();
+        });
+      }
+    });
+
+    return () => {
+      void unlistenPromise.then((unlisten) => unlisten());
+    };
+  }, []);
+
   return (
     <>
-      <div className="flex shrink-0 flex-row items-center gap-1 border-b border-b-gray-300 p-2 dark:border-b-zinc-700 dark:bg-zinc-900">
+      <div
+        className={cn(
+          'flex shrink-0 flex-row items-center gap-2 px-2 py-3 transition',
+          'border-b-2',
+          'border-b-gray-400 has-[input:focus]:bg-gray-50',
+          'dark:border-b-zinc-600 dark:has-[input:focus]:bg-black',
+        )}
+      >
+        <ToggleButton
+          title="fuzzy search"
+          type="button"
+          isActive={props.searchMode === 'fuzzy'}
+          onClick={(e) => {
+            e.stopPropagation();
+            return toggleSearchMode();
+          }}
+        >
+          <span className="icon-[codicon--search-fuzzy] size-4"></span>
+        </ToggleButton>
+
         <input
+          id="query"
           type="text"
-          className="w-full transition focus:outline-none dark:bg-transparent dark:text-zinc-100"
+          className="w-full transition outline-none"
           autoFocus={true}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+          autoComplete="off"
         />
 
-        <div className="inline-flex flex-row items-center gap-2">
-          <button
+        <div className="inline-flex flex-row items-center gap-1.5">
+          <ToggleButton
             title="text"
             type="button"
-            className={`inline-flex items-center justify-center rounded-full p-2 transition-colors focus:outline-none ${
-              props.searchContentType.some((x) => x === 'text')
-                ? 'bg-green-200 hover:bg-green-300 focus:bg-green-300 dark:bg-emerald-900/60 dark:text-emerald-300 dark:hover:bg-emerald-800/80 dark:focus:bg-emerald-800/80'
-                : 'bg-gray-200 hover:bg-gray-300 focus:bg-gray-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600'
-            }`}
+            isActive={props.searchContentType.some((x) => x === 'text')}
             onClick={(e) => {
               e.stopPropagation();
               return toggleSearchContentTypeText();
             }}
           >
             <span className="icon-[humbleicons--text] size-4"></span>
-          </button>
-          <button
+          </ToggleButton>
+          <ToggleButton
             title="image"
             type="button"
-            className={`inline-flex items-center justify-center rounded-full p-2 transition-colors focus:outline-none ${
-              props.searchContentType.some((x) => x === 'image')
-                ? 'bg-green-200 hover:bg-green-300 focus:bg-green-300 dark:bg-emerald-900/60 dark:text-emerald-300 dark:hover:bg-emerald-800/80 dark:focus:bg-emerald-800/80'
-                : 'bg-gray-200 hover:bg-gray-300 focus:bg-gray-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600'
-            }`}
+            isActive={props.searchContentType.some((x) => x === 'image')}
             onClick={(e) => {
               e.stopPropagation();
               return toggleSearchContentTypeImage();
             }}
           >
             <span className="icon-[humbleicons--image] size-4"></span>
-          </button>
-          <button
+          </ToggleButton>
+          <ToggleButton
             title="files"
             type="button"
-            className={`inline-flex items-center justify-center rounded-full p-2 transition-colors focus:outline-none ${
-              props.searchContentType.some((x) => x === 'files')
-                ? 'bg-green-200 hover:bg-green-300 focus:bg-green-300 dark:bg-emerald-900/60 dark:text-emerald-300 dark:hover:bg-emerald-800/80 dark:focus:bg-emerald-800/80'
-                : 'bg-gray-200 hover:bg-gray-300 focus:bg-gray-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600'
-            }`}
+            isActive={props.searchContentType.some((x) => x === 'files')}
             onClick={(e) => {
               e.stopPropagation();
               return toggleSearchContentTypeFiles();
             }}
           >
             <span className="icon-[humbleicons--folder] size-4"></span>
-          </button>
+          </ToggleButton>
 
-          <button
+          <ToggleButton
             title="search_bookmark"
             type="button"
-            className={`inline-flex items-center justify-center rounded-full p-2 transition-colors focus:outline-none ${
-              props.searchBookmark.length === 1 && props.searchBookmark[0] === true
-                ? 'bg-green-200 hover:bg-green-300 focus:bg-green-300 dark:bg-emerald-900/60 dark:text-emerald-300 dark:hover:bg-emerald-800/80 dark:focus:bg-emerald-800/80'
-                : 'bg-gray-200 hover:bg-gray-300 focus:bg-gray-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600'
-            }`}
+            isActive={props.searchBookmark.length === 1 && props.searchBookmark[0] === true}
             onClick={(e) => {
               e.stopPropagation();
               return toggleSearchBookmark();
             }}
           >
             <span className="icon-[material-symbols--bookmark-outline-rounded] size-4"></span>
-          </button>
-
-          <button
-            title="fuzzy search"
-            type="button"
-            className={`inline-flex items-center justify-center rounded-full p-2 transition-colors focus:outline-none ${
-              props.searchMode === 'fuzzy'
-                ? 'bg-green-200 hover:bg-green-300 focus:bg-green-300 dark:bg-emerald-900/60 dark:text-emerald-300 dark:hover:bg-emerald-800/80 dark:focus:bg-emerald-800/80'
-                : 'bg-gray-200 hover:bg-gray-300 focus:bg-gray-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600'
-            }`}
-            onClick={(e) => {
-              e.stopPropagation();
-              return toggleSearchMode();
-            }}
-          >
-            <span className="icon-[codicon--search-fuzzy] size-4"></span>
-          </button>
+          </ToggleButton>
         </div>
       </div>
 
       <div
         tabIndex={-1}
-        className="flex min-h-0 w-full flex-1 flex-col divide-y divide-gray-300 overflow-y-auto focus:outline-none dark:divide-zinc-700"
+        className={cn(
+          'flex min-h-0 w-full flex-1 flex-col divide-y overflow-y-auto outline-none',
+          'divide-gray-300',
+          'dark:divide-zinc-600',
+        )}
       >
         {clipboard.length > 0 ? (
           clipboard.map((item, i) => {
             const isActive = cursor === i;
             return (
               <div
-                key={i}
-                className={`relative border-l-4 px-1 transition-colors hover:bg-gray-200/50 dark:hover:bg-zinc-700/50 ${
+                key={item.clip.id}
+                className={cn(
+                  'relative border-l-6 px-1 transition-colors',
+                  'hover:bg-white',
+                  'dark:hover:bg-zinc-700',
                   isActive
-                    ? 'border-l-red-500 bg-gray-200 dark:bg-zinc-700'
-                    : 'border-l-transparent'
-                } `}
+                    ? ['border-l-red-500', 'bg-white', 'dark:bg-zinc-700']
+                    : 'border-l-transparent',
+                )}
               >
                 <button
                   ref={isActive ? activeItemRef : null}
                   type="button"
                   title={item.clip.plain_text}
-                  className={`relative w-full shrink-0 cursor-pointer py-1 text-start outline-none ${
+                  className={cn(
+                    'relative w-full shrink-0 cursor-pointer py-1 text-start outline-none',
+                    item.trimmed_begin
+                      ? [
+                          'pl-5 before:absolute before:top-0 before:left-0 before:translate-y-1/2',
+                          "before:content-['']",
+                          'before:icon-[lucide--ellipsis] before:inline-block before:size-4',
+                          'before:bg-gray-300',
+                          'dark:before:bg-zinc-600',
+                        ]
+                      : '',
+                    item.trimmed_end
+                      ? [
+                          'pr-5 after:absolute after:right-0 after:bottom-0 after:-translate-y-1/2',
+                          "after:content-['']",
+                          'after:icon-[lucide--ellipsis] after:inline-block after:size-4',
+                          'after:bg-gray-300',
+                          'dark:after:bg-zinc-600',
+                        ]
+                      : '',
                     props.wrapTextAutomatically
                       ? 'wrap-anywhere whitespace-pre-wrap'
-                      : 'line-clamp-1 leading-6'
-                  } ${
-                    item.trimmed_begin
-                      ? "before:icon-[lucide--ellipsis] pl-5 before:absolute before:top-0 before:left-0 before:inline-block before:size-4 before:translate-y-1/2 before:bg-gray-300 before:content-[''] dark:before:bg-zinc-600"
-                      : ''
-                  } ${
-                    item.trimmed_end
-                      ? "after:icon-[lucide--ellipsis] pr-5 after:absolute after:right-0 after:bottom-0 after:inline-block after:size-4 after:-translate-y-1/2 after:bg-gray-300 after:content-[''] dark:after:bg-zinc-600"
-                      : ''
-                  }`}
+                      : 'line-clamp-1 leading-6',
+                  )}
                   onFocus={() => {
                     setCursor(i);
                   }}
@@ -382,11 +408,12 @@ export function Clipboard({
                 </button>
 
                 {item.clip.content_type === 'text' && item.clip.image_hash && (
-                  <button
+                  <Button
+                    title="paste as image"
                     type="button"
-                    className="absolute top-0.5 right-3.5 z-10 inline-flex items-center justify-center rounded-full bg-gray-50 p-1 dark:bg-zinc-800"
+                    set="default"
+                    className="absolute top-0.5 right-3.5 z-10 rounded-full p-1"
                     onClick={(e) => {
-                      console.log('paste_image');
                       e.stopPropagation();
                       void invoke.paste_image(item.clip);
                     }}
@@ -397,14 +424,15 @@ export function Clipboard({
                     }}
                   >
                     <span className="icon-[humbleicons--image] size-4"></span>
-                  </button>
+                  </Button>
                 )}
                 {item.clip.content_type !== 'text' && item.clip.plain_text && (
-                  <button
+                  <Button
+                    title="paste as text"
                     type="button"
-                    className="absolute top-0.5 right-3.5 z-10 inline-flex items-center justify-center rounded-full bg-gray-50 p-1 dark:bg-zinc-800"
+                    set="default"
+                    className="absolute top-0.5 right-3.5 z-10 rounded-full p-1"
                     onClick={(e) => {
-                      console.log('paste_text');
                       e.stopPropagation();
                       void invoke.paste_text(item.clip);
                     }}
@@ -415,7 +443,7 @@ export function Clipboard({
                     }}
                   >
                     <span className="icon-[humbleicons--text] size-4"></span>
-                  </button>
+                  </Button>
                 )}
 
                 <div className="pointer-events-none absolute top-0 right-0">
@@ -423,11 +451,19 @@ export function Clipboard({
                     title="bookmark"
                     type="button"
                     tabIndex={-1}
-                    className={`pointer-events-auto aspect-square size-5 transition-colors [clip-path:polygon(0_0,100%_0,100%_100%)] ${
+                    className={cn(
+                      'pointer-events-auto aspect-square size-5 transition-colors',
+                      '[clip-path:polygon(0_0,100%_0,100%_100%)]',
                       item.clip.bookmark
-                        ? 'bg-green-400 hover:bg-green-500 dark:bg-emerald-700 dark:hover:bg-emerald-800'
-                        : 'bg-gray-100/90 hover:bg-gray-300 dark:bg-zinc-800/50 dark:hover:bg-zinc-600'
-                    }`}
+                        ? [
+                            'bg-green-400 hover:bg-green-500',
+                            'dark:bg-emerald-600 dark:hover:bg-emerald-700',
+                          ]
+                        : [
+                            'bg-gray-300 hover:bg-green-200',
+                            'dark:bg-zinc-800 dark:hover:bg-emerald-800',
+                          ],
+                    )}
                     onClick={(e) => {
                       e.stopPropagation();
                       return toggleClipBookmark(item.clip);
@@ -439,11 +475,14 @@ export function Clipboard({
           })
         ) : (
           <div
-            className={`flex w-full grow items-center justify-center py-1 text-gray-500 dark:text-zinc-400 ${
+            className={cn(
+              'w-full grow py-1 text-center',
+              'text-gray-500',
+              'dark:text-zinc-400',
               props.wrapTextAutomatically
                 ? 'wrap-anywhere whitespace-pre-wrap'
-                : 'line-clamp-1 leading-6'
-            }`}
+                : 'line-clamp-1 leading-6',
+            )}
           >
             No matches found
           </div>
@@ -527,7 +566,12 @@ function ShrinkImage(props: ClipContainerProps) {
       <img
         src={imageSrc}
         alt="clipboard image"
-        className="h-auto max-h-32 w-auto max-w-140 border border-dotted border-gray-400 dark:border-zinc-400"
+        className={cn(
+          'h-auto max-h-32 w-auto max-w-140',
+          'border border-dotted',
+          'border-gray-400',
+          'dark:border-zinc-400',
+        )}
       />
     )
   );

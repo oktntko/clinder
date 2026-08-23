@@ -7,6 +7,8 @@ import { Information } from '~/page/Information';
 import { Setting } from '~/page/Setting';
 import { useStore } from '~/plugin/useStore';
 
+import { cn } from './lib/utils';
+
 function App() {
   const store = useStore();
 
@@ -26,6 +28,24 @@ function App() {
       switch (e.key) {
         case 'Tab': {
           const modalDialog = document.querySelector('dialog:modal');
+          if (e.ctrlKey) {
+            if (modalDialog) {
+              return;
+            }
+
+            if (!e.shiftKey) {
+              store.setPage((page) =>
+                page === 'clipboard' ? 'setting' : page === 'setting' ? 'information' : 'clipboard',
+              );
+            } else {
+              store.setPage((page) =>
+                page === 'clipboard' ? 'information' : page === 'setting' ? 'clipboard' : 'setting',
+              );
+            }
+
+            return;
+          }
+
           const focusable = (modalDialog || document).querySelectorAll(FOCUSABLE_SELECTOR);
           const firstElement: Element | undefined = focusable[0];
           const lastElement: Element | undefined = focusable[focusable.length - 1];
@@ -104,26 +124,13 @@ function App() {
   }, []);
 
   // ウィンドウのフォーカス変化を監視
-  // フォーカスされたら input をフォーカスする
   // フォーカスが外れたら非表示にする
   useEffect(() => {
-    const appWindow = getCurrentWindow();
-
-    const unlistenPromise = appWindow.onFocusChanged(({ payload: focused }) => {
-      if (focused) {
-        requestAnimationFrame(() => {
-          const focusable = document.querySelectorAll(FOCUSABLE_SELECTOR);
-          const firstElement: Element | undefined = focusable[0];
-          if (firstElement instanceof HTMLElement) {
-            firstElement.focus();
-          }
-        });
-      } else {
-        if (!isDragging) {
-          setPressingAlt(false);
-          if (!store.enablePin) {
-            void appWindow.hide();
-          }
+    const unlistenPromise = getCurrentWindow().onFocusChanged(({ payload: focused }) => {
+      if (!focused && !isDragging) {
+        setPressingAlt(false);
+        if (!store.enablePin) {
+          void getCurrentWindow().hide();
         }
       }
     });
@@ -135,15 +142,15 @@ function App() {
 
   return (
     <>
-      {pressingAlt && (
-        <style>{`
-          div * { cursor: move !important; }
-        `}</style>
-      )}
       <div
-        className={`flex w-150 flex-col rounded-lg bg-white text-sm text-gray-900 shadow-md dark:bg-zinc-900 dark:text-zinc-100 ${
-          pressingAlt ? 'cursor-move!' : ''
-        }`}
+        className={cn(
+          'w-150 rounded-lg shadow-md',
+          'flex flex-col',
+          'text-sm',
+          'bg-gray-200 text-gray-900',
+          'dark:bg-zinc-900 dark:text-zinc-100',
+          pressingAlt ? 'cursor-move! [&_div_*]:cursor-move!' : '',
+        )}
         style={{
           minHeight: store.minHeight,
           maxHeight: store.maxHeight,
@@ -168,3 +175,13 @@ export default App;
 
 const FOCUSABLE_SELECTOR =
   'a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"]), [contenteditable]';
+
+// app
+//      | light    | dark     |
+//   bg | gray-100 | zinc-900 |
+// text | gray-900 | zinc-100 |
+
+// input
+//      | light    | dark     |
+//   bg | gray-50  | zinc-900 |
+// text | gray-900 | zinc-100 |

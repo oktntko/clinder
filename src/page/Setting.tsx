@@ -1,6 +1,10 @@
 import { useEffect, useState, type ReactNode } from 'react';
 
 import invoke from '~/command';
+import { Button } from '~/component/Button';
+import { Checkbox } from '~/component/Checkbox';
+import { Input } from '~/component/Input';
+import { cn } from '~/lib/utils';
 import { useDialog } from '~/plugin/useDialog';
 import {
   defaultFont,
@@ -33,12 +37,10 @@ export function Setting(props: SettingProps) {
   return (
     <>
       <div className="flex flex-col gap-8 overflow-y-auto px-12 py-8 focus:outline-none">
-        <div className="text-lg font-bold text-gray-700 capitalize dark:text-zinc-300">setting</div>
+        <div className="text-lg font-bold capitalize">setting</div>
 
         <section className="flex flex-col gap-2">
-          <div className="text-base font-semibold text-gray-700 capitalize dark:text-zinc-300">
-            appearance
-          </div>
+          <div className="text-base font-semibold capitalize">appearance</div>
           <div className="flex flex-col gap-2">
             <div className="flex flex-col gap-0.5">
               <div>
@@ -47,12 +49,11 @@ export function Setting(props: SettingProps) {
                 </label>
               </div>
               <div className="flex flex-row items-center gap-2">
-                <input
+                <Input
                   id="font"
                   type="text"
                   list="systemFontList"
                   defaultValue={props.font}
-                  className="rounded-md border border-gray-300 bg-white p-2 outline-none dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
                   onChange={(e) => {
                     const newFont = e.target.value;
                     if (newFont === '' || props.systemFontList.includes(newFont)) {
@@ -67,10 +68,10 @@ export function Setting(props: SettingProps) {
                     </option>
                   ))}
                 </datalist>
-                <button
+                <Button
                   title="reset"
                   type="button"
-                  className="inline-flex items-center rounded bg-gray-200 p-2 transition-colors hover:bg-gray-300 focus:bg-gray-300 focus:outline-none dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
+                  set="default"
                   onClick={async () => {
                     await props.saveAndApplyFont(defaultFont);
 
@@ -79,7 +80,7 @@ export function Setting(props: SettingProps) {
                   }}
                 >
                   <span className="icon-[system-uicons--reset] size-4"></span>
-                </button>
+                </Button>
               </div>
             </div>
             <form
@@ -99,24 +100,20 @@ export function Setting(props: SettingProps) {
                 </label>
               </div>
               <div className="flex flex-row items-center gap-2">
-                <input
+                <Input
                   id="min height"
                   type="number"
                   min={100}
                   defaultValue={props.minHeight}
-                  className="rounded-md border border-gray-300 bg-white p-2 outline-none dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
                   required
                 />
-                <button
-                  type="submit"
-                  className="inline-flex items-center rounded bg-gray-200 p-2 transition-colors hover:bg-gray-300 focus:bg-gray-300 focus:outline-none dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
-                >
+                <Button type="submit" set="default">
                   <span className="icon-[material-symbols--check-rounded] size-4"></span>
-                </button>
-                <button
+                </Button>
+                <Button
                   title="reset"
                   type="button"
-                  className="inline-flex items-center rounded bg-gray-200 p-2 transition-colors hover:bg-gray-300 focus:bg-gray-300 focus:outline-none dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
+                  set="default"
                   onClick={async () => {
                     await props.saveMinHeight(defaultMinHeight);
 
@@ -127,7 +124,7 @@ export function Setting(props: SettingProps) {
                   }}
                 >
                   <span className="icon-[system-uicons--reset] size-4"></span>
-                </button>
+                </Button>
               </div>
             </form>
 
@@ -148,24 +145,20 @@ export function Setting(props: SettingProps) {
                 </label>
               </div>
               <div className="flex flex-row items-center gap-2">
-                <input
+                <Input
                   id="max height"
                   type="number"
                   min={150}
                   defaultValue={props.maxHeight}
-                  className="rounded-md border border-gray-300 bg-white p-2 outline-none dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
                   required
                 />
-                <button
-                  type="submit"
-                  className="inline-flex items-center rounded bg-gray-200 p-2 transition-colors hover:bg-gray-300 focus:bg-gray-300 focus:outline-none dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
-                >
+                <Button type="submit" set="default">
                   <span className="icon-[material-symbols--check-rounded] size-4"></span>
-                </button>
-                <button
+                </Button>
+                <Button
                   title="reset"
                   type="button"
-                  className="inline-flex items-center rounded bg-gray-200 p-2 transition-colors hover:bg-gray-300 focus:bg-gray-300 focus:outline-none dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
+                  set="default"
                   onClick={async () => {
                     await props.saveMaxHeight(defaultMaxHeight);
 
@@ -176,7 +169,7 @@ export function Setting(props: SettingProps) {
                   }}
                 >
                   <span className="icon-[system-uicons--reset] size-4"></span>
-                </button>
+                </Button>
               </div>
             </form>
 
@@ -187,34 +180,24 @@ export function Setting(props: SettingProps) {
                 </label>
               </div>
               <div className="flex flex-row items-center gap-2">
-                <label
-                  htmlFor="wrap text automatically"
-                  className="inline-flex justify-center gap-2 p-2"
-                >
-                  <input
-                    id="wrap text automatically"
-                    type="checkbox"
-                    checked={props.wrapTextAutomatically}
-                    className="peer size-4 rounded-md border border-gray-300 bg-white dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
-                    onChange={async (e) => {
-                      await props.saveWrapTextAutomatically(e.target.checked);
+                <Checkbox
+                  id="wrap text automatically"
+                  checked={props.wrapTextAutomatically}
+                  onChange={async (e) => {
+                    await props.saveWrapTextAutomatically(e.target.checked);
 
-                      return $toast.success('Wrap Text Automatically updated successfully.');
-                    }}
-                  />
-                  <span className="capitalize transition-colors peer-not-checked:text-gray-500 dark:peer-not-checked:text-zinc-500">
-                    enabled
-                  </span>
-                </label>
+                    return $toast.success('Wrap Text Automatically updated successfully.');
+                  }}
+                >
+                  enabled
+                </Checkbox>
               </div>
             </div>
           </div>
         </section>
 
         <section className="flex flex-col gap-2">
-          <div className="text-base font-semibold text-gray-700 capitalize dark:text-zinc-300">
-            behavior
-          </div>
+          <div className="text-base font-semibold capitalize">behavior</div>
           <div className="flex flex-col gap-2">
             <form
               className="flex flex-col gap-0.5"
@@ -237,24 +220,20 @@ export function Setting(props: SettingProps) {
                 </div>
               </div>
               <div className="flex flex-row items-center gap-2">
-                <input
+                <Input
                   id="history size"
                   type="number"
                   min={0}
                   defaultValue={props.historySize}
-                  className="rounded-md border border-gray-300 bg-white p-2 outline-none dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
                   required
                 />
-                <button
-                  type="submit"
-                  className="inline-flex items-center rounded bg-gray-200 p-2 transition-colors hover:bg-gray-300 focus:bg-gray-300 focus:outline-none dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
-                >
+                <Button type="submit" set="default">
                   <span className="icon-[material-symbols--check-rounded] size-4"></span>
-                </button>
-                <button
+                </Button>
+                <Button
                   title="reset"
                   type="button"
-                  className="inline-flex items-center rounded bg-gray-200 p-2 transition-colors hover:bg-gray-300 focus:bg-gray-300 focus:outline-none dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
+                  set="default"
                   onClick={async () => {
                     await props.saveHistorySize(defaultHistorySize);
 
@@ -265,7 +244,7 @@ export function Setting(props: SettingProps) {
                   }}
                 >
                   <span className="icon-[system-uicons--reset] size-4"></span>
-                </button>
+                </Button>
               </div>
             </form>
 
@@ -286,25 +265,21 @@ export function Setting(props: SettingProps) {
                 </label>
               </div>
               <div className="flex flex-row items-center gap-2">
-                <input
+                <Input
                   id="max items"
                   type="number"
                   min={10}
                   max={100}
                   defaultValue={props.maxItems}
-                  className="rounded-md border border-gray-300 bg-white p-2 outline-none dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
                   required
                 />
-                <button
-                  type="submit"
-                  className="inline-flex items-center rounded bg-gray-200 p-2 transition-colors hover:bg-gray-300 focus:bg-gray-300 focus:outline-none dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
-                >
+                <Button type="submit" set="default">
                   <span className="icon-[material-symbols--check-rounded] size-4"></span>
-                </button>
-                <button
+                </Button>
+                <Button
                   title="reset"
                   type="button"
-                  className="inline-flex items-center rounded bg-gray-200 p-2 transition-colors hover:bg-gray-300 focus:bg-gray-300 focus:outline-none dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
+                  set="default"
                   onClick={async () => {
                     await props.saveMaxItems(defaultMaxItems);
 
@@ -315,7 +290,7 @@ export function Setting(props: SettingProps) {
                   }}
                 >
                   <span className="icon-[system-uicons--reset] size-4"></span>
-                </button>
+                </Button>
               </div>
             </form>
 
@@ -326,38 +301,28 @@ export function Setting(props: SettingProps) {
                 </label>
               </div>
               <div className="flex flex-row items-center gap-2">
-                <label
-                  htmlFor="trim final newlines"
-                  className="inline-flex justify-center gap-2 p-2"
+                <Checkbox
+                  id="trim final newlines"
+                  checked={props.trimFinalNewlines}
+                  onChange={async (e) => {
+                    await props.saveTrimFinalNewlines(e.target.checked);
+
+                    await $dialog.confirm.success(
+                      'Trim Final Newlines updated successfully. Do you want to restart now?',
+                    );
+
+                    return invoke.restart_app();
+                  }}
                 >
-                  <input
-                    id="trim final newlines"
-                    type="checkbox"
-                    checked={props.trimFinalNewlines}
-                    className="peer size-4 rounded-md border border-gray-300 bg-white dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
-                    onChange={async (e) => {
-                      await props.saveTrimFinalNewlines(e.target.checked);
-
-                      await $dialog.confirm.success(
-                        'Trim Final Newlines updated successfully. Do you want to restart now?',
-                      );
-
-                      return invoke.restart_app();
-                    }}
-                  />
-                  <span className="capitalize transition-colors peer-not-checked:text-gray-500 dark:peer-not-checked:text-zinc-500">
-                    enabled
-                  </span>
-                </label>
+                  enabled
+                </Checkbox>
               </div>
             </div>
           </div>
         </section>
 
         <section className="flex flex-col gap-2">
-          <div className="text-base font-semibold text-gray-700 capitalize dark:text-zinc-300">
-            Keybindings
-          </div>
+          <div className="text-base font-semibold capitalize">Keybindings</div>
           <div className="flex flex-col gap-2">
             {[
               {
@@ -447,10 +412,10 @@ export function Setting(props: SettingProps) {
                   </div>
                   <div className="flex flex-row items-center gap-2">
                     <ShortcutKey shortcut={x.shortcut} duplicate={duplicate} />
-                    <button
+                    <Button
                       title="save"
                       type="button"
-                      className="inline-flex items-center rounded bg-gray-200 p-2 transition-colors hover:bg-gray-300 focus:bg-gray-300 focus:outline-none dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
+                      set="default"
                       onClick={async () => {
                         const newShortcut: Shortcut = await $dialog.showModal(
                           EditShortcutDialog,
@@ -476,11 +441,11 @@ export function Setting(props: SettingProps) {
                       }}
                     >
                       <span className="icon-[mage--edit] size-4"></span>
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       title="reset"
                       type="button"
-                      className="inline-flex items-center rounded bg-gray-200 p-2 transition-colors hover:bg-gray-300 focus:bg-gray-300 focus:outline-none dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
+                      set="default"
                       onClick={async () => {
                         try {
                           await x.save(x.default);
@@ -496,7 +461,7 @@ export function Setting(props: SettingProps) {
                       }}
                     >
                       <span className="icon-[system-uicons--reset] size-4"></span>
-                    </button>
+                    </Button>
                   </div>
                 </div>
               );
@@ -505,18 +470,17 @@ export function Setting(props: SettingProps) {
         </section>
 
         <section className="flex flex-col gap-2">
-          <div className="text-base font-semibold text-gray-700 capitalize dark:text-zinc-300">
-            Danger Zone
-          </div>
+          <div className="text-base font-semibold capitalize">Danger Zone</div>
           <div className="flex flex-col gap-2">
             <div className="flex flex-col gap-0.5">
               <div>
                 <label className="text-xs capitalize">clear clipboard</label>
               </div>
               <div className="flex flex-row items-center gap-2">
-                <button
+                <Button
                   type="button"
-                  className="inline-flex w-24 items-center justify-center rounded-lg border-2 border-yellow-300 bg-yellow-200 px-4 py-2 text-yellow-700 capitalize shadow transition-colors hover:bg-yellow-300 focus:bg-yellow-300 focus:outline-none"
+                  set="warning"
+                  className="min-w-24 font-bold"
                   onClick={async () => {
                     await $dialog.confirm.warn(
                       'Are you sure you want to clear all clipboard history?',
@@ -526,7 +490,7 @@ export function Setting(props: SettingProps) {
                   }}
                 >
                   clear
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -559,20 +523,26 @@ function EditShortcutDialog(props: {
   });
 
   return (
-    <div className="rounded-lg bg-white p-8 text-sm text-gray-900 shadow-md dark:bg-zinc-900 dark:text-zinc-100">
+    <div
+      className={cn(
+        'rounded-lg p-8 shadow-md',
+        'text-sm',
+        'bg-gray-200 text-gray-900',
+        'dark:bg-zinc-900 dark:text-zinc-100',
+      )}
+    >
       <div className="flex flex-col gap-6">
         <div>
-          <div className="text-base font-semibold text-gray-700 capitalize dark:text-zinc-300">
-            {props.title}
-          </div>
-          <div className="text-sm text-gray-700 capitalize dark:text-zinc-300">
+          <div className="text-base font-semibold capitalize">{props.title}</div>
+          <div className="text-sm text-gray-700 dark:text-zinc-300">
             Press the shortcut key you want to use.
           </div>
         </div>
-        <button
+        <Button
           type="button"
+          set="default"
           autoFocus
-          className="flex flex-row items-center justify-center gap-2 rounded-2xl border-2 border-gray-300 bg-gray-200 py-6 transition outline-none hover:bg-gray-300 hover:ring-2 hover:ring-gray-400 focus:bg-gray-300 focus:ring-2 focus:ring-gray-400 focus:outline-none dark:border-zinc-600 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:hover:ring-zinc-300 dark:focus:bg-zinc-600 dark:focus:ring-zinc-300"
+          className="flex rounded-2xl border-2 p-6"
           onKeyDown={(e) => {
             if (['Tab', 'Control', 'Alt', 'Shift', 'Meta'].includes(e.key)) {
               return;
@@ -590,22 +560,24 @@ function EditShortcutDialog(props: {
           }}
         >
           <ShortcutKey shortcut={value} />
-        </button>
+        </Button>
         <section className="flex flex-row items-center justify-center gap-4">
-          <button
+          <Button
             type="button"
-            className="inline-flex w-24 items-center justify-center rounded-lg border-2 border-green-300 bg-green-200 px-4 py-2 capitalize shadow transition-colors hover:bg-green-300 focus:bg-green-300 focus:outline-none dark:border-emerald-900 dark:bg-emerald-900/60 dark:text-emerald-300 dark:hover:bg-emerald-800/80 dark:focus:bg-emerald-800/80"
+            set="positive"
+            className="min-w-24 font-bold"
             onClick={() => props.onSave(value)}
           >
             save
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
-            className="inline-flex w-24 items-center justify-center rounded-lg border-2 border-gray-300 bg-gray-200 px-4 py-2 capitalize shadow transition-colors hover:bg-gray-300 focus:bg-gray-300 focus:outline-none dark:border-zinc-600 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:focus:bg-zinc-600"
+            set="default"
+            className="min-w-24 font-bold"
             onClick={() => props.onCancel()}
           >
             cancel
-          </button>
+          </Button>
         </section>
       </div>
     </div>
@@ -631,11 +603,12 @@ function ShortcutKey({ shortcut, duplicate }: { shortcut: Shortcut; duplicate?: 
 function Key(props: { children: ReactNode; duplicate?: boolean }) {
   return (
     <kbd
-      className={`inline-block min-w-9 cursor-default rounded-md border bg-white px-3 py-1.5 text-center text-sm font-bold text-gray-800 capitalize select-none ${
+      className={cn(
+        `inline-block min-w-9 cursor-default rounded-md border bg-white px-3 py-1.5 text-center text-sm font-bold text-gray-700 capitalize select-none`,
         props.duplicate
           ? 'border-red-500 bg-red-100 shadow-[0_4px_0_#faa3a3,0_5px_0_#fb2c36,0_5px_3px_rgba(0,0,0,0.3)]'
-          : 'border-gray-300 bg-white shadow-[0_4px_0_#b1b1b1,0_5px_0_#999,0_5px_3px_rgba(0,0,0,0.3)]'
-      }`}
+          : 'border-gray-300 bg-white shadow-[0_4px_0_#b1b1b1,0_5px_0_#999,0_5px_3px_rgba(0,0,0,0.3)]',
+      )}
     >
       {props.children}
     </kbd>

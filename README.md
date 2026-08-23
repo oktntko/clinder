@@ -35,12 +35,6 @@ Open it with the global shortcut `Alt + V` and use incremental fuzzy search to f
 
 ## TODO
 
-- Improve UI
-  - ページのボタンのところ
-  - ボタンが見づらい
-  - history size のフィードバック（ボタンいらないか？）
-  - コンポーネント化
-  - 入力欄の色を変える
 - 機能
   - 画像コピー: OCRで文字抽出してテキスト検索可能にする
   - ペーストメニュー

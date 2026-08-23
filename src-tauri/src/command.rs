@@ -510,7 +510,7 @@ pub fn get_real_app_local_data_dir(app_handle: AppHandle) -> Result<PathBuf, Str
 pub fn get_real_app_data_dir(app_handle: AppHandle) -> Result<PathBuf, String> {
     let standard_dir = app_handle
         .path()
-        .app_local_data_dir()
+        .app_data_dir()
         .map_err(|e| e.to_string())?;
 
     #[cfg(target_os = "windows")]
