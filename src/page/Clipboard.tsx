@@ -295,7 +295,7 @@ export function Clipboard({
         className={cn(
           'flex shrink-0 flex-row items-center gap-2 px-2 py-3 transition',
           'border-b-2',
-          'border-b-gray-400 has-[input:focus]:bg-gray-50',
+          'border-b-gray-400 has-[input:focus]:bg-white',
           'dark:border-b-zinc-600 dark:has-[input:focus]:bg-black',
         )}
       >
@@ -479,7 +479,7 @@ export function Clipboard({
                             'dark:bg-emerald-600 dark:hover:bg-emerald-700',
                           ]
                         : [
-                            'bg-gray-300 hover:bg-green-200',
+                            'bg-gray-200 hover:bg-green-200',
                             'dark:bg-zinc-800 dark:hover:bg-emerald-800',
                           ],
                     )}
@@ -701,13 +701,13 @@ function PasteMenu(props: { clip: Clip; onSuccess: () => void }) {
     <div
       ref={refCallback}
       className={cn(
-        'bg-white text-gray-900',
+        'bg-gray-100 text-gray-900',
         'dark:bg-zinc-900 dark:text-zinc-100',
         'rounded-lg shadow-md',
         'text-sm',
       )}
     >
-      <div className={cn('grid grid-cols-4 gap-x-1 gap-y-px')}>
+      <div className={cn('grid grid-cols-4 gap-x-1 rounded-md')}>
         {props.clip.plain_text && (
           <MenuButton
             type="button"
@@ -833,15 +833,15 @@ function MenuButton({
       onKeyDown={onKeyDown}
       className={cn(
         'inline-flex items-center justify-center capitalize transition',
-        'outline-none first:rounded-t-md last:rounded-b-md hover:ring-1 focus:ring-1',
+        'outline-none first:rounded-t-md last:rounded-b-md',
         'p-2',
-        'focus:font-bold',
-        'bg-white text-gray-900',
-        'dark:bg-zinc-900 dark:text-zinc-100',
+        'focus:scale-105',
+        'bg-white text-gray-500',
+        'dark:bg-zinc-900 dark:text-zinc-500',
+        'hover:text-gray-900 focus:text-gray-900',
+        'dark:hover:text-zinc-100 dark:focus:text-zinc-100',
         'hover:bg-gray-100 focus:bg-gray-100',
-        'hover:ring-gray-400 focus:ring-gray-400',
         'dark:hover:bg-black dark:focus:bg-black',
-        'dark:hover:ring-zinc-500 dark:focus:ring-zinc-500',
         'col-span-4 grid grid-cols-subgrid',
         className,
       )}

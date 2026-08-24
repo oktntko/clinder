@@ -8,7 +8,7 @@ export function Input({ className, ...props }: InputProps) {
       {...props}
       className={cn(
         'rounded-md border p-2 transition outline-none hover:ring-1 focus:ring-2',
-        'border-gray-400 bg-gray-100',
+        'border-gray-400 bg-white',
         'hover:bg-white hover:ring-gray-400',
         'focus:bg-white focus:ring-gray-400',
         'dark:border-zinc-600 dark:bg-zinc-800',

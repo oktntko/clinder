@@ -620,7 +620,7 @@ function EditShortcutDialog(props: {
       className={cn(
         'rounded-lg p-8 shadow-md',
         'text-sm',
-        'bg-gray-200 text-gray-900',
+        'bg-gray-100 text-gray-900',
         'dark:bg-zinc-900 dark:text-zinc-100',
       )}
     >
