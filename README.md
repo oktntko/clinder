@@ -38,3 +38,10 @@ Open it with the global shortcut `Alt + V` and use incremental fuzzy search to f
 - Mac version
 - Improve and expand this README
 - ファイルペースト時に変な挙動をする
+- UI
+  - ボタンとトグルボタン共通化
+  - ライトテーマの背景色濃すぎ
+  - ラジオボタンの ring
+  - ペーストメニューのフォーカスわかりづらい
+  - トーストのライトテーマ・ダークテーマ、色統一
+  - イベントリスナ多すぎ
