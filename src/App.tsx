@@ -147,7 +147,7 @@ function App() {
           'w-150 rounded-lg shadow-md',
           'flex flex-col',
           'text-sm',
-          'bg-gray-100 text-gray-900',
+          'bg-slate-100 text-slate-900',
           'dark:bg-zinc-900 dark:text-zinc-100',
           pressingAlt ? 'cursor-move! [&_div_*]:cursor-move!' : '',
         )}

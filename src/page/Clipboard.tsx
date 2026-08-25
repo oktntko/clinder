@@ -295,7 +295,7 @@ export function Clipboard({
         className={cn(
           'flex shrink-0 flex-row items-center gap-2 px-2 py-3 transition',
           'border-b-2',
-          'border-b-gray-400 has-[input:focus]:bg-white',
+          'border-b-slate-400 has-[input:focus]:bg-white',
           'dark:border-b-zinc-600 dark:has-[input:focus]:bg-black',
         )}
       >
@@ -374,7 +374,7 @@ export function Clipboard({
         tabIndex={-1}
         className={cn(
           'flex min-h-0 w-full flex-1 flex-col divide-y overflow-y-auto outline-none',
-          'divide-gray-300',
+          'divide-slate-300',
           'dark:divide-zinc-600',
         )}
       >
@@ -439,7 +439,7 @@ export function Clipboard({
                     isActive={false}
                     tabIndex={-1}
                     set="default"
-                    className="absolute top-0.5 right-3.5 z-10 bg-gray-50 dark:bg-zinc-800"
+                    className="absolute top-0.5 right-3.5 z-10 bg-slate-50 dark:bg-zinc-800"
                     onClick={(e) => {
                       e.preventDefault();
                       void invoke.paste_image(item.clip);
@@ -455,7 +455,7 @@ export function Clipboard({
                     isActive={false}
                     tabIndex={-1}
                     set="default"
-                    className="absolute top-0.5 right-3.5 z-10 bg-gray-50 dark:bg-zinc-800"
+                    className="absolute top-0.5 right-3.5 z-10 bg-slate-50 dark:bg-zinc-800"
                     onClick={(e) => {
                       e.preventDefault();
                       void invoke.paste_text(item.clip);
@@ -479,7 +479,7 @@ export function Clipboard({
                             'dark:bg-emerald-600 dark:hover:bg-emerald-700',
                           ]
                         : [
-                            'bg-gray-200 hover:bg-green-200',
+                            'bg-slate-200 hover:bg-green-200',
                             'dark:bg-zinc-800 dark:hover:bg-emerald-800',
                           ],
                     )}
@@ -499,7 +499,7 @@ export function Clipboard({
           <div
             className={cn(
               'flex h-full w-full grow items-center justify-center py-1',
-              'text-gray-500',
+              'text-slate-500',
               'dark:text-zinc-400',
               props.wrapTextAutomatically ? 'wrap-anywhere whitespace-pre-wrap' : 'leading-6',
             )}
@@ -614,7 +614,7 @@ function ShrinkImage(props: ClipContainerProps) {
         className={cn(
           'h-auto max-h-32 w-auto max-w-140',
           'border border-dotted',
-          'border-gray-400',
+          'border-slate-400',
           'dark:border-zinc-400',
         )}
       />
@@ -701,8 +701,10 @@ function PasteMenu(props: { clip: Clip; onSuccess: () => void }) {
     <div
       ref={refCallback}
       className={cn(
-        'bg-gray-100 text-gray-900',
+        'bg-slate-100 text-slate-900',
         'dark:bg-zinc-900 dark:text-zinc-100',
+        'shadow-black/20',
+        'dark:shadow-white/20',
         'rounded-lg shadow-md',
         'text-sm',
       )}
@@ -835,12 +837,12 @@ function MenuButton({
         'inline-flex items-center justify-center capitalize transition',
         'outline-none first:rounded-t-md last:rounded-b-md',
         'p-2',
-        'focus:scale-105',
-        'bg-white text-gray-500',
+        'focus:scale-[102%]',
+        'bg-white text-slate-500',
         'dark:bg-zinc-900 dark:text-zinc-500',
-        'hover:text-gray-900 focus:text-gray-900',
+        'hover:text-slate-900 focus:text-slate-900',
         'dark:hover:text-zinc-100 dark:focus:text-zinc-100',
-        'hover:bg-gray-100 focus:bg-gray-100',
+        'hover:bg-slate-100 focus:bg-slate-100',
         'dark:hover:bg-black dark:focus:bg-black',
         'col-span-4 grid grid-cols-subgrid',
         className,

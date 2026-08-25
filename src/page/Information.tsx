@@ -27,7 +27,7 @@ export function Information(props: InformationProps) {
 
       {/* Links Section */}
       <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-semibold text-gray-700 dark:text-zinc-300">Links</h2>
+        <h2 className="text-base font-semibold capitalize">Links</h2>
         <div className="flex flex-col gap-2">
           <Button
             type="button"
@@ -50,7 +50,7 @@ export function Information(props: InformationProps) {
 
       {/* Application Data Section */}
       <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-semibold text-gray-700 dark:text-zinc-300">Application Data</h2>
+        <h2 className="text-base font-semibold capitalize">Application Data</h2>
         <div className="flex flex-col gap-2">
           <Button
             type="button"
@@ -75,7 +75,7 @@ export function Information(props: InformationProps) {
 
       {/* Troubleshooting Section */}
       <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-semibold text-gray-700 dark:text-zinc-300">Troubleshooting</h2>
+        <h2 className="text-base font-semibold capitalize">Troubleshooting</h2>
         <div className="rounded-lg bg-amber-50 p-4 text-sm text-amber-900 dark:bg-amber-900/20 dark:text-amber-200">
           <p className="mb-2 font-medium">If the application is not working correctly:</p>
           <ol className="list-inside list-decimal space-y-1">

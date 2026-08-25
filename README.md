@@ -41,6 +41,5 @@ Open it with the global shortcut `Alt + V` and use incremental fuzzy search to f
 - UI
   - ボタンとトグルボタン共通化
   - ラジオボタンの ring
-  - ペーストメニューのフォーカスわかりづらい
   - トーストのライトテーマ・ダークテーマ、色統一
   - イベントリスナ多すぎ

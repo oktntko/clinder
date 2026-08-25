@@ -620,14 +620,14 @@ function EditShortcutDialog(props: {
       className={cn(
         'rounded-lg p-8 shadow-md',
         'text-sm',
-        'bg-gray-100 text-gray-900',
+        'bg-slate-100 text-slate-900',
         'dark:bg-zinc-900 dark:text-zinc-100',
       )}
     >
       <div className="flex flex-col gap-6">
         <div>
           <div className="text-base font-semibold capitalize">{props.title}</div>
-          <div className="text-sm text-gray-700 dark:text-zinc-300">
+          <div className="text-sm text-slate-700 dark:text-zinc-300">
             Press the shortcut key you want to use.
           </div>
         </div>

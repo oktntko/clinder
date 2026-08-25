@@ -41,7 +41,7 @@ function WindowDialog({
       className={cn(
         'max-w-80 rounded-lg p-8 shadow-md',
         'text-sm',
-        'bg-gray-100 text-gray-900',
+        'bg-slate-100 text-slate-900',
         'dark:bg-zinc-900 dark:text-zinc-100',
       )}
     >
@@ -120,7 +120,7 @@ function createDialogElement(
     starting:[[open]]:scale-95 starting:[[open]]:opacity-0
     [[open]]:scale-100 [[open]]:opacity-100
     backdrop:bg-gray-500/20
-    ${anchor ? 'backdrop:backdrop-grayscale-xs' : 'backdrop:backdrop-blur-xs'}
+    ${anchor ? 'backdrop:backdrop-grayscale' : 'backdrop:backdrop-blur-xs'}
     backdrop:transition backdrop:transition-discrete backdrop:duration-200 backdrop:ease-out
     backdrop:opacity-0
     starting:[[open]]:backdrop:opacity-0
@@ -137,9 +137,9 @@ function createCloseButton() {
     inline-flex items-center justify-center
     rounded-full outline-none hover:ring-1 focus:ring-2
     bg-transparent shadow
-    text-gray-400
-    hover:bg-white hover:ring-gray-400
-    focus:bg-white focus:ring-gray-400
+    text-slate-400
+    hover:bg-white hover:ring-slate-400
+    focus:bg-white focus:ring-slate-400
     dark:text-zinc-500
     dark:hover:bg-zinc-700 dark:hover:ring-zinc-500
     dark:focus:bg-zinc-700 dark:focus:ring-zinc-500

@@ -14,7 +14,7 @@ export function Footer(props: FooterProps) {
         'flex shrink-0 flex-row justify-between',
         'px-2 py-1.5',
         'border-t-2',
-        'border-t-gray-400',
+        'border-t-slate-400',
         'dark:border-t-zinc-600',
       )}
     >
