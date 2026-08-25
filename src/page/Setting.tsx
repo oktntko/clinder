@@ -1,10 +1,8 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode, type SetStateAction } from 'react';
 
 import invoke from '~/command';
 import { Button } from '~/component/Button';
-import { Checkbox } from '~/component/Checkbox';
-import { Input } from '~/component/Input';
-import { Radio } from '~/component/Radio';
+import { Checkbox, Input, Radio } from '~/component/Input';
 import { cn } from '~/lib/utils';
 import { useDialog } from '~/plugin/useDialog';
 import {
@@ -23,7 +21,8 @@ import {
   defaultShortcutToggleSearchContentTypeFiles,
   defaultShortcutToggleSearchContentTypeImage,
   defaultShortcutToggleSearchContentTypeText,
-  defaultShortcutToggleSearchMode,
+  defaultShortcutToggleShowSubContents,
+  defaultShortcutToggleWrapTextAutomatically,
   matchShortcut,
   type Shortcut,
   type useStore,
@@ -85,93 +84,26 @@ export function Setting(props: SettingProps) {
                 </Button>
               </div>
             </div>
-            <form
-              className="flex flex-col gap-0.5"
-              onSubmit={async (e) => {
-                e.preventDefault();
-                const value = (document.getElementById('min height') as HTMLInputElement).value;
 
-                await props.saveMinHeight(Number(value));
-                return $toast.success('Min Height updated successfully.');
-              }}
-            >
-              <div>
-                <label htmlFor="min height" className="capitalize">
-                  min height (min: 100px)
-                </label>
-              </div>
-              <div className="flex flex-row items-center gap-2">
-                <Input
-                  id="min height"
-                  type="number"
-                  min={100}
-                  defaultValue={props.minHeight}
-                  required
-                />
-                <Button type="submit" set="default">
-                  <span className="icon-[material-symbols--check-rounded] size-4"></span>
-                </Button>
-                <Button
-                  title="reset"
-                  type="button"
-                  set="default"
-                  onClick={async () => {
-                    await props.saveMinHeight(defaultMinHeight);
+            <InlineForm
+              id="min height"
+              name="Min Height"
+              label="min height (min: 100px)"
+              initialValue={props.minHeight}
+              defaultValue={defaultMinHeight}
+              save={props.saveMinHeight}
+              input={{ type: 'number', min: 100 }}
+            />
 
-                    const input = document.getElementById('min height') as HTMLInputElement;
-                    input.value = `${defaultMinHeight}`;
-
-                    return $toast.success('Min Height updated successfully.');
-                  }}
-                >
-                  <span className="icon-[system-uicons--reset] size-4"></span>
-                </Button>
-              </div>
-            </form>
-
-            <form
-              className="flex flex-col gap-0.5"
-              onSubmit={async (e) => {
-                e.preventDefault();
-                const value = (document.getElementById('max height') as HTMLInputElement).value;
-
-                await props.saveMaxHeight(Number(value));
-                return $toast.success('Max Height updated successfully.');
-              }}
-            >
-              <div>
-                <label htmlFor="max height" className="capitalize">
-                  max height (min: 150px)
-                </label>
-              </div>
-              <div className="flex flex-row items-center gap-2">
-                <Input
-                  id="max height"
-                  type="number"
-                  min={150}
-                  defaultValue={props.maxHeight}
-                  required
-                />
-                <Button type="submit" set="default">
-                  <span className="icon-[material-symbols--check-rounded] size-4"></span>
-                </Button>
-                <Button
-                  title="reset"
-                  type="button"
-                  set="default"
-                  onClick={async () => {
-                    await props.saveMaxHeight(defaultMaxHeight);
-
-                    const input = document.getElementById('max height') as HTMLInputElement;
-                    input.value = `${defaultMaxHeight}`;
-
-                    return $toast.success('Max Height updated successfully.');
-                  }}
-                >
-                  <span className="icon-[system-uicons--reset] size-4"></span>
-                </Button>
-              </div>
-            </form>
+            <InlineForm
+              id="max height"
+              name="Max Height"
+              label="max height (min: 150px)"
+              initialValue={props.maxHeight}
+              defaultValue={defaultMaxHeight}
+              save={props.saveMaxHeight}
+              input={{ type: 'number', min: 150 }}
+            />
 
             <div className="flex flex-col gap-0.5">
               <div>
@@ -206,104 +138,59 @@ export function Setting(props: SettingProps) {
                 </Radio>
               </div>
             </div>
+
+            <div className="flex flex-col gap-0.5">
+              <div>
+                <label htmlFor="show sub contents" className="capitalize">
+                  show sub contents (e.g., excel image, ocr text)
+                </label>
+              </div>
+              <div className="flex flex-row items-center gap-2">
+                <Checkbox
+                  id="show sub contents"
+                  checked={props.showSubContents}
+                  onChange={async (e) => {
+                    await props.saveShowSubContents(e.target.checked);
+
+                    return $toast.success(
+                      `Show Sub Contents ${e.target.checked ? 'enabled' : 'disabled'} successfully.`,
+                    );
+                  }}
+                >
+                  enabled
+                </Checkbox>
+              </div>
+            </div>
           </div>
         </section>
 
         <section className="flex flex-col gap-2">
           <div className="text-base font-semibold capitalize">behavior</div>
           <div className="flex flex-col gap-2">
-            <form
-              className="flex flex-col gap-0.5"
-              onSubmit={async (e) => {
-                e.preventDefault();
-                const value = (document.getElementById('history size') as HTMLInputElement).value;
-
-                await props.saveHistorySize(Number(value));
-                return $toast.success('History Size updated successfully.');
-              }}
+            <InlineForm
+              id="history size"
+              name="History Size"
+              label="history size (0 = unlimited)"
+              initialValue={props.historySize}
+              defaultValue={defaultHistorySize}
+              save={props.saveHistorySize}
+              input={{ type: 'number', min: 0 }}
             >
-              <div>
-                <label htmlFor="history size" className="capitalize">
-                  history size (0 = unlimited)
-                </label>
-                <div className="text-xs">
-                  Max history items to keep. Older items are deleted on startup and daily when
-                  exceeding the limit.
-                </div>
+              <div className="text-xs">
+                Max history items to keep. Older items are deleted on startup and daily when
+                exceeding the limit.
               </div>
-              <div className="flex flex-row items-center gap-2">
-                <Input
-                  id="history size"
-                  type="number"
-                  min={0}
-                  defaultValue={props.historySize}
-                  required
-                />
-                <Button type="submit" set="default">
-                  <span className="icon-[material-symbols--check-rounded] size-4"></span>
-                </Button>
-                <Button
-                  title="reset"
-                  type="button"
-                  set="default"
-                  onClick={async () => {
-                    await props.saveHistorySize(defaultHistorySize);
+            </InlineForm>
 
-                    const input = document.getElementById('history size') as HTMLInputElement;
-                    input.value = `${defaultHistorySize}`;
-
-                    return $toast.success('History Size updated successfully.');
-                  }}
-                >
-                  <span className="icon-[system-uicons--reset] size-4"></span>
-                </Button>
-              </div>
-            </form>
-
-            <form
-              className="flex flex-col gap-0.5"
-              onSubmit={async (e) => {
-                e.preventDefault();
-                const value = (document.getElementById('max items') as HTMLInputElement).value;
-
-                await props.saveMaxItems(Number(value));
-                return $toast.success('Max Items updated successfully.');
-              }}
-            >
-              <div>
-                <label htmlFor="max items" className="capitalize">
-                  max items (min: 10, max: 100)
-                </label>
-              </div>
-              <div className="flex flex-row items-center gap-2">
-                <Input
-                  id="max items"
-                  type="number"
-                  min={10}
-                  max={100}
-                  defaultValue={props.maxItems}
-                  required
-                />
-                <Button type="submit" set="default">
-                  <span className="icon-[material-symbols--check-rounded] size-4"></span>
-                </Button>
-                <Button
-                  title="reset"
-                  type="button"
-                  set="default"
-                  onClick={async () => {
-                    await props.saveMaxItems(defaultMaxItems);
-
-                    const input = document.getElementById('max items') as HTMLInputElement;
-                    input.value = `${defaultMaxItems}`;
-
-                    return $toast.success('Max Items updated successfully.');
-                  }}
-                >
-                  <span className="icon-[system-uicons--reset] size-4"></span>
-                </Button>
-              </div>
-            </form>
+            <InlineForm
+              id="max items"
+              name="Max Items"
+              label="max items (min: 10, max: 100)"
+              initialValue={props.maxItems}
+              defaultValue={defaultMaxItems}
+              save={props.saveMaxItems}
+              input={{ type: 'number', min: 10, max: 100 }}
+            />
 
             <div className="flex flex-col gap-0.5">
               <div>
@@ -319,7 +206,7 @@ export function Setting(props: SettingProps) {
                     await props.saveTrimFinalNewlines(e.target.checked);
 
                     await $dialog.confirm.success(
-                      `Trim Final Newlines ${e.target.checked ? 'enabled' : 'disabled'} successfully.\nDo you want to restart now?'`,
+                      `Trim Final Newlines ${e.target.checked ? 'enabled' : 'disabled'} successfully.\nDo you want to restart now?`,
                     );
 
                     return invoke.restart_app();
@@ -335,10 +222,13 @@ export function Setting(props: SettingProps) {
                 <label htmlFor="enable OCR" className="capitalize">
                   enable OCR (requires restart)
                 </label>
+                <div className="text-xs">
+                  Extracts text from images so you can search them like regular text.
+                </div>
                 <div
                   className={cn(
-                    'flex flex-col items-start gap-1 rounded-lg',
-                    'border px-4 py-2',
+                    'flex flex-col items-start gap-1 rounded-lg text-xs',
+                    'border p-2',
                     'border-blue-800 bg-blue-200 text-blue-800',
                     'dark:border-blue-700 dark:bg-blue-900 dark:text-blue-100',
                   )}
@@ -466,10 +356,16 @@ export function Setting(props: SettingProps) {
                 default: defaultShortcutToggleSearchBookmark,
               },
               {
-                title: 'toggle search mode (fuzzy / exact)',
-                shortcut: props.shortcutToggleSearchMode,
-                save: props.saveShortcutToggleSearchMode,
-                default: defaultShortcutToggleSearchMode,
+                title: 'toggle wrap text automatically',
+                shortcut: props.shortcutToggleWrapTextAutomatically,
+                save: props.saveShortcutToggleWrapTextAutomatically,
+                default: defaultShortcutToggleWrapTextAutomatically,
+              },
+              {
+                title: 'toggle show sub contents',
+                shortcut: props.shortcutToggleShowSubContents,
+                save: props.saveShortcutToggleShowSubContents,
+                default: defaultShortcutToggleShowSubContents,
               },
             ].map((x, i, arr) => {
               const duplicate = arr
@@ -555,7 +451,7 @@ export function Setting(props: SettingProps) {
               </div>
               <div>
                 <div>
-                  <Key>Alt</Key> dragging anywhere in the window lets you move it.
+                  <Key>Alt</Key> Drag anywhere in the window to move it.
                 </div>
               </div>
             </div>
@@ -573,7 +469,7 @@ export function Setting(props: SettingProps) {
                 <Button
                   type="button"
                   set="warning"
-                  className="min-w-24 font-bold"
+                  variant="text"
                   onClick={async () => {
                     await $dialog.confirm.warn(
                       'Are you sure you want to clear all clipboard history?',
@@ -590,6 +486,73 @@ export function Setting(props: SettingProps) {
         </section>
       </div>
     </>
+  );
+}
+
+function InlineForm<T extends string | number>(props: {
+  id: string;
+  name: string;
+  label: string;
+  initialValue: T;
+  defaultValue: T;
+  save: (v: SetStateAction<T>) => Promise<void>;
+  input: Omit<React.InputHTMLAttributes<HTMLInputElement>, 'id' | 'defaultValue' | 'required'>;
+  children?: ReactNode;
+}) {
+  const $toast = useToast();
+  const [value, setValue] = useState<T>(props.initialValue);
+
+  return (
+    <form
+      className="flex flex-col gap-0.5"
+      onSubmit={async (e) => {
+        e.preventDefault();
+
+        await props.save(value);
+        return $toast.success(`${props.name} updated successfully.`);
+      }}
+    >
+      <div>
+        <label htmlFor={props.id} className="capitalize">
+          {props.label}
+        </label>
+      </div>
+      {props.children}
+      <div className="flex flex-row items-center gap-2">
+        <Input
+          id={props.id}
+          defaultValue={props.initialValue}
+          required
+          value={value}
+          onChange={(e) =>
+            setValue((typeof value === 'number' ? Number(e.target.value) : e.target.value) as T)
+          }
+          {...props.input}
+        />
+        <Button
+          type="submit"
+          set={value !== props.initialValue ? 'positive' : 'default'}
+          disabled={value === props.initialValue}
+        >
+          <span className="icon-[material-symbols--check-rounded] size-4"></span>
+        </Button>
+        <Button
+          title="reset"
+          type="button"
+          set="default"
+          disabled={value === props.defaultValue}
+          onClick={async () => {
+            await props.save(props.defaultValue);
+
+            setValue(props.defaultValue);
+
+            return $toast.success(`${props.name} updated successfully.`);
+          }}
+        >
+          <span className="icon-[system-uicons--reset] size-4"></span>
+        </Button>
+      </div>
+    </form>
   );
 }
 
@@ -655,20 +618,10 @@ function EditShortcutDialog(props: {
           <ShortcutKey shortcut={value} />
         </Button>
         <section className="flex flex-row items-center justify-center gap-4">
-          <Button
-            type="button"
-            set="positive"
-            className="min-w-24 font-bold"
-            onClick={() => props.onSave(value)}
-          >
+          <Button type="button" set="positive" variant="text" onClick={() => props.onSave(value)}>
             save
           </Button>
-          <Button
-            type="button"
-            set="default"
-            className="min-w-24 font-bold"
-            onClick={() => props.onCancel()}
-          >
+          <Button type="button" set="default" variant="text" onClick={() => props.onCancel()}>
             cancel
           </Button>
         </section>

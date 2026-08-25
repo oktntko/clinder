@@ -24,6 +24,7 @@ const STORE = {
     MIN_HEIGHT: 'min_height',
     MAX_HEIGHT: 'max_height',
     WRAP_TEXT_AUTOMATICALLY: 'wrap_text_automatically',
+    SHOW_SUB_CONTENTS: 'show_sub_contents',
   },
   behavior: {
     HISTORY_SIZE: 'history_size',
@@ -45,6 +46,8 @@ const STORE = {
     TOGGLE_SEARCH_CONTENT_TYPE_FILES: 'toggle_search_content_type_files',
     TOGGLE_SEARCH_BOOKMARK: 'toggle_search_bookmark',
     TOGGLE_SEARCH_MODE: 'toggle_search_mode',
+    TOGGLE_WRAP_TEXT_AUTOMATICALLY: 'toggle_wrap_text_automatically',
+    TOGGLE_SHOW_SUB_CONTENTS: 'toggle_show_sub_contents',
   },
   state: {
     SEARCH_CONTENT_TYPE: 'search_content_type',
@@ -130,12 +133,27 @@ export const defaultShortcutToggleSearchMode: Shortcut = {
   metaKey: false,
   code: 'KeyS',
 };
+export const defaultShortcutToggleWrapTextAutomatically: Shortcut = {
+  ctrlKey: false,
+  shiftKey: false,
+  altKey: true,
+  metaKey: false,
+  code: 'Comma',
+};
+export const defaultShortcutToggleShowSubContents: Shortcut = {
+  ctrlKey: false,
+  shiftKey: false,
+  altKey: true,
+  metaKey: false,
+  code: 'Period',
+};
 
 export const defaultTheme = 'dark';
 export const defaultFont = '';
 export const defaultMinHeight = 100;
 export const defaultMaxHeight = 800;
 export const defaultWrapTextAutomatically = true;
+export const defaultShowSubContents = true;
 
 export const defaultHistorySize = 10000;
 export const defaultMaxItems = 50;
@@ -204,6 +222,13 @@ export function useStore() {
   async function saveWrapTextAutomatically(v: SetStateAction<boolean>) {
     setWrapTextAutomatically(v);
     await store?.set(STORE.appearance.WRAP_TEXT_AUTOMATICALLY, v);
+    await store?.save();
+  }
+
+  const [showSubContents, setShowSubContents] = useState(defaultShowSubContents);
+  async function saveShowSubContents(v: SetStateAction<boolean>) {
+    setShowSubContents(v);
+    await store?.set(STORE.appearance.SHOW_SUB_CONTENTS, v);
     await store?.save();
   }
 
@@ -365,6 +390,23 @@ export function useStore() {
     await store?.save();
   }
 
+  const [shortcutToggleWrapTextAutomatically, setShortcutToggleWrapTextAutomatically] =
+    useState<Shortcut>(defaultShortcutToggleWrapTextAutomatically);
+  async function saveShortcutToggleWrapTextAutomatically(v: SetStateAction<Shortcut>) {
+    setShortcutToggleWrapTextAutomatically(v);
+    await store?.set(STORE.app_shortcut.TOGGLE_WRAP_TEXT_AUTOMATICALLY, v);
+    await store?.save();
+  }
+
+  const [shortcutToggleShowSubContents, setShortcutToggleShowSubContents] = useState<Shortcut>(
+    defaultShortcutToggleShowSubContents,
+  );
+  async function saveShortcutToggleShowSubContents(v: SetStateAction<Shortcut>) {
+    setShortcutToggleShowSubContents(v);
+    await store?.set(STORE.app_shortcut.TOGGLE_SHOW_SUB_CONTENTS, v);
+    await store?.save();
+  }
+
   useEffect(() => {
     void (async () => {
       // %USERPROFILE%\AppData\Roaming\oktntko.clinder
@@ -396,6 +438,9 @@ export function useStore() {
       void store
         ?.get<boolean>(STORE.appearance.WRAP_TEXT_AUTOMATICALLY)
         .then((v) => setWrapTextAutomatically(v ?? defaultWrapTextAutomatically));
+      void store
+        ?.get<boolean>(STORE.appearance.SHOW_SUB_CONTENTS)
+        .then((v) => setShowSubContents(v ?? defaultShowSubContents));
 
       void store
         ?.get<number>(STORE.behavior.HISTORY_SIZE)
@@ -464,6 +509,14 @@ export function useStore() {
       void store
         ?.get<Shortcut>(STORE.app_shortcut.TOGGLE_SEARCH_MODE)
         .then((v) => setShortcutToggleSearchMode(v ?? defaultShortcutToggleSearchMode));
+      void store
+        ?.get<Shortcut>(STORE.app_shortcut.TOGGLE_WRAP_TEXT_AUTOMATICALLY)
+        .then((v) =>
+          setShortcutToggleWrapTextAutomatically(v ?? defaultShortcutToggleWrapTextAutomatically),
+        );
+      void store
+        ?.get<Shortcut>(STORE.app_shortcut.TOGGLE_SHOW_SUB_CONTENTS)
+        .then((v) => setShortcutToggleShowSubContents(v ?? defaultShortcutToggleShowSubContents));
     })();
 
     return () => undefined;
@@ -484,6 +537,8 @@ export function useStore() {
     saveMaxHeight,
     wrapTextAutomatically,
     saveWrapTextAutomatically,
+    showSubContents,
+    saveShowSubContents,
 
     historySize,
     saveHistorySize,
@@ -531,6 +586,10 @@ export function useStore() {
     saveShortcutToggleSearchBookmark,
     shortcutToggleSearchMode,
     saveShortcutToggleSearchMode,
+    shortcutToggleWrapTextAutomatically,
+    saveShortcutToggleWrapTextAutomatically,
+    shortcutToggleShowSubContents,
+    saveShortcutToggleShowSubContents,
   };
 }
 

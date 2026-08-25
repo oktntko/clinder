@@ -3,7 +3,6 @@ import type { useStore } from '~/plugin/useStore';
 import { cn } from '~/lib/utils';
 
 import { Button } from './Button';
-import { ToggleButton } from './ToggleButton';
 
 type FooterProps = ReturnType<typeof useStore> & {};
 
@@ -19,23 +18,22 @@ export function Footer(props: FooterProps) {
       )}
     >
       <div className="flex flex-row items-center gap-2">
-        <ToggleButton
+        <Button
           title="pin"
           type="button"
-          isActive={props.enablePin}
+          set={props.enablePin ? 'positive' : 'ghost'}
           onClick={(e) => {
             e.preventDefault();
             void props.saveEnablePin(!props.enablePin);
           }}
         >
           <span className="icon-[mynaui--pin] size-4"></span>
-        </ToggleButton>
+        </Button>
 
         <Button
           title="theme"
           type="button"
           className={cn(
-            'rounded-full p-1',
             props.theme === 'light'
               ? 'border-amber-500 bg-white text-amber-500'
               : 'border-indigo-600 bg-indigo-900 text-indigo-500',
@@ -57,42 +55,39 @@ export function Footer(props: FooterProps) {
       </div>
 
       <div title="page" className="inline-flex items-center justify-center gap-1.5">
-        <ToggleButton
+        <Button
           title="clipboard"
           type="button"
-          isActive={props.page === 'clipboard'}
-          set="default"
+          set={props.page === 'clipboard' ? 'default' : 'ghost'}
           onClick={(e) => {
             e.preventDefault();
             props.setPage('clipboard');
           }}
         >
           <span className="icon-[solar--clipboard-outline] size-4"></span>
-        </ToggleButton>
-        <ToggleButton
+        </Button>
+        <Button
           title="setting"
           type="button"
-          isActive={props.page === 'setting'}
-          set="default"
+          set={props.page === 'setting' ? 'default' : 'ghost'}
           onClick={(e) => {
             e.preventDefault();
             props.setPage('setting');
           }}
         >
           <span className="icon-[ep--setting] size-4"></span>
-        </ToggleButton>
-        <ToggleButton
+        </Button>
+        <Button
           title="information"
           type="button"
-          isActive={props.page === 'information'}
-          set="default"
+          set={props.page === 'information' ? 'default' : 'ghost'}
           onClick={(e) => {
             e.preventDefault();
             props.setPage('information');
           }}
         >
           <span className="icon-[mdi--information-outline] size-4"></span>
-        </ToggleButton>
+        </Button>
       </div>
     </div>
   );

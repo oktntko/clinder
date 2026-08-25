@@ -75,16 +75,11 @@ function WindowDialog({
         </main>
 
         <footer className="flex items-center justify-center gap-4">
-          <Button type="submit" set={set} className="min-w-24 font-bold" autoFocus>
+          <Button type="submit" set={set} variant="text" autoFocus>
             <span className="capitalize">{confirmText}</span>
           </Button>
           {cancelText && (
-            <Button
-              type="button"
-              set="default"
-              className="min-w-24 font-bold"
-              onClick={() => onCancel()}
-            >
+            <Button type="button" set="default" variant="text" onClick={() => onCancel()}>
               <span className="capitalize">{cancelText}</span>
             </Button>
           )}

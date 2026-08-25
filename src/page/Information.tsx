@@ -32,6 +32,7 @@ export function Information(props: InformationProps) {
           <Button
             type="button"
             set="default"
+            variant="text"
             onClick={() => openUrl('https://github.com/oktntko/clinder')}
             className={afterIcon('after:icon-[majesticons--open-line]')}
           >
@@ -40,6 +41,7 @@ export function Information(props: InformationProps) {
           <Button
             type="button"
             set="default"
+            variant="text"
             onClick={() => openUrl('https://oktntko.github.io/clinder/')}
             className={afterIcon('after:icon-[majesticons--open-line]')}
           >
@@ -55,6 +57,7 @@ export function Information(props: InformationProps) {
           <Button
             type="button"
             set="default"
+            variant="text"
             onClick={() => openPath(props.realAppLocalDataDir)}
             className={cn('justify-start text-xs', afterIcon('after:icon-[proicons--folder-open]'))}
             title={props.realAppLocalDataDir}
@@ -64,6 +67,7 @@ export function Information(props: InformationProps) {
           <Button
             type="button"
             set="default"
+            variant="text"
             onClick={() => openPath(props.realAppDataDir)}
             className={cn('justify-start text-xs', afterIcon('after:icon-[proicons--folder-open]'))}
             title={props.realAppDataDir}

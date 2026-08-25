@@ -111,8 +111,8 @@ async function paste_files({ files }: Clip) {
 //////////////////// ////////////////////
 // グローバルショートカット関連
 //////////////////// ////////////////////
-async function update_global_shortcut_toggle_window(newShortcutWebView: Shortcut) {
-  return invoke('update_global_shortcut_toggle_window', { newShortcutWebView });
+async function update_global_shortcut_toggle_window(new_shortcut_web_view: Shortcut) {
+  return invoke('update_global_shortcut_toggle_window', { new_shortcut_web_view });
 }
 
 //////////////////// ////////////////////
