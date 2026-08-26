@@ -33,6 +33,7 @@ export function Footer(props: FooterProps) {
         <Button
           title="theme"
           type="button"
+          set="none"
           className={cn(
             props.theme === 'light'
               ? 'border-amber-500 bg-white text-amber-500'

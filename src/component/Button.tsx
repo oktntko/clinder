@@ -4,7 +4,7 @@ import { cn } from '~/lib/utils';
 
 export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   children?: ReactNode;
-  set: 'default' | 'positive' | 'warning' | 'ghost';
+  set: 'default' | 'positive' | 'warning' | 'ghost' | 'none';
   variant?: 'icon' | 'text';
 };
 
