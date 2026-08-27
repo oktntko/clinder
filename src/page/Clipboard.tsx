@@ -85,13 +85,24 @@ export function Clipboard({
       const buttonCount =
         (clip.plain_text ? 2 : 0) + (clip.image_hash ? 2 : 0) + (clip.files.length > 0 ? 2 : 0);
       const height = buttonCount * 36 + 18;
-      return $dialog.showModal(PasteMenu, (resolve) => ({ clip, onSuccess: () => resolve('ok') }), {
+      return $dialog.showModal(
+        PasteMenu,
+        (resolve) => ({
+          clip,
+          onSuccess: () => resolve('ok'),
+          onDelete: (clip) => {
+            void deleteClip(clip);
+            resolve('ok');
+          },
+        }),
+        {
         anchor,
         anchorChildHeight: height,
         showCloseButton: false,
-      });
     },
-    [$dialog],
+      );
+    },
+    [$dialog, deleteClip],
   );
 
   const toggleSearchContentTypeText = useCallback(async () => {
@@ -655,7 +666,7 @@ function FileList(props: ClipContainerProps) {
   );
 }
 
-function PasteMenu(props: { clip: Clip; onSuccess: () => void }) {
+function PasteMenu(props: { clip: Clip; onSuccess: () => void; onDelete: (clip: Clip) => void }) {
   useEffect(() => {
     function closeDialog(e: KeyboardEvent) {
       if (e.key === 'Escape') {
@@ -836,8 +847,7 @@ function PasteMenu(props: { clip: Clip; onSuccess: () => void }) {
         <MenuButton
           type="button"
           onClick={() => {
-            void invoke.delete_clip(props.clip);
-            props.onSuccess();
+            props.onDelete(props.clip);
           }}
         >
           <div className="flex items-center justify-center">
