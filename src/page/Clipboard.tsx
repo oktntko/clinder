@@ -96,10 +96,10 @@ export function Clipboard({
           },
         }),
         {
-        anchor,
-        anchorChildHeight: height,
-        showCloseButton: false,
-    },
+          anchor,
+          anchorChildHeight: height,
+          showCloseButton: false,
+        },
       );
     },
     [$dialog, deleteClip],
@@ -733,46 +733,36 @@ function PasteMenu(props: { clip: Clip; onSuccess: () => void; onDelete: (clip: 
     <div
       ref={refCallback}
       className={cn(
-        'bg-slate-100 text-slate-900',
-        'dark:bg-zinc-900 dark:text-zinc-100',
-        'shadow-black/20',
-        'dark:shadow-white/20',
-        'rounded-lg shadow-md',
-        'text-sm',
+        'border-slate-300 bg-white text-slate-900',
+        'dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100',
+        'rounded-lg px-1.25 py-px shadow-md',
+        'border text-sm',
       )}
     >
-      <div className={cn('grid grid-cols-4 gap-x-1 rounded-md')}>
+      <div className={cn('flex flex-col gap-x-1 rounded-md')}>
         {props.clip.plain_text && (
           <MenuButton
             type="button"
             autoFocus
+            className="after:icon-[humbleicons--text]"
             onClick={() => {
               void invoke.send_text(props.clip);
               props.onSuccess();
             }}
           >
-            <span></span>
-            <span>send</span>
-            <span>text</span>
-            <div className="flex items-center justify-center">
-              <span className="icon-[humbleicons--text] size-4"></span>
-            </div>
+            send text
           </MenuButton>
         )}
         {props.clip.plain_text && (
           <MenuButton
             type="button"
+            className="before:icon-[material-symbols--chat-paste-go-outline-rounded]"
             onClick={() => {
               void invoke.paste_text(props.clip);
               props.onSuccess();
             }}
           >
-            <div className="flex items-center justify-center">
-              <span className="icon-[material-symbols--chat-paste-go-outline-rounded] size-4"></span>
-            </div>
-            <span>paste</span>
-            <span>text</span>
-            <span></span>
+            paste text
           </MenuButton>
         )}
 
@@ -780,33 +770,25 @@ function PasteMenu(props: { clip: Clip; onSuccess: () => void; onDelete: (clip: 
           <MenuButton
             type="button"
             autoFocus={!props.clip.plain_text}
+            className="after:icon-[humbleicons--image]"
             onClick={() => {
               void invoke.send_image(props.clip);
               props.onSuccess();
             }}
           >
-            <span></span>
-            <span>send</span>
-            <span>image</span>
-            <div className="flex items-center justify-center">
-              <span className="icon-[humbleicons--image] size-4"></span>
-            </div>
+            send image
           </MenuButton>
         )}
         {props.clip.image_hash && (
           <MenuButton
             type="button"
+            className="before:icon-[material-symbols--chat-paste-go-outline-rounded]"
             onClick={() => {
               void invoke.paste_image(props.clip);
               props.onSuccess();
             }}
           >
-            <div className="flex items-center justify-center">
-              <span className="icon-[material-symbols--chat-paste-go-outline-rounded] size-4"></span>
-            </div>
-            <span>paste</span>
-            <span>image</span>
-            <span></span>
+            paste image
           </MenuButton>
         )}
 
@@ -814,48 +796,36 @@ function PasteMenu(props: { clip: Clip; onSuccess: () => void; onDelete: (clip: 
           <MenuButton
             type="button"
             autoFocus={!props.clip.plain_text && !props.clip.image_hash}
+            className="after:icon-[humbleicons--folder]"
             onClick={() => {
               void invoke.send_files(props.clip);
               props.onSuccess();
             }}
           >
-            <span></span>
-            <span>send</span>
-            <span>files</span>
-            <div className="flex items-center justify-center">
-              <span className="icon-[humbleicons--folder] size-4"></span>
-            </div>
+            send files
           </MenuButton>
         )}
         {props.clip.files.length > 0 && (
           <MenuButton
             type="button"
+            className="before:icon-[material-symbols--chat-paste-go-outline-rounded]"
             onClick={() => {
               void invoke.paste_files(props.clip);
               props.onSuccess();
             }}
           >
-            <div className="flex items-center justify-center">
-              <span className="icon-[material-symbols--chat-paste-go-outline-rounded] size-4"></span>
-            </div>
-            <span>paste</span>
-            <span>files</span>
-            <span></span>
+            paste files
           </MenuButton>
         )}
 
         <MenuButton
           type="button"
+          className="before:icon-[cuida--trash-outline]"
           onClick={() => {
             props.onDelete(props.clip);
           }}
         >
-          <div className="flex items-center justify-center">
-            <span className="icon-[cuida--trash-outline] size-4"></span>
-          </div>
-          <span>delete</span>
-          <span>clip</span>
-          <span></span>
+          delete clip
         </MenuButton>
       </div>
     </div>
@@ -880,17 +850,20 @@ function MenuButton({
       {...props}
       onKeyDown={onKeyDown}
       className={cn(
-        'inline-flex items-center justify-center capitalize transition',
+        'flex w-36 items-center justify-center capitalize transition',
         'outline-none first:rounded-t-md last:rounded-b-md',
-        'p-2',
-        'focus:scale-[102%]',
+        'p-1',
+        'hover:scale-105 focus:scale-105',
         'bg-white text-slate-500',
         'dark:bg-zinc-900 dark:text-zinc-500',
         'hover:text-slate-900 focus:text-slate-900',
         'dark:hover:text-zinc-100 dark:focus:text-zinc-100',
         'hover:bg-slate-100 focus:bg-slate-100',
         'dark:hover:bg-black dark:focus:bg-black',
-        'col-span-4 grid grid-cols-subgrid',
+        'relative',
+        "before:content-[''] after:content-['']",
+        'before:absolute before:top-1/2 before:left-2 before:size-4 before:-translate-y-1/2',
+        'after:absolute after:top-1/2 after:right-2 after:size-4 after:-translate-y-1/2',
         className,
       )}
     >

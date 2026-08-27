@@ -115,7 +115,7 @@ function createDialogElement(
     starting:[[open]]:scale-95 starting:[[open]]:opacity-0
     [[open]]:scale-100 [[open]]:opacity-100
     backdrop:bg-gray-500/20
-    ${anchor ? 'backdrop:backdrop-grayscale' : 'backdrop:backdrop-blur-xs'}
+    ${anchor ? 'backdrop:backdrop-grayscale-xs' : 'backdrop:backdrop-blur-xs'}
     backdrop:transition backdrop:transition-discrete backdrop:duration-200 backdrop:ease-out
     backdrop:opacity-0
     starting:[[open]]:backdrop:opacity-0
