@@ -53,9 +53,15 @@ export function Footer(props: FooterProps) {
             )}
           ></span>
         </Button>
+
+        <div id="portal-footer-left" className="contents"></div>
       </div>
 
+      <div id="portal-footer-middle" className="flex flex-row items-center gap-2"></div>
+
       <div title="page" className="inline-flex items-center justify-center gap-1.5">
+        <div id="portal-footer-right" className="contents"></div>
+
         <Button
           title="clipboard"
           type="button"

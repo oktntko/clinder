@@ -41,3 +41,6 @@ Open it with the global shortcut `Alt + V` and use incremental fuzzy search to f
 - UI
   - トーストのライトテーマ・ダークテーマ、色統一
   - イベントリスナ多すぎ
+- デュアルディスプレイの時にマウス位置によって表示位置を変える
+- 右クリックメニュー
+- 画像の拡大（全画面できる？）

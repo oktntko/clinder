@@ -3,11 +3,12 @@ import { listen } from '@tauri-apps/api/event';
 import { join } from '@tauri-apps/api/path';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 
 import { FOCUSABLE_SELECTOR } from '~/App';
 import invoke, { type Clip, type Searched } from '~/command';
 import { Button } from '~/component/Button';
-import { cn } from '~/lib/utils';
+import { cn, usePortalTarget } from '~/lib/utils';
 import { useDialog } from '~/plugin/useDialog';
 import { matchShortcut, type useStore } from '~/plugin/useStore';
 
@@ -66,6 +67,16 @@ export function Clipboard({
     setClipboard((clipboard) => clipboard.filter((item) => item.clip.id !== clip.id));
     void invoke.delete_clip(clip);
   }, []);
+
+  const clearClipBoard = useCallback(
+    async function () {
+      await $dialog.confirm.warn('Are you sure you want to clear all clipboard history?');
+
+      await invoke.clear_clipboard();
+      setClipboard([]);
+    },
+    [$dialog],
+  );
 
   const toggleClipBookmark = useCallback(async function (clip: Clip) {
     const updatedClip = { ...clip, bookmark: !clip.bookmark };
@@ -167,21 +178,6 @@ export function Clipboard({
         return;
       }
 
-      if (matchShortcut(e, props.shortcutSendAndPaste)) {
-        e.preventDefault();
-        const selected = clipboard[cursor];
-        if (selected != null) {
-          if (selected.clip.content_type === 'text') {
-            void invoke.paste_text(selected.clip);
-          } else if (selected.clip.content_type === 'image') {
-            void invoke.paste_image(selected.clip);
-          } else {
-            void invoke.paste_files(selected.clip);
-          }
-        }
-        return;
-      }
-
       if (matchShortcut(e, props.shortcutSendClipboard)) {
         e.preventDefault();
         const selected = clipboard[cursor];
@@ -197,12 +193,33 @@ export function Clipboard({
         return;
       }
 
+      if (matchShortcut(e, props.shortcutSendAndPaste)) {
+        e.preventDefault();
+        const selected = clipboard[cursor];
+        if (selected != null) {
+          if (selected.clip.content_type === 'text') {
+            void invoke.paste_text(selected.clip);
+          } else if (selected.clip.content_type === 'image') {
+            void invoke.paste_image(selected.clip);
+          } else {
+            void invoke.paste_files(selected.clip);
+          }
+        }
+        return;
+      }
+
       if (matchShortcut(e, props.shortcutDeleteClip)) {
         e.preventDefault();
         const selected = clipboard[cursor];
         if (selected != null) {
           void deleteClip(selected.clip);
         }
+        return;
+      }
+
+      if (matchShortcut(e, props.shortcutClearClipboard)) {
+        e.preventDefault();
+        void clearClipBoard();
         return;
       }
 
@@ -281,6 +298,7 @@ export function Clipboard({
     props.shortcutSendAndPaste,
     props.shortcutSendClipboard,
     props.shortcutDeleteClip,
+    props.shortcutClearClipboard,
     props.shortcutToggleClipBookmark,
     props.shortcutShowPasteMenu,
     props.shortcutToggleSearchContentTypeText,
@@ -291,6 +309,7 @@ export function Clipboard({
     props.shortcutToggleWrapTextAutomatically,
     props.shortcutToggleShowSubContents,
     deleteClip,
+    clearClipBoard,
     toggleClipBookmark,
     showPasteMenu,
     toggleSearchContentTypeText,
@@ -328,6 +347,8 @@ export function Clipboard({
       void unlistenPromise.then((unlisten) => unlisten());
     };
   }, []);
+
+  const portalFooterMiddle = usePortalTarget('portal-footer-middle');
 
   return (
     <>
@@ -544,6 +565,49 @@ export function Clipboard({
           </div>
         )}
       </div>
+
+      {portalFooterMiddle &&
+        createPortal(
+          <>
+            <Button
+              title="wrap text"
+              type="button"
+              set={props.wrapTextAutomatically ? 'positive' : 'ghost'}
+              onClick={(e) => {
+                e.preventDefault();
+                void saveWrapTextAutomatically((prev) => !prev);
+              }}
+            >
+              <span className="icon-[pajamas--soft-wrap] size-4"></span>
+            </Button>
+
+            <Button
+              title="show sub contents"
+              type="button"
+              set={props.showSubContents ? 'positive' : 'ghost'}
+              onClick={(e) => {
+                e.preventDefault();
+                void saveShowSubContents((prev) => !prev);
+              }}
+            >
+              <span className="icon-[fluent--content-view-32-regular] size-4"></span>
+            </Button>
+
+            <Button
+              title="clear"
+              type="button"
+              set="ghost"
+              onClick={async (e) => {
+                e.preventDefault();
+
+                void clearClipBoard();
+              }}
+            >
+              <span className="icon-[codicon--clear-all] size-4"></span>
+            </Button>
+          </>,
+          portalFooterMiddle,
+        )}
     </>
   );
 }
@@ -735,7 +799,7 @@ function PasteMenu(props: { clip: Clip; onSuccess: () => void; onDelete: (clip: 
       className={cn(
         'border-slate-300 bg-white text-slate-900',
         'dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100',
-        'rounded-lg px-1.25 py-px shadow-md',
+        'rounded-lg px-0.75 py-px shadow-md',
         'border text-sm',
       )}
     >

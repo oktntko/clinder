@@ -27,7 +27,7 @@ export function Button({
       className={cn(
         'inline-flex items-center justify-center capitalize transition',
         'border outline-none hover:ring-1 focus:ring-2',
-        'disabled:cursor-not-allowed disabled:opacity-20 disabled:hover:ring-0 disabled:focus:ring-0',
+        'disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:ring-0 disabled:focus:ring-0',
         variant === 'text' ? 'font-semi-bold min-w-24 rounded-md p-2' : 'rounded-full p-1',
         ...(set === 'default'
           ? [

@@ -36,9 +36,10 @@ const STORE = {
     TOGGLE_WINDOW: 'toggle_window',
   },
   app_shortcut: {
-    SEND_AND_PASTE: 'send_and_paste',
     SEND_CLIPBOARD: 'send_clipboard',
+    SEND_AND_PASTE: 'send_and_paste',
     DELETE_CLIP: 'delete_clip',
+    CLEAR_CLIPBOARD: 'clear_clipboard',
     TOGGLE_CLIP_BOOKMARK: 'toggle_clip_bookmark',
     SHOW_PASTE_MENU: 'show_paste_menu',
     TOGGLE_SEARCH_CONTENT_TYPE_TEXT: 'toggle_search_content_type_text',
@@ -63,14 +64,14 @@ export const defaultGlobalShortcutToggleWindow: Shortcut = {
   metaKey: false,
   code: 'KeyV',
 };
-export const defaultShortcutSendAndPaste: Shortcut = {
+export const defaultShortcutSendClipboard: Shortcut = {
   ctrlKey: false,
   shiftKey: false,
   altKey: false,
   metaKey: false,
   code: 'Enter',
 };
-export const defaultShortcutSendClipboard: Shortcut = {
+export const defaultShortcutSendAndPaste: Shortcut = {
   ctrlKey: true,
   shiftKey: false,
   altKey: false,
@@ -80,6 +81,13 @@ export const defaultShortcutSendClipboard: Shortcut = {
 export const defaultShortcutDeleteClip: Shortcut = {
   ctrlKey: true,
   shiftKey: false,
+  altKey: false,
+  metaKey: false,
+  code: 'KeyD',
+};
+export const defaultShortcutClearClipboard: Shortcut = {
+  ctrlKey: true,
+  shiftKey: true,
   altKey: false,
   metaKey: false,
   code: 'KeyD',
@@ -305,15 +313,7 @@ export function useStore() {
   const [globalShortcutToggleWindow, setGlobalShortcutToggleWindow] = useState<Shortcut>(
     defaultGlobalShortcutToggleWindow,
   );
-  async function saveShortcutSendAndPaste(v: SetStateAction<Shortcut>) {
-    setShortcutSendAndPaste(v);
-    await store?.set(STORE.app_shortcut.SEND_AND_PASTE, v);
-    await store?.save();
-  }
 
-  const [shortcutSendAndPaste, setShortcutSendAndPaste] = useState<Shortcut>(
-    defaultShortcutSendAndPaste,
-  );
   const [shortcutSendClipboard, setShortcutSendClipboard] = useState<Shortcut>(
     defaultShortcutSendClipboard,
   );
@@ -322,11 +322,28 @@ export function useStore() {
     await store?.set(STORE.app_shortcut.SEND_CLIPBOARD, v);
     await store?.save();
   }
+  const [shortcutSendAndPaste, setShortcutSendAndPaste] = useState<Shortcut>(
+    defaultShortcutSendAndPaste,
+  );
+  async function saveShortcutSendAndPaste(v: SetStateAction<Shortcut>) {
+    setShortcutSendAndPaste(v);
+    await store?.set(STORE.app_shortcut.SEND_AND_PASTE, v);
+    await store?.save();
+  }
 
   const [shortcutDeleteClip, setShortcutDeleteClip] = useState<Shortcut>(defaultShortcutDeleteClip);
   async function saveShortcutDeleteClip(v: SetStateAction<Shortcut>) {
     setShortcutDeleteClip(v);
     await store?.set(STORE.app_shortcut.DELETE_CLIP, v);
+    await store?.save();
+  }
+
+  const [shortcutClearClipboard, setShortcutClearClipboard] = useState<Shortcut>(
+    defaultShortcutClearClipboard,
+  );
+  async function saveShortcutClearClipboard(v: SetStateAction<Shortcut>) {
+    setShortcutClearClipboard(v);
+    await store?.set(STORE.app_shortcut.CLEAR_CLIPBOARD, v);
     await store?.save();
   }
 
@@ -474,14 +491,17 @@ export function useStore() {
         ?.get<Shortcut>(STORE.global_shortcut.TOGGLE_WINDOW)
         .then((v) => setGlobalShortcutToggleWindow(v ?? defaultGlobalShortcutToggleWindow));
       void store
-        ?.get<Shortcut>(STORE.app_shortcut.SEND_AND_PASTE)
-        .then((v) => setShortcutSendAndPaste(v ?? defaultShortcutSendAndPaste));
-      void store
         ?.get<Shortcut>(STORE.app_shortcut.SEND_CLIPBOARD)
         .then((v) => setShortcutSendClipboard(v ?? defaultShortcutSendClipboard));
       void store
+        ?.get<Shortcut>(STORE.app_shortcut.SEND_AND_PASTE)
+        .then((v) => setShortcutSendAndPaste(v ?? defaultShortcutSendAndPaste));
+      void store
         ?.get<Shortcut>(STORE.app_shortcut.DELETE_CLIP)
         .then((v) => setShortcutDeleteClip(v ?? defaultShortcutDeleteClip));
+      void store
+        ?.get<Shortcut>(STORE.app_shortcut.CLEAR_CLIPBOARD)
+        .then((v) => setShortcutClearClipboard(v ?? defaultShortcutClearClipboard));
       void store
         ?.get<Shortcut>(STORE.app_shortcut.SHOW_PASTE_MENU)
         .then((v) => setShortcutShowPasteMenu(v ?? defaultShortcutShowPasteMenu));
@@ -566,12 +586,14 @@ export function useStore() {
 
     globalShortcutToggleWindow,
     setGlobalShortcutToggleWindow,
-    shortcutSendAndPaste,
-    saveShortcutSendAndPaste,
     shortcutSendClipboard,
     saveShortcutSendClipboard,
+    shortcutSendAndPaste,
+    saveShortcutSendAndPaste,
     shortcutDeleteClip,
     saveShortcutDeleteClip,
+    shortcutClearClipboard,
+    saveShortcutClearClipboard,
     shortcutShowPasteMenu,
     saveShortcutShowPasteMenu,
     shortcutToggleClipBookmark,
