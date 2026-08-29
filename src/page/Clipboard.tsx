@@ -1,7 +1,8 @@
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import { join } from '@tauri-apps/api/path';
+import { dirname, join } from '@tauri-apps/api/path';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { openPath } from '@tauri-apps/plugin-opener';
 import mediumZoom from 'medium-zoom';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
@@ -40,6 +41,7 @@ export function Clipboard({
         bookmark: props.searchBookmark,
       });
       setClipboard(_clipboard);
+      setCursor(0);
     } catch (err) {
       console.error('Failed to search history:', err);
     }
@@ -95,17 +97,21 @@ export function Clipboard({
         (clip.plain_text ? 2 : 0) + // plain_text
         (clip.image_hash ? 2 : 0) + // image_hash
         (clip.files.length > 0 ? 2 : 0) + // files
-        (clip.image_hash && (clip.content_type === 'image' || props.showSubContents) ? 1 : 0) + // zoom
+        (clip.image_hash && (clip.content_type === 'image' || props.showSubContents) ? 1 : 0) + // zoom image
+        (clip.image_hash ? 1 : 0) + // open image
+        (clip.files.length === 1 ? 1 : 0) + // open file
+        (clip.files.length > 0 ? 1 : 0) + // open parent directory
         1; // delete
 
       const height = buttonCount * 28 + 4;
-      const width = 144;
+      const width = 200;
 
       return $dialog.showModal(
         PasteMenu,
         (resolve) => ({
           clip,
           showSubContents: props.showSubContents,
+          appLocalDataDir: props.appLocalDataDir,
           theme: props.theme,
           onSuccess: () => resolve('ok'),
           onDelete: (clip) => {
@@ -123,7 +129,7 @@ export function Clipboard({
         },
       );
     },
-    [$dialog, deleteClip, props.showSubContents, props.theme],
+    [$dialog, deleteClip, props.showSubContents, props.appLocalDataDir, props.theme],
   );
 
   const toggleSearchContentTypeText = useCallback(async () => {
@@ -511,7 +517,9 @@ export function Clipboard({
                   title={item.clip.plain_text}
                   tabIndex={-1}
                   className={cn(
-                    'flex w-full shrink-0 cursor-pointer flex-col items-start justify-center py-1 text-start outline-none',
+                    'w-full shrink-0 cursor-pointer py-1',
+                    'flex flex-col items-start justify-center text-start outline-none',
+                    'overflow-hidden',
                   )}
                   onFocus={() => {
                     setCursor(i);
@@ -676,14 +684,14 @@ type ClipContainerProps = Pick<
 function HighlightText(props: ClipContainerProps) {
   if (!props.item.indices || props.item.indices.length === 0) {
     return (
-      <div
+      <span
         className={cn(
           props.wrapTextAutomatically ? 'wrap-anywhere whitespace-pre-wrap' : 'line-clamp-1',
         )}
       >
         {props.item.trimmed_begin ? '... ' : ''}
         {props.item.snippet}
-      </div>
+      </span>
     );
   }
 
@@ -730,39 +738,57 @@ function HighlightText(props: ClipContainerProps) {
   }
 
   return (
-    <div
+    <span
       className={cn(
         props.wrapTextAutomatically ? 'wrap-anywhere whitespace-pre-wrap' : 'line-clamp-1',
       )}
     >
       {props.item.trimmed_begin ? '... ' : ''}
       {elements}
-    </div>
+    </span>
   );
 }
 
-function ShrinkImage(props: ClipContainerProps) {
-  const [imageSrc, setImageSrc] = useState('');
+function useImageSrc({
+  image_hash,
+  appLocalDataDir,
+}: {
+  image_hash: string;
+  appLocalDataDir: string;
+}) {
+  const [imageFullPath, setImageFullPath] = useState('');
+
   useEffect(() => {
+    if (!image_hash) {
+      return;
+    }
+
     void (async () => {
-      const path = await join(
-        props.appLocalDataDir,
-        'clipboard_image',
-        `${props.item.clip.image_hash}.png`,
-      );
-      setImageSrc(convertFileSrc(path));
+      const path = await join(appLocalDataDir, 'clipboard_image', `${image_hash}.png`);
+      setImageFullPath(path);
     })();
 
     return () => {
       //
     };
-  }, [props.item.clip.image_hash, props.appLocalDataDir]);
+  }, [image_hash, appLocalDataDir]);
+
+  return {
+    imageFullPath,
+  };
+}
+
+function ShrinkImage(props: ClipContainerProps) {
+  const { imageFullPath } = useImageSrc({
+    appLocalDataDir: props.appLocalDataDir,
+    image_hash: props.item.clip.image_hash,
+  });
 
   return (
-    imageSrc && (
+    imageFullPath && (
       <img
         id={`image-${props.item.clip.id}`}
-        src={imageSrc}
+        src={convertFileSrc(imageFullPath)}
         alt="clipboard image"
         className={cn(
           'h-auto max-h-32 w-auto max-w-140',
@@ -777,19 +803,21 @@ function ShrinkImage(props: ClipContainerProps) {
 
 function FileList(props: ClipContainerProps) {
   return (
-    <>
-      <div className="flex items-center gap-1">
-        <span className="icon-[glyphs-poly--folder] size-5"></span>
-        {props.item.clip.files.length} files
-      </div>
+    <div>
+      {/* https://iconify.design/docs/iconify-icon/inline.html */}
+      <span className="icon-[glyphs-poly--folder] size-5 align-[-0.25em]"></span>
+      <span>
+        {props.item.clip.files.length} file{props.item.clip.files.length > 1 ? 's ' : ' '}
+      </span>
       <HighlightText {...props} />
-    </>
+    </div>
   );
 }
 
 function PasteMenu(props: {
   clip: Clip;
   showSubContents: boolean;
+  appLocalDataDir: string;
   theme: Theme;
   onSuccess: () => void;
   onDelete: (clip: Clip) => void;
@@ -862,6 +890,27 @@ function PasteMenu(props: {
     }
   }, []);
 
+  const [dir, setDir] = useState('');
+  useEffect(() => {
+    if (!props.clip.files[0]) {
+      return;
+    }
+
+    void (async () => {
+      const path = await dirname(props.clip.files[0]);
+      setDir(path);
+    })();
+
+    return () => {
+      //
+    };
+  }, [props.clip.files]);
+
+  const { imageFullPath } = useImageSrc({
+    appLocalDataDir: props.appLocalDataDir,
+    image_hash: props.clip.image_hash,
+  });
+
   return (
     <div
       ref={refCallback}
@@ -883,7 +932,7 @@ function PasteMenu(props: {
               props.onSuccess();
             }}
           >
-            send text
+            copy text
           </MenuButton>
         )}
         {props.clip.plain_text && (
@@ -909,7 +958,7 @@ function PasteMenu(props: {
               props.onSuccess();
             }}
           >
-            send image
+            copy image
           </MenuButton>
         )}
         {props.clip.image_hash && (
@@ -924,33 +973,6 @@ function PasteMenu(props: {
             paste image
           </MenuButton>
         )}
-
-        {props.clip.files.length > 0 && (
-          <MenuButton
-            type="button"
-            autoFocus={!props.clip.plain_text && !props.clip.image_hash}
-            className="after:icon-[humbleicons--folder]"
-            onClick={() => {
-              void invoke.send_files(props.clip);
-              props.onSuccess();
-            }}
-          >
-            send files
-          </MenuButton>
-        )}
-        {props.clip.files.length > 0 && (
-          <MenuButton
-            type="button"
-            className="before:icon-[material-symbols--chat-paste-go-outline-rounded]"
-            onClick={() => {
-              void invoke.paste_files(props.clip);
-              props.onSuccess();
-            }}
-          >
-            paste files
-          </MenuButton>
-        )}
-
         {props.clip.image_hash &&
           (props.clip.content_type === 'image' || props.showSubContents) && (
             <MenuButton
@@ -969,6 +991,70 @@ function PasteMenu(props: {
               zoom image
             </MenuButton>
           )}
+        {imageFullPath && (
+          <MenuButton
+            type="button"
+            className="before:icon-[stash--image-open]"
+            onClick={async () => {
+              void openPath(imageFullPath);
+              props.onSuccess();
+            }}
+          >
+            open image
+          </MenuButton>
+        )}
+
+        {props.clip.files.length > 0 && (
+          <MenuButton
+            type="button"
+            autoFocus={!props.clip.plain_text && !props.clip.image_hash}
+            className="after:icon-[humbleicons--folder]"
+            onClick={() => {
+              void invoke.send_files(props.clip);
+              props.onSuccess();
+            }}
+          >
+            copy files
+          </MenuButton>
+        )}
+        {props.clip.files.length > 0 && (
+          <MenuButton
+            type="button"
+            className="before:icon-[material-symbols--chat-paste-go-outline-rounded]"
+            onClick={() => {
+              void invoke.paste_files(props.clip);
+              props.onSuccess();
+            }}
+          >
+            paste files
+          </MenuButton>
+        )}
+
+        {props.clip.files.length === 1 && (
+          <MenuButton
+            type="button"
+            className="before:icon-[fluent-mdl2--open-file]"
+            onClick={() => {
+              void openPath(props.clip.files[0]);
+              props.onSuccess();
+            }}
+          >
+            open file
+          </MenuButton>
+        )}
+
+        {dir && (
+          <MenuButton
+            type="button"
+            className="before:icon-[cil--folder-open]"
+            onClick={() => {
+              void openPath(dir);
+              props.onSuccess();
+            }}
+          >
+            open parent directory
+          </MenuButton>
+        )}
 
         <MenuButton
           type="button"
@@ -1002,9 +1088,9 @@ function MenuButton({
       {...props}
       onKeyDown={onKeyDown}
       className={cn(
-        'flex w-36 items-center justify-center capitalize transition',
+        'flex items-center justify-start capitalize transition',
         'outline-none first:rounded-t-md last:rounded-b-md',
-        'p-1',
+        'px-8 py-1',
         'hover:scale-105 focus:scale-105',
         'bg-white text-slate-500',
         'dark:bg-zinc-900 dark:text-zinc-500',

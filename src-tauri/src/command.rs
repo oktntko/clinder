@@ -1,5 +1,6 @@
 use crate::clipboard_image;
 use crate::db;
+use crate::db::ContentType;
 
 use clipboard_rs::{Clipboard, ClipboardContext, common::RustImage};
 use enigo::{Enigo, Key, Keyboard, Settings};
@@ -8,6 +9,7 @@ use nucleo_matcher::pattern::{Atom, AtomKind, CaseMatching, Normalization};
 use nucleo_matcher::{Config, Matcher, Utf32Str};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
+use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
 use tauri::{AppHandle, Manager, WebviewWindow};
@@ -62,7 +64,13 @@ pub fn search_clipboard(
             .iter()
             .take(max_items)
             .map(|clip| {
-                let content = clip.plain_text.replace("\r\n", "\n");
+                let content = if clip.content_type == ContentType::Files {
+                    files_to_snippets(clip.files.clone())
+                } else {
+                    // 改行コード \r\n があると indices がずれるため、除去しておく
+                    clip.plain_text.replace("\r\n", "\n")
+                };
+
                 let (snippet, indices, trimmed_begin, trimmed_end) =
                     extract_around_index_with_indices(&content, &[]);
 
@@ -94,8 +102,13 @@ pub fn search_clipboard(
     let mut matches = Vec::new();
     for clip in clipboard.iter() {
         let mut buf = Vec::new();
-        // 改行コード \r\n があると indices がずれるため、除去しておく
-        let content = clip.plain_text.replace("\r\n", "\n");
+        let content = if clip.content_type == ContentType::Files {
+            files_to_snippets(clip.files.clone())
+        } else {
+            // 改行コード \r\n があると indices がずれるため、除去しておく
+            clip.plain_text.replace("\r\n", "\n")
+        };
+
         let utf32 = Utf32Str::new(&content, &mut buf);
         let mut indices_origin: Vec<u32> = Vec::new();
 
@@ -187,6 +200,35 @@ fn extract_around_index_with_indices(
         begin_char_idx > 0,
         end_char_idx < total_chars,
     )
+}
+
+fn files_to_snippets(files: Vec<String>) -> String {
+    // ファイル名/フォルダ名の配列
+    let filenames: Vec<String> = files
+        .iter()
+        .map(|f| {
+            Path::new(f)
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("")
+                .to_string()
+        })
+        .collect();
+
+    // 親ディレクトリの配列
+    let parent_set: std::collections::HashSet<String> = files
+        .iter()
+        .filter_map(|f| {
+            Path::new(f)
+                .parent()
+                .and_then(|p| p.to_str())
+                .map(|s| s.to_string())
+        })
+        .collect();
+
+    let parent_dirs: Vec<String> = parent_set.into_iter().collect();
+
+    parent_dirs.join(", ") + "\n" + &filenames.join("\n")
 }
 
 // 指定IDの 1 行削除
