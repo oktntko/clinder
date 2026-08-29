@@ -17,6 +17,11 @@ function App() {
     function hideWindow(e: KeyboardEvent) {
       switch (e.key) {
         case 'Escape': {
+          const mediumZoomImageOpened = document.querySelector('.medium-zoom-image--opened');
+          if (mediumZoomImageOpened) {
+            return;
+          }
+
           e.preventDefault();
           void getCurrentWindow().hide();
           return;

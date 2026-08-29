@@ -2,15 +2,18 @@ import { convertFileSrc } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { join } from '@tauri-apps/api/path';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import mediumZoom from 'medium-zoom';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+
+import type { Position } from '~/plugin/dialogContext';
 
 import { FOCUSABLE_SELECTOR } from '~/App';
 import invoke, { type Clip, type Searched } from '~/command';
 import { Button } from '~/component/Button';
 import { cn, usePortalTarget } from '~/lib/utils';
 import { useDialog } from '~/plugin/useDialog';
-import { matchShortcut, type useStore } from '~/plugin/useStore';
+import { matchShortcut, type Theme, type useStore } from '~/plugin/useStore';
 
 type ClipboardProps = ReturnType<typeof useStore> & {};
 
@@ -87,19 +90,23 @@ export function Clipboard({
   }, []);
 
   const showPasteMenu = useCallback(
-    async function (clip: Clip, anchor: HTMLDivElement) {
-      anchor.scrollIntoView({
-        block: 'nearest', // 画面外に出たときだけ最小限スクロール
-        inline: 'nearest',
-      });
-
+    async function (clip: Clip, position: Position) {
       const buttonCount =
-        (clip.plain_text ? 2 : 0) + (clip.image_hash ? 2 : 0) + (clip.files.length > 0 ? 2 : 0);
-      const height = buttonCount * 36 + 18;
+        (clip.plain_text ? 2 : 0) + // plain_text
+        (clip.image_hash ? 2 : 0) + // image_hash
+        (clip.files.length > 0 ? 2 : 0) + // files
+        (clip.image_hash && (clip.content_type === 'image' || props.showSubContents) ? 1 : 0) + // zoom
+        1; // delete
+
+      const height = buttonCount * 28 + 4;
+      const width = 144;
+
       return $dialog.showModal(
         PasteMenu,
         (resolve) => ({
           clip,
+          showSubContents: props.showSubContents,
+          theme: props.theme,
           onSuccess: () => resolve('ok'),
           onDelete: (clip) => {
             void deleteClip(clip);
@@ -107,13 +114,16 @@ export function Clipboard({
           },
         }),
         {
-          anchor,
-          anchorChildHeight: height,
           showCloseButton: false,
+          fixed: {
+            height,
+            width,
+            position,
+          },
         },
       );
     },
-    [$dialog, deleteClip],
+    [$dialog, deleteClip, props.showSubContents, props.theme],
   );
 
   const toggleSearchContentTypeText = useCallback(async () => {
@@ -166,7 +176,18 @@ export function Clipboard({
         if (modalDialog == null) {
           const selected = clipboard[cursor];
           if (selected != null && activeItemRef.current != null) {
-            void showPasteMenu(selected.clip, activeItemRef.current);
+            activeItemRef.current.scrollIntoView({
+              block: 'nearest', // 画面外に出たときだけ最小限スクロール
+              inline: 'nearest',
+            });
+
+            const position = activeItemRef.current.getBoundingClientRect();
+            void showPasteMenu(selected.clip, {
+              top: position.top,
+              bottom: position.bottom,
+              right: position.right,
+              left: window.innerWidth, // 内容が隠れないように常に右側に表示するため
+            });
           }
         } else {
           modalDialog.close();
@@ -175,6 +196,11 @@ export function Clipboard({
       }
 
       if (modalDialog) {
+        return;
+      }
+
+      const mediumZoomImageOpened = document.querySelector('.medium-zoom-image--opened');
+      if (mediumZoomImageOpened) {
         return;
       }
 
@@ -348,6 +374,7 @@ export function Clipboard({
     };
   }, []);
 
+  const portalFooterLeft = usePortalTarget('portal-footer-left');
   const portalFooterMiddle = usePortalTarget('portal-footer-middle');
 
   return (
@@ -458,6 +485,18 @@ export function Clipboard({
                     ? ['border-l-red-500', 'bg-white', 'dark:bg-zinc-700']
                     : 'border-l-transparent',
                 )}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+
+                  setCursor(i);
+                  const position = {
+                    top: e.clientY,
+                    left: e.clientX,
+                    bottom: e.clientY,
+                    right: e.clientX,
+                  };
+                  void showPasteMenu(item.clip, position);
+                }}
               >
                 <button
                   type="button"
@@ -516,7 +555,10 @@ export function Clipboard({
                   )}
                   onClick={(e) => {
                     e.preventDefault();
-                    void showPasteMenu(item.clip, (e.target as HTMLButtonElement).closest('div')!);
+
+                    setCursor(i);
+                    const position = e.currentTarget.getBoundingClientRect();
+                    void showPasteMenu(item.clip, position);
                   }}
                 >
                   <span className="icon-[boxicons--menu] size-4"></span>
@@ -566,7 +608,7 @@ export function Clipboard({
         )}
       </div>
 
-      {portalFooterMiddle &&
+      {portalFooterLeft &&
         createPortal(
           <>
             <Button
@@ -592,7 +634,13 @@ export function Clipboard({
             >
               <span className="icon-[fluent--content-view-32-regular] size-4"></span>
             </Button>
+          </>,
+          portalFooterLeft,
+        )}
 
+      {portalFooterMiddle &&
+        createPortal(
+          <>
             <Button
               title="clear"
               type="button"
@@ -614,7 +662,7 @@ export function Clipboard({
 
 type ClipContainerProps = Pick<
   ReturnType<typeof useStore>,
-  'wrapTextAutomatically' | 'appLocalDataDir'
+  'wrapTextAutomatically' | 'appLocalDataDir' | 'showSubContents'
 > & { item: Searched };
 
 function HighlightText(props: ClipContainerProps) {
@@ -705,6 +753,7 @@ function ShrinkImage(props: ClipContainerProps) {
   return (
     imageSrc && (
       <img
+        id={`image-${props.item.clip.id}`}
         src={imageSrc}
         alt="clipboard image"
         className={cn(
@@ -730,18 +779,30 @@ function FileList(props: ClipContainerProps) {
   );
 }
 
-function PasteMenu(props: { clip: Clip; onSuccess: () => void; onDelete: (clip: Clip) => void }) {
+function PasteMenu(props: {
+  clip: Clip;
+  showSubContents: boolean;
+  theme: Theme;
+  onSuccess: () => void;
+  onDelete: (clip: Clip) => void;
+}) {
   useEffect(() => {
     function closeDialog(e: KeyboardEvent) {
       if (e.key === 'Escape') {
         e.stopPropagation(); // App.tsx の hideWindow に突き抜けないようにする
       }
     }
+    function preventContextMenu(e: MouseEvent) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
 
     window.addEventListener('keydown', closeDialog, true);
+    window.addEventListener('contextmenu', preventContextMenu, true);
 
     return () => {
       window.removeEventListener('keydown', closeDialog, true);
+      window.removeEventListener('contextmenu', preventContextMenu, true);
     };
   });
 
@@ -881,6 +942,25 @@ function PasteMenu(props: { clip: Clip; onSuccess: () => void; onDelete: (clip: 
             paste files
           </MenuButton>
         )}
+
+        {props.clip.image_hash &&
+          (props.clip.content_type === 'image' || props.showSubContents) && (
+            <MenuButton
+              type="button"
+              className="before:icon-[akar-icons--zoom-in]"
+              onClick={async () => {
+                const zoom = mediumZoom(`#image-${props.clip.id}`, {
+                  background: props.theme === 'dark' ? '#000' : '#fff',
+                });
+
+                void zoom.open();
+
+                props.onSuccess();
+              }}
+            >
+              zoom image
+            </MenuButton>
+          )}
 
         <MenuButton
           type="button"
