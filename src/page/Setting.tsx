@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode, type SetStateAction } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 import invoke from '~/command';
 import { Button } from '~/component/Button';
@@ -488,7 +488,7 @@ function InlineForm<T extends string | number>(props: {
   label: string;
   initialValue: T;
   defaultValue: T;
-  save: (v: SetStateAction<T>) => Promise<void>;
+  save: (v: T) => Promise<void>;
   input: Omit<React.InputHTMLAttributes<HTMLInputElement>, 'id' | 'defaultValue' | 'required'>;
   children?: ReactNode;
 }) {

@@ -1,7 +1,7 @@
 import { getVersion } from '@tauri-apps/api/app';
 import { appLocalDataDir as getAppLocalDataDir } from '@tauri-apps/api/path';
 import { Store } from '@tauri-apps/plugin-store';
-import { useCallback, useEffect, useState, type SetStateAction } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import invoke, { type ContentType, type SearchMode } from '~/command';
 
@@ -173,7 +173,7 @@ export function useStore() {
 
   // appearance
   const [enablePin, setEnablePin] = useState(false);
-  async function saveEnablePin(v: SetStateAction<boolean>) {
+  async function saveEnablePin(v: boolean) {
     setEnablePin(v);
     await store?.set(STORE.appearance.PIN, v);
     await store?.save();
@@ -213,28 +213,28 @@ export function useStore() {
   const [systemFontList, setSystemFontList] = useState<string[]>([]);
 
   const [minHeight, setMinHeight] = useState(defaultMinHeight);
-  async function saveMinHeight(v: SetStateAction<number>) {
+  async function saveMinHeight(v: number) {
     setMinHeight(v);
     await store?.set(STORE.appearance.MIN_HEIGHT, v);
     await store?.save();
   }
 
   const [maxHeight, setMaxHeight] = useState(defaultMaxHeight);
-  async function saveMaxHeight(v: SetStateAction<number>) {
+  async function saveMaxHeight(v: number) {
     setMaxHeight(v);
     await store?.set(STORE.appearance.MAX_HEIGHT, v);
     await store?.save();
   }
 
   const [wrapTextAutomatically, setWrapTextAutomatically] = useState(defaultWrapTextAutomatically);
-  async function saveWrapTextAutomatically(v: SetStateAction<boolean>) {
+  async function saveWrapTextAutomatically(v: boolean) {
     setWrapTextAutomatically(v);
     await store?.set(STORE.appearance.WRAP_TEXT_AUTOMATICALLY, v);
     await store?.save();
   }
 
   const [showSubContents, setShowSubContents] = useState(defaultShowSubContents);
-  async function saveShowSubContents(v: SetStateAction<boolean>) {
+  async function saveShowSubContents(v: boolean) {
     setShowSubContents(v);
     await store?.set(STORE.appearance.SHOW_SUB_CONTENTS, v);
     await store?.save();
@@ -242,21 +242,21 @@ export function useStore() {
 
   // behavior
   const [historySize, setHistorySize] = useState(defaultHistorySize);
-  async function saveHistorySize(v: SetStateAction<number>) {
+  async function saveHistorySize(v: number) {
     setHistorySize(v);
     await store?.set(STORE.behavior.HISTORY_SIZE, v);
     await store?.save();
   }
 
   const [maxItems, setMaxItems] = useState(defaultMaxItems);
-  async function saveMaxItems(v: SetStateAction<number>) {
+  async function saveMaxItems(v: number) {
     setMaxItems(v);
     await store?.set(STORE.behavior.MAX_ITEMS, v);
     await store?.save();
   }
 
   const [trimFinalNewlines, setTrimFinalNewlines] = useState(defaultTrimFinalNewlines);
-  async function saveTrimFinalNewlines(v: SetStateAction<boolean>) {
+  async function saveTrimFinalNewlines(v: boolean) {
     setTrimFinalNewlines(v);
     await store?.set(STORE.behavior.TRIM_FINAL_NEWLINES, v);
     await store?.save();
@@ -264,7 +264,7 @@ export function useStore() {
 
   const [ocr, setOCR] = useState('');
   const [enableOCR, setEnableOCR] = useState(defaultEnableOCR);
-  async function saveEnableOCR(v: SetStateAction<boolean>) {
+  async function saveEnableOCR(v: boolean) {
     setEnableOCR(v);
     await store?.set(STORE.behavior.ENABLE_OCR, v);
     await store?.save();
@@ -275,7 +275,7 @@ export function useStore() {
 
   const [searchMode, setSearchMode] = useState<SearchMode>('fuzzy');
   const saveSearchMode = useCallback(
-    async (v: SetStateAction<SearchMode>) => {
+    async (v: SearchMode) => {
       setSearchMode(v);
       await store?.set(STORE.state.SEARCH_MODE, v);
       await store?.save();
@@ -285,7 +285,7 @@ export function useStore() {
 
   const [searchContentType, setSearchContentType] = useState<ContentType[]>([]);
   const saveSearchContentType = useCallback(
-    async (v: SetStateAction<ContentType[]>) => {
+    async (v: ContentType[]) => {
       setSearchContentType(v);
       await store?.set(STORE.state.SEARCH_CONTENT_TYPE, v);
       await store?.save();
@@ -295,9 +295,9 @@ export function useStore() {
 
   const [searchBookmark, setSearchBookmark] = useState<boolean[]>([true, false]);
   const saveSearchBookmark = useCallback(
-    async (v: SetStateAction<boolean[]>) => {
+    async (v: boolean[]) => {
       setSearchBookmark(v);
-      await store?.set(STORE.state.SEARCH_CONTENT_TYPE, v);
+      await store?.set(STORE.state.SEARCH_BOOKMARK, v);
       await store?.save();
     },
     [store],
@@ -317,7 +317,7 @@ export function useStore() {
   const [shortcutSendClipboard, setShortcutSendClipboard] = useState<Shortcut>(
     defaultShortcutSendClipboard,
   );
-  async function saveShortcutSendClipboard(v: SetStateAction<Shortcut>) {
+  async function saveShortcutSendClipboard(v: Shortcut) {
     setShortcutSendClipboard(v);
     await store?.set(STORE.app_shortcut.SEND_CLIPBOARD, v);
     await store?.save();
@@ -325,14 +325,14 @@ export function useStore() {
   const [shortcutSendAndPaste, setShortcutSendAndPaste] = useState<Shortcut>(
     defaultShortcutSendAndPaste,
   );
-  async function saveShortcutSendAndPaste(v: SetStateAction<Shortcut>) {
+  async function saveShortcutSendAndPaste(v: Shortcut) {
     setShortcutSendAndPaste(v);
     await store?.set(STORE.app_shortcut.SEND_AND_PASTE, v);
     await store?.save();
   }
 
   const [shortcutDeleteClip, setShortcutDeleteClip] = useState<Shortcut>(defaultShortcutDeleteClip);
-  async function saveShortcutDeleteClip(v: SetStateAction<Shortcut>) {
+  async function saveShortcutDeleteClip(v: Shortcut) {
     setShortcutDeleteClip(v);
     await store?.set(STORE.app_shortcut.DELETE_CLIP, v);
     await store?.save();
@@ -341,7 +341,7 @@ export function useStore() {
   const [shortcutClearClipboard, setShortcutClearClipboard] = useState<Shortcut>(
     defaultShortcutClearClipboard,
   );
-  async function saveShortcutClearClipboard(v: SetStateAction<Shortcut>) {
+  async function saveShortcutClearClipboard(v: Shortcut) {
     setShortcutClearClipboard(v);
     await store?.set(STORE.app_shortcut.CLEAR_CLIPBOARD, v);
     await store?.save();
@@ -350,7 +350,7 @@ export function useStore() {
   const [shortcutShowPasteMenu, setShortcutShowPasteMenu] = useState<Shortcut>(
     defaultShortcutShowPasteMenu,
   );
-  async function saveShortcutShowPasteMenu(v: SetStateAction<Shortcut>) {
+  async function saveShortcutShowPasteMenu(v: Shortcut) {
     setShortcutShowPasteMenu(v);
     await store?.set(STORE.app_shortcut.SHOW_PASTE_MENU, v);
     await store?.save();
@@ -359,7 +359,7 @@ export function useStore() {
   const [shortcutToggleClipBookmark, setShortcutToggleClipBookmark] = useState<Shortcut>(
     defaultShortcutToggleClipBookmark,
   );
-  async function saveShortcutToggleClipBookmark(v: SetStateAction<Shortcut>) {
+  async function saveShortcutToggleClipBookmark(v: Shortcut) {
     setShortcutToggleClipBookmark(v);
     await store?.set(STORE.app_shortcut.TOGGLE_CLIP_BOOKMARK, v);
     await store?.save();
@@ -367,7 +367,7 @@ export function useStore() {
 
   const [shortcutToggleSearchContentTypeText, setShortcutToggleSearchContentTypeText] =
     useState<Shortcut>(defaultShortcutToggleSearchContentTypeText);
-  async function saveShortcutToggleSearchContentTypeText(v: SetStateAction<Shortcut>) {
+  async function saveShortcutToggleSearchContentTypeText(v: Shortcut) {
     setShortcutToggleSearchContentTypeText(v);
     await store?.set(STORE.app_shortcut.TOGGLE_SEARCH_CONTENT_TYPE_TEXT, v);
     await store?.save();
@@ -375,7 +375,7 @@ export function useStore() {
 
   const [shortcutToggleSearchContentTypeImage, setShortcutToggleSearchContentTypeImage] =
     useState<Shortcut>(defaultShortcutToggleSearchContentTypeImage);
-  async function saveShortcutToggleSearchContentTypeImage(v: SetStateAction<Shortcut>) {
+  async function saveShortcutToggleSearchContentTypeImage(v: Shortcut) {
     setShortcutToggleSearchContentTypeImage(v);
     await store?.set(STORE.app_shortcut.TOGGLE_SEARCH_CONTENT_TYPE_IMAGE, v);
     await store?.save();
@@ -383,7 +383,7 @@ export function useStore() {
 
   const [shortcutToggleSearchContentTypeFiles, setShortcutToggleSearchContentTypeFiles] =
     useState<Shortcut>(defaultShortcutToggleSearchContentTypeFiles);
-  async function saveShortcutToggleSearchContentTypeFiles(v: SetStateAction<Shortcut>) {
+  async function saveShortcutToggleSearchContentTypeFiles(v: Shortcut) {
     setShortcutToggleSearchContentTypeFiles(v);
     await store?.set(STORE.app_shortcut.TOGGLE_SEARCH_CONTENT_TYPE_FILES, v);
     await store?.save();
@@ -392,7 +392,7 @@ export function useStore() {
   const [shortcutToggleSearchBookmark, setShortcutToggleSearchBookmark] = useState<Shortcut>(
     defaultShortcutToggleSearchBookmark,
   );
-  async function saveShortcutToggleSearchBookmark(v: SetStateAction<Shortcut>) {
+  async function saveShortcutToggleSearchBookmark(v: Shortcut) {
     setShortcutToggleSearchBookmark(v);
     await store?.set(STORE.app_shortcut.TOGGLE_SEARCH_BOOKMARK, v);
     await store?.save();
@@ -401,7 +401,7 @@ export function useStore() {
   const [shortcutToggleSearchMode, setShortcutToggleSearchMode] = useState<Shortcut>(
     defaultShortcutToggleSearchMode,
   );
-  async function saveShortcutToggleSearchMode(v: SetStateAction<Shortcut>) {
+  async function saveShortcutToggleSearchMode(v: Shortcut) {
     setShortcutToggleSearchMode(v);
     await store?.set(STORE.app_shortcut.TOGGLE_SEARCH_MODE, v);
     await store?.save();
@@ -409,7 +409,7 @@ export function useStore() {
 
   const [shortcutToggleWrapTextAutomatically, setShortcutToggleWrapTextAutomatically] =
     useState<Shortcut>(defaultShortcutToggleWrapTextAutomatically);
-  async function saveShortcutToggleWrapTextAutomatically(v: SetStateAction<Shortcut>) {
+  async function saveShortcutToggleWrapTextAutomatically(v: Shortcut) {
     setShortcutToggleWrapTextAutomatically(v);
     await store?.set(STORE.app_shortcut.TOGGLE_WRAP_TEXT_AUTOMATICALLY, v);
     await store?.save();
@@ -418,7 +418,7 @@ export function useStore() {
   const [shortcutToggleShowSubContents, setShortcutToggleShowSubContents] = useState<Shortcut>(
     defaultShortcutToggleShowSubContents,
   );
-  async function saveShortcutToggleShowSubContents(v: SetStateAction<Shortcut>) {
+  async function saveShortcutToggleShowSubContents(v: Shortcut) {
     setShortcutToggleShowSubContents(v);
     await store?.set(STORE.app_shortcut.TOGGLE_SHOW_SUB_CONTENTS, v);
     await store?.save();

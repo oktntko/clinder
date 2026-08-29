@@ -127,40 +127,48 @@ export function Clipboard({
   );
 
   const toggleSearchContentTypeText = useCallback(async () => {
-    return saveSearchContentType((prev) =>
-      prev.some((x) => x === 'text') ? prev.filter((x) => x !== 'text') : prev.concat(['text']),
+    return saveSearchContentType(
+      props.searchContentType.some((x) => x === 'text')
+        ? props.searchContentType.filter((x) => x !== 'text')
+        : props.searchContentType.concat(['text']),
     );
-  }, [saveSearchContentType]);
+  }, [saveSearchContentType, props.searchContentType]);
 
   const toggleSearchContentTypeImage = useCallback(async () => {
-    return saveSearchContentType((prev) =>
-      prev.some((x) => x === 'image') ? prev.filter((x) => x !== 'image') : prev.concat(['image']),
+    return saveSearchContentType(
+      props.searchContentType.some((x) => x === 'image')
+        ? props.searchContentType.filter((x) => x !== 'image')
+        : props.searchContentType.concat(['image']),
     );
-  }, [saveSearchContentType]);
+  }, [saveSearchContentType, props.searchContentType]);
 
   const toggleSearchContentTypeFiles = useCallback(async () => {
-    return saveSearchContentType((prev) =>
-      prev.some((x) => x === 'files') ? prev.filter((x) => x !== 'files') : prev.concat(['files']),
+    return saveSearchContentType(
+      props.searchContentType.some((x) => x === 'files')
+        ? props.searchContentType.filter((x) => x !== 'files')
+        : props.searchContentType.concat(['files']),
     );
-  }, [saveSearchContentType]);
+  }, [saveSearchContentType, props.searchContentType]);
 
   const toggleSearchBookmark = useCallback(async () => {
-    return saveSearchBookmark((prev) =>
-      prev.length === 1 && prev[0] === true ? [true, false] : [true],
+    return saveSearchBookmark(
+      props.searchBookmark.length === 1 && props.searchBookmark[0] === true
+        ? [true, false]
+        : [true],
     );
-  }, [saveSearchBookmark]);
+  }, [saveSearchBookmark, props.searchBookmark]);
 
   const toggleSearchMode = useCallback(async () => {
-    return saveSearchMode((prev) => (prev === 'fuzzy' ? 'substring' : 'fuzzy'));
-  }, [saveSearchMode]);
+    return saveSearchMode(props.searchMode === 'fuzzy' ? 'substring' : 'fuzzy');
+  }, [saveSearchMode, props.searchMode]);
 
   const toggleWrapTextAutomatically = useCallback(async () => {
-    return saveWrapTextAutomatically((prev) => !prev);
-  }, [saveWrapTextAutomatically]);
+    return saveWrapTextAutomatically(!props.wrapTextAutomatically);
+  }, [saveWrapTextAutomatically, props.wrapTextAutomatically]);
 
   const toggleShowSubContents = useCallback(async () => {
-    return saveShowSubContents((prev) => !prev);
-  }, [saveShowSubContents]);
+    return saveShowSubContents(!props.showSubContents);
+  }, [saveShowSubContents, props.showSubContents]);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -617,7 +625,7 @@ export function Clipboard({
               set={props.wrapTextAutomatically ? 'positive' : 'ghost'}
               onClick={(e) => {
                 e.preventDefault();
-                void saveWrapTextAutomatically((prev) => !prev);
+                void saveWrapTextAutomatically(!props.wrapTextAutomatically);
               }}
             >
               <span className="icon-[pajamas--soft-wrap] size-4"></span>
@@ -629,7 +637,7 @@ export function Clipboard({
               set={props.showSubContents ? 'positive' : 'ghost'}
               onClick={(e) => {
                 e.preventDefault();
-                void saveShowSubContents((prev) => !prev);
+                void saveShowSubContents(!props.showSubContents);
               }}
             >
               <span className="icon-[fluent--content-view-32-regular] size-4"></span>
