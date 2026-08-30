@@ -7,6 +7,7 @@ import { cn } from '~/lib/utils';
 import {
   DialogContext,
   type ColorSet,
+  type Position,
   type ReactComponent,
   type WindowDialogOptions,
   type WindowDialogProps,
@@ -28,20 +29,25 @@ function WindowDialog({
         e.stopPropagation(); // App.tsx の hideWindow に突き抜けないようにする
       }
     }
+    function preventContextMenu(e: MouseEvent) {
+      e.stopPropagation();
+    }
 
     window.addEventListener('keydown', closeDialog, true);
+    window.addEventListener('contextmenu', preventContextMenu, true);
 
     return () => {
       window.removeEventListener('keydown', closeDialog, true);
+      window.removeEventListener('contextmenu', preventContextMenu, true);
     };
   });
 
   return (
     <div
       className={cn(
-        'max-w-80 rounded-lg p-8 shadow-md',
+        'max-w-120 rounded-lg p-8 shadow-md',
         'text-sm',
-        'bg-slate-100 text-slate-900',
+        'bg-white text-slate-900',
         'dark:bg-zinc-900 dark:text-zinc-100',
       )}
     >
@@ -53,7 +59,7 @@ function WindowDialog({
         }}
       >
         <main className="flex items-center gap-4">
-          <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full`}>
+          <div className={`inline-flex shrink-0 items-center justify-center rounded-full`}>
             <span
               className={cn(
                 'size-6',
@@ -102,10 +108,7 @@ function iconClass(set: ColorSet) {
 }
 
 // --- Helper Functions ---
-function createDialogElement(
-  closedby: 'any' | 'closerequest' | 'none' = 'any',
-  anchor?: HTMLElement,
-) {
+function createDialogElement(closedby: 'any' | 'closerequest' | 'none' = 'any', fixed?: unknown) {
   const dialog = document.createElement('dialog');
   dialog.setAttribute('closedby', closedby);
   dialog.className = `
@@ -115,7 +118,7 @@ function createDialogElement(
     starting:[[open]]:scale-95 starting:[[open]]:opacity-0
     [[open]]:scale-100 [[open]]:opacity-100
     backdrop:bg-gray-500/20
-    ${anchor ? 'backdrop:backdrop-grayscale' : 'backdrop:backdrop-blur-xs'}
+    ${fixed ? 'backdrop:backdrop-grayscale-xs' : 'backdrop:backdrop-blur-xs'}
     backdrop:transition backdrop:transition-discrete backdrop:duration-200 backdrop:ease-out
     backdrop:opacity-0
     starting:[[open]]:backdrop:opacity-0
@@ -140,7 +143,7 @@ function createCloseButton() {
     dark:focus:bg-zinc-700 dark:focus:ring-zinc-500
   `;
   button.setAttribute('aria-label', 'Close');
-  button.innerHTML = `<span class="icon-[bi--x] h-6 w-6"></span>`;
+  button.innerHTML = `<span class="icon-[bi--x] size-5"></span>`;
   return button;
 }
 
@@ -155,16 +158,18 @@ function createDialogPlugin() {
     {
       closedby = 'any',
       showCloseButton = true,
-      anchor,
-      anchorChildHeight,
+      fixed,
     }: {
       closedby?: 'any' | 'closerequest' | 'none';
       showCloseButton?: boolean;
-      anchor?: HTMLElement;
-      anchorChildHeight?: number;
+      fixed?: {
+        width: number;
+        height: number;
+        position: Position;
+      };
     } = {},
   ) {
-    const dialog = createDialogElement(closedby, anchor);
+    const dialog = createDialogElement(closedby, fixed);
 
     if (showCloseButton) {
       const closeButton = createCloseButton();
@@ -214,20 +219,22 @@ function createDialogPlugin() {
 
       dialog.addEventListener('close', handleClose, { once: true });
 
-      if (anchor) {
+      if (fixed) {
         dialog.style.margin = '0'; // マージで中の要素を中央寄せしているので消す
         dialog.style.insetInlineStart = 'unset'; // 消すと right: が効くようになる
         dialog.style.insetBlockStart = 'unset'; // 消すと bottom: が効くようになる
         dialog.style.position = 'fixed';
-        dialog.style.right = 'calc(4px + var(--spacing) * 1.5)'; // scrollbar 分
 
-        const rect = anchor.getBoundingClientRect();
-        const spaceBelow = window.innerHeight + anchor.clientHeight - rect.bottom;
-
-        if (spaceBelow >= (anchorChildHeight ?? 300)) {
-          dialog.style.top = `${rect.top}px`;
+        if (window.innerWidth >= fixed.position.left + fixed.width) {
+          dialog.style.left = `${fixed.position.left}px`;
         } else {
-          dialog.style.bottom = `${window.innerHeight - rect.bottom}px`;
+          dialog.style.right = 'calc(4px + var(--spacing) * 1.5)'; // scrollbar 分
+        }
+
+        if (window.innerHeight >= fixed.position.top + fixed.height) {
+          dialog.style.top = `${fixed.position.top}px`;
+        } else {
+          dialog.style.bottom = `${window.innerHeight - fixed.position.bottom}px`;
         }
       }
 

@@ -10,14 +10,14 @@ export function Footer(props: FooterProps) {
   return (
     <div
       className={cn(
-        'flex shrink-0 flex-row justify-between',
+        'grid shrink-0 grid-cols-3 items-center justify-center',
         'px-2 py-1.5',
         'border-t-2',
         'border-t-slate-400',
         'dark:border-t-zinc-600',
       )}
     >
-      <div className="flex flex-row items-center gap-2">
+      <div className="flex flex-row items-center justify-start gap-2">
         <Button
           title="pin"
           type="button"
@@ -53,9 +53,18 @@ export function Footer(props: FooterProps) {
             )}
           ></span>
         </Button>
+
+        <div id="portal-footer-left" className="contents"></div>
       </div>
 
-      <div title="page" className="inline-flex items-center justify-center gap-1.5">
+      <div
+        id="portal-footer-middle"
+        className="flex flex-row items-center justify-center gap-2"
+      ></div>
+
+      <div title="page" className="inline-flex items-center justify-end gap-1.5">
+        <div id="portal-footer-right" className="contents"></div>
+
         <Button
           title="clipboard"
           type="button"

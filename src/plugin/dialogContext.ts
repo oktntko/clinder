@@ -22,6 +22,13 @@ export type WindowDialogProps = WindowDialogOptions & {
   onCancel: (reason?: unknown) => void;
 };
 
+export type Position = {
+  top: number;
+  left: number;
+  bottom: number;
+  right: number;
+};
+
 export type DialogPlugin = {
   /**
    * 任意の React コンポーネントをモーダルダイアログとして開きます。
@@ -35,8 +42,11 @@ export type DialogPlugin = {
     options?: {
       closedby?: 'any' | 'closerequest' | 'none';
       showCloseButton?: boolean;
-      anchor?: HTMLElement;
-      anchorChildHeight?: number;
+      fixed?: {
+        width: number;
+        height: number;
+        position: Position;
+      };
     },
   ) => Promise<T>;
 

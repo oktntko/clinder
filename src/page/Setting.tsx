@@ -1,9 +1,9 @@
-import { useEffect, useState, type ReactNode, type SetStateAction } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 import invoke from '~/command';
 import { Button } from '~/component/Button';
 import { Checkbox, Input, Radio } from '~/component/Input';
-import { cn } from '~/lib/utils';
+import { cn, sleep } from '~/lib/utils';
 import { useDialog } from '~/plugin/useDialog';
 import {
   defaultFont,
@@ -12,6 +12,7 @@ import {
   defaultMaxHeight,
   defaultMaxItems,
   defaultMinHeight,
+  defaultShortcutClearClipboard,
   defaultShortcutDeleteClip,
   defaultShortcutSendAndPaste,
   defaultShortcutSendClipboard,
@@ -37,12 +38,12 @@ export function Setting(props: SettingProps) {
 
   return (
     <>
-      <div className="flex flex-col gap-8 overflow-y-auto px-12 py-8 focus:outline-none">
+      <div className="flex flex-col gap-6 overflow-y-auto px-12 py-8 focus:outline-none">
         <div className="text-lg font-bold capitalize">setting</div>
 
-        <section className="flex flex-col gap-2">
+        <section className="flex flex-col gap-3">
           <div className="text-base font-semibold capitalize">appearance</div>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-0.5">
               <div>
                 <label htmlFor="font" className="capitalize">
@@ -164,9 +165,9 @@ export function Setting(props: SettingProps) {
           </div>
         </section>
 
-        <section className="flex flex-col gap-2">
+        <section className="flex flex-col gap-3">
           <div className="text-base font-semibold capitalize">behavior</div>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-3">
             <InlineForm
               id="history size"
               name="History Size"
@@ -204,6 +205,12 @@ export function Setting(props: SettingProps) {
                   checked={props.trimFinalNewlines}
                   onChange={async (e) => {
                     await props.saveTrimFinalNewlines(e.target.checked);
+
+                    $toast.success(
+                      `Trim Final Newlines ${e.target.checked ? 'enabled' : 'disabled'} successfully.`,
+                    );
+
+                    await sleep(1000);
 
                     await $dialog.confirm.success(
                       `Trim Final Newlines ${e.target.checked ? 'enabled' : 'disabled'} successfully.\nDo you want to restart now?`,
@@ -247,6 +254,12 @@ export function Setting(props: SettingProps) {
                   onChange={async (e) => {
                     await props.saveEnableOCR(e.target.checked);
 
+                    $toast.success(
+                      `OCR ${e.target.checked ? 'enabled' : 'disabled'} successfully.`,
+                    );
+
+                    await sleep(1000);
+
                     await $dialog.confirm.success(
                       `OCR ${e.target.checked ? 'enabled' : 'disabled'} successfully.\nDo you want to restart now?`,
                     );
@@ -260,7 +273,7 @@ export function Setting(props: SettingProps) {
               {props.ocr ? (
                 <div className="text-xs">
                   Detected OS Languages:
-                  <span className="font-mono font-bold text-blue-500"> {props.ocr}</span>
+                  <span className="font-mono text-base font-bold text-blue-500"> {props.ocr}</span>
                 </div>
               ) : (
                 <div className="text-xs text-red-500">
@@ -275,9 +288,9 @@ export function Setting(props: SettingProps) {
           </div>
         </section>
 
-        <section className="flex flex-col gap-2">
+        <section className="flex flex-col gap-3">
           <div className="text-base font-semibold capitalize">Keybindings</div>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-3">
             {[
               {
                 title: 'toggle window open / close',
@@ -302,22 +315,28 @@ export function Setting(props: SettingProps) {
                 default: defaultGlobalShortcutToggleWindow,
               },
               {
-                title: 'send and paste',
-                shortcut: props.shortcutSendAndPaste,
-                save: props.saveShortcutSendAndPaste,
-                default: defaultShortcutSendAndPaste,
-              },
-              {
                 title: 'send clipboard',
                 shortcut: props.shortcutSendClipboard,
                 save: props.saveShortcutSendClipboard,
                 default: defaultShortcutSendClipboard,
               },
               {
+                title: 'send and paste',
+                shortcut: props.shortcutSendAndPaste,
+                save: props.saveShortcutSendAndPaste,
+                default: defaultShortcutSendAndPaste,
+              },
+              {
                 title: 'delete clip',
                 shortcut: props.shortcutDeleteClip,
                 save: props.saveShortcutDeleteClip,
                 default: defaultShortcutDeleteClip,
+              },
+              {
+                title: 'clear clipboard',
+                shortcut: props.shortcutClearClipboard,
+                save: props.saveShortcutClearClipboard,
+                default: defaultShortcutClearClipboard,
               },
               {
                 title: 'toggle clip bookmark',
@@ -412,6 +431,7 @@ export function Setting(props: SettingProps) {
                       title="reset"
                       type="button"
                       set="default"
+                      disabled={matchShortcut(x.shortcut, x.default)}
                       onClick={async () => {
                         try {
                           await x.save(x.default);
@@ -457,33 +477,6 @@ export function Setting(props: SettingProps) {
             </div>
           </div>
         </section>
-
-        <section className="flex flex-col gap-2">
-          <div className="text-base font-semibold capitalize">Danger Zone</div>
-          <div className="flex flex-col gap-2">
-            <div className="flex flex-col gap-0.5">
-              <div>
-                <label className="capitalize">clear clipboard</label>
-              </div>
-              <div className="flex flex-row items-center gap-2">
-                <Button
-                  type="button"
-                  set="warning"
-                  variant="text"
-                  onClick={async () => {
-                    await $dialog.confirm.warn(
-                      'Are you sure you want to clear all clipboard history?',
-                    );
-                    await invoke.clear_clipboard();
-                    return $toast.success('Clipboard history cleared!');
-                  }}
-                >
-                  clear
-                </Button>
-              </div>
-            </div>
-          </div>
-        </section>
       </div>
     </>
   );
@@ -495,7 +488,7 @@ function InlineForm<T extends string | number>(props: {
   label: string;
   initialValue: T;
   defaultValue: T;
-  save: (v: SetStateAction<T>) => Promise<void>;
+  save: (v: T) => Promise<void>;
   input: Omit<React.InputHTMLAttributes<HTMLInputElement>, 'id' | 'defaultValue' | 'required'>;
   children?: ReactNode;
 }) {
@@ -521,7 +514,6 @@ function InlineForm<T extends string | number>(props: {
       <div className="flex flex-row items-center gap-2">
         <Input
           id={props.id}
-          defaultValue={props.initialValue}
           required
           value={value}
           onChange={(e) =>

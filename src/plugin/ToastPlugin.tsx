@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
 import { cn } from '~/lib/utils';
@@ -8,7 +8,7 @@ import { ToastContext, type ColorType, type ToastOptions, type ToastPlugin } fro
 type ToastItem = {
   id: number;
   message: string;
-  color: ColorType;
+  set: ColorType;
 };
 
 export default function ToastProvider({ children }: { children: ReactNode }) {
@@ -19,7 +19,7 @@ export default function ToastProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const element = document.createElement('div');
     element.className =
-      'toast-container pointer-events-none fixed bottom-5 left-1/2 z-10 inline-flex -translate-x-1/2 flex-col gap-4';
+      'toast-container pointer-events-none fixed bottom-0 left-1/2 z-10 -translate-x-1/2';
     document.body.appendChild(element);
     setContainer(element);
 
@@ -33,22 +33,22 @@ export default function ToastProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const openToast = useCallback(
-    (message: string, { color = 'white', ...options }: ToastOptions = {}) => {
+    (message: string, { set = 'default', ...options }: ToastOptions = {}) => {
       const id = ++toastIdRef.current;
 
       setToasts((current) => [
-        ...current,
+        ...current.slice(-4),
         {
           id,
           message,
-          color,
+          set,
           ...options,
         },
       ]);
 
       window.setTimeout(() => {
         removeToast(id);
-      }, 3250);
+      }, 4000);
     },
     [removeToast],
   );
@@ -57,16 +57,13 @@ export default function ToastProvider({ children }: { children: ReactNode }) {
     () => ({
       open: openToast,
       success(message: string, options?: ToastOptions) {
-        return openToast(message, { color: 'green', ...options });
-      },
-      info(message: string, options?: ToastOptions) {
-        return openToast(message, { color: 'blue', ...options });
+        return openToast(message, { set: 'positive', ...options });
       },
       warn(message: string, options?: ToastOptions) {
-        return openToast(message, { color: 'yellow', ...options });
+        return openToast(message, { set: 'warning', ...options });
       },
       danger(message: string, options?: ToastOptions) {
-        return openToast(message, { color: 'red', ...options });
+        return openToast(message, { set: 'danger', ...options });
       },
     }),
     [openToast],
@@ -75,36 +72,46 @@ export default function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={api}>
       {children}
-      {container != null
-        ? createPortal(
-            <div className="pointer-events-none fixed bottom-5 left-1/2 z-10 inline-flex -translate-x-1/2 flex-col gap-4">
-              {toasts.map((toast) => (
-                <ToastContent
-                  key={toast.id}
-                  message={toast.message}
-                  color={toast.color}
-                  onClose={() => removeToast(toast.id)}
-                />
-              ))}
-            </div>,
-            container,
-          )
-        : null}
+
+      {container &&
+        createPortal(
+          <div className="relative">
+            {toasts.map((toast, index, arr) => (
+              <ToastContent
+                key={toast.id}
+                index={arr.length - 1 - index}
+                message={toast.message}
+                set={toast.set}
+                onClose={() => removeToast(toast.id)}
+              />
+            ))}
+          </div>,
+          container,
+        )}
     </ToastContext.Provider>
   );
 }
 
-function ToastContent({
+// React.memo で不要な再レンダリングを防止（index以外の変更時のみ）
+const ToastContent = memo(function ({
+  index,
   message,
-  color,
+  set,
   onClose,
 }: {
+  index: number;
   message: string;
-  color: ColorType;
+  set: ColorType;
   onClose: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const toastRef = useRef<HTMLDivElement | null>(null);
+
+  // onClose や close が変化してもタイマーが再設定されないよう Ref で最新関数を保持
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     const frameId = window.requestAnimationFrame(() => {
@@ -119,10 +126,11 @@ function ToastContent({
   const close = useCallback(() => {
     setOpen(false);
     window.setTimeout(() => {
-      onClose();
-    }, 200);
-  }, [onClose]);
+      onCloseRef.current();
+    }, 300);
+  }, []);
 
+  // 初回マウント時のみ 3000ms のタイマーをセットする
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       close();
@@ -133,96 +141,84 @@ function ToastContent({
     };
   }, [close]);
 
-  const contentColor = (() => {
-    switch (color) {
-      case 'green':
-        return 'border-green-300 text-green-800';
-      case 'blue':
-        return 'border-blue-300 text-blue-800';
-      case 'yellow':
-        return 'border-yellow-300 text-yellow-800';
-      case 'red':
-        return 'border-red-300 text-red-800';
-      case 'white':
-        return 'border-gray-300 text-gray-400';
-      case 'gray':
-        return 'border-gray-300 text-gray-800';
-      default:
-        return 'border-gray-300 text-gray-800';
-    }
-  })();
-
-  const iconContainerColor = (() => {
-    switch (color) {
-      case 'green':
-        return 'bg-green-100 text-green-800';
-      case 'blue':
-        return 'bg-blue-100 text-blue-800';
-      case 'yellow':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'red':
-        return 'bg-red-100 text-red-800';
-      case 'white':
-        return 'bg-gray-100 text-gray-400';
-      case 'gray':
-        return 'bg-gray-100 text-gray-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  })();
-
-  const icon = (() => {
-    switch (color) {
-      case 'green':
-        return 'icon-[qlementine-icons--success-12]';
-      case 'blue':
-        return 'icon-[material-symbols--info-outline-rounded]';
-      case 'yellow':
-        return 'icon-[material-symbols--warning-outline-rounded]';
-      case 'red':
-        return 'icon-[material-symbols--dangerous-outline-rounded]';
-      case 'white':
-      case 'gray':
-      default:
-        return 'icon-[solar--dialog-line-duotone]';
-    }
-  })();
-
   return (
     <div
       ref={toastRef}
       role="status"
       aria-live="polite"
       aria-atomic="true"
+      style={
+        {
+          '--index': index,
+        } as React.CSSProperties
+      }
       className={cn([
-        'pointer-events-auto relative flex w-sm items-center gap-2 rounded-lg border bg-white p-4 shadow-md',
-        'transition-all duration-200 ease-out',
-        contentColor,
-        open ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-2 scale-95 opacity-0',
+        'absolute bottom-0 left-1/2 z-10 w-sm -translate-x-1/2 overflow-hidden rounded-lg shadow-md',
+        'transition-all duration-300 ease-out',
+        'text-sm',
+        'bg-white text-slate-900',
+        'dark:bg-zinc-900 dark:text-zinc-100',
+        open
+          ? 'pointer-events-auto -translate-y-[calc(var(--spacing)*(var(--index)+1)*4)] scale-[calc(100%-(10%*var(--index)))] opacity-[calc(100%-(5%*var(--index)))]'
+          : 'pointer-events-none -translate-y-[calc(var(--spacing)*var(--index)*4)] scale-[calc(100%-(10%*var(--index))-5%)] opacity-0',
       ])}
     >
       <div
         className={cn([
-          'inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full',
-          iconContainerColor,
+          'relative flex items-center gap-2 rounded-lg border px-4 py-2',
+          contentColor(set),
         ])}
       >
-        <span className={cn(['h-4 w-4', icon])}></span>
+        <span className={cn('size-5', iconClass(set))} />
+        <span className="whitespace-pre-wrap">{message}</span>
+
+        <button
+          type="button"
+          aria-label="Close"
+          className={cn([
+            'absolute top-1 right-1 size-5 cursor-pointer transition',
+            'inline-flex items-center justify-center',
+            'rounded-full outline-none hover:ring-1 focus:ring-2',
+            'bg-transparent shadow',
+            'text-slate-400',
+            'hover:bg-white hover:ring-slate-400',
+            'focus:bg-white focus:ring-slate-400',
+            'dark:text-zinc-500',
+            'dark:hover:bg-zinc-700 dark:hover:ring-zinc-500',
+            'dark:focus:bg-zinc-700 dark:focus:ring-zinc-500',
+          ])}
+          onClick={close}
+        >
+          <span className="icon-[bi--x] size-4" />
+        </button>
       </div>
-
-      <span className="text-sm leading-relaxed whitespace-pre-wrap">{message}</span>
-
-      <button
-        type="button"
-        className={cn([
-          'absolute top-1 right-1 flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full bg-transparent text-gray-400 transition outline-none',
-          'hover:bg-gray-50 hover:ring-2 hover:ring-gray-300 focus:ring-2 focus:ring-gray-300 focus:outline-none',
-          'disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-300 disabled:text-gray-100 disabled:hover:bg-gray-400 disabled:hover:text-gray-200 disabled:hover:ring-gray-300 disabled:focus:ring-gray-300',
-        ])}
-        onClick={close}
-      >
-        <span className="icon-[bi--x] h-4 w-4" />
-      </button>
     </div>
   );
+});
+
+function contentColor(set: ColorType) {
+  switch (set) {
+    case 'positive':
+      return 'border-green-800 text-green-600 dark:border-emerald-400 dark:text-emerald-400';
+    case 'warning':
+      return 'border-amber-800 text-amber-600 dark:border-amber-300 dark:text-amber-200';
+    case 'danger':
+      return 'border-red-500 text-red-500 dark:border-red-500 dark:text-red-500';
+    case 'default':
+    default:
+      return 'border-slate-900 text-slate-900 dark:border-zinc-100 dark:text-zinc-100';
+  }
+}
+
+function iconClass(set: ColorType) {
+  switch (set) {
+    case 'positive':
+      return 'icon-[qlementine-icons--success-12]';
+    case 'warning':
+    case 'danger':
+      return 'icon-[material-symbols--warning-outline-rounded]';
+    case 'default':
+    default:
+      return 'icon-[solar--dialog-line-duotone]';
+  }
 }
