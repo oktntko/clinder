@@ -514,7 +514,6 @@ function InlineForm<T extends string | number>(props: {
       <div className="flex flex-row items-center gap-2">
         <Input
           id={props.id}
-          defaultValue={props.initialValue}
           required
           value={value}
           onChange={(e) =>

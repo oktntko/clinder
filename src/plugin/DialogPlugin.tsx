@@ -45,9 +45,9 @@ function WindowDialog({
   return (
     <div
       className={cn(
-        'max-w-80 rounded-lg p-8 shadow-md',
+        'max-w-120 rounded-lg p-8 shadow-md',
         'text-sm',
-        'bg-slate-100 text-slate-900',
+        'bg-white text-slate-900',
         'dark:bg-zinc-900 dark:text-zinc-100',
       )}
     >
@@ -59,7 +59,7 @@ function WindowDialog({
         }}
       >
         <main className="flex items-center gap-4">
-          <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full`}>
+          <div className={`inline-flex shrink-0 items-center justify-center rounded-full`}>
             <span
               className={cn(
                 'size-6',
@@ -143,7 +143,7 @@ function createCloseButton() {
     dark:focus:bg-zinc-700 dark:focus:ring-zinc-500
   `;
   button.setAttribute('aria-label', 'Close');
-  button.innerHTML = `<span class="icon-[bi--x] h-6 w-6"></span>`;
+  button.innerHTML = `<span class="icon-[bi--x] size-5"></span>`;
   return button;
 }
 
