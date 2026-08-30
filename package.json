@@ -1,6 +1,6 @@
 {
   "name": "clinder",
-  "version": "0.9.5",
+  "version": "0.9.6",
   "description": "Clinder is a lightweight, always-running clipboard history manager designed for fast, keyboard-only use.",
   "license": "MIT",
   "author": "oktntko@gmail.com",
