@@ -7,6 +7,7 @@ import { Information } from '~/page/Information';
 import { Setting } from '~/page/Setting';
 import { useStore } from '~/plugin/useStore';
 
+import command from './command';
 import { cn } from './lib/utils';
 
 function App() {
@@ -23,7 +24,7 @@ function App() {
           }
 
           e.preventDefault();
-          void getCurrentWindow().hide();
+          void command.hide_window();
           return;
         }
       }
@@ -135,7 +136,7 @@ function App() {
       if (!focused && !isDragging) {
         setPressingAlt(false);
         if (!store.enablePin) {
-          void getCurrentWindow().hide();
+          void command.hide_window();
         }
       }
     });

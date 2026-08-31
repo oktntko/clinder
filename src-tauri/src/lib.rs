@@ -8,9 +8,11 @@ use clipboard_rs::{
     Clipboard, ClipboardContext, ClipboardHandler, ClipboardWatcher, ClipboardWatcherContext,
     ContentFormat, RustImageData, common::RustImage,
 };
-use std::str::FromStr;
+use std::collections::HashMap;
 use std::thread;
 use std::time::Duration;
+use std::{str::FromStr, sync::Mutex};
+use tauri::PhysicalPosition;
 use tauri::{
     AppHandle, Emitter, Manager,
     menu::{Menu, MenuItem},
@@ -22,6 +24,9 @@ use tauri_plugin_store::StoreExt;
 use tokio::time;
 
 use crate::command::WebViewShortcut;
+
+#[derive(Default)]
+pub struct WindowPositionMemory(pub Mutex<HashMap<String, PhysicalPosition<i32>>>);
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -37,6 +42,7 @@ pub fn run() {
                 })
                 .build(),
         )
+        .manage(WindowPositionMemory::default())
         .setup(move |app: &mut tauri::App| {
             let open_item = MenuItem::with_id(app, "open", "Open", true, None::<&str>)?;
             let hide_item = MenuItem::with_id(app, "hide", "Hide", true, None::<&str>)?;
@@ -51,13 +57,16 @@ pub fn run() {
                 .on_menu_event(|_app_handle, event| match event.id.as_ref() {
                     "open" => {
                         if let Some(window) = _app_handle.get_webview_window("main") {
-                            let _ = window.show();
-                            let _ = window.set_focus();
+                            if !window.is_visible().unwrap_or(false) {
+                                let _ = command::open_window(_app_handle.clone());
+                            }
                         }
                     }
                     "hide" => {
                         if let Some(window) = _app_handle.get_webview_window("main") {
-                            let _ = window.hide();
+                            if window.is_visible().unwrap_or(false) {
+                                let _ = command::hide_window(_app_handle.clone());
+                            }
                         }
                     }
                     "quit" => {
@@ -148,6 +157,8 @@ pub fn run() {
             command::send_files,
             command::paste_files,
             command::update_global_shortcut_toggle_window,
+            command::open_window,
+            command::hide_window,
             command::restart_app,
             command::list_system_font,
             command::get_real_app_local_data_dir,

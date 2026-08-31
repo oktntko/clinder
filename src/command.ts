@@ -115,6 +115,14 @@ async function update_global_shortcut_toggle_window(new_shortcut_web_view: Short
   return invoke('update_global_shortcut_toggle_window', { new_shortcut_web_view });
 }
 
+async function open_window() {
+  return invoke('open_window');
+}
+
+async function hide_window() {
+  return invoke('hide_window');
+}
+
 //////////////////// ////////////////////
 // その他
 //////////////////// ////////////////////
@@ -154,6 +162,8 @@ export default {
   send_files,
   paste_files,
   update_global_shortcut_toggle_window,
+  open_window,
+  hide_window,
   restart_app,
   list_system_font,
   get_real_app_local_data_dir,
