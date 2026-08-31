@@ -10,7 +10,7 @@ import { createPortal } from 'react-dom';
 import type { Position } from '~/plugin/dialogContext';
 
 import { FOCUSABLE_SELECTOR } from '~/App';
-import invoke, { type Clip, type Searched } from '~/command';
+import { command, type Clip, type Searched } from '~/command';
 import { Button } from '~/component/Button';
 import { cn, usePortalTarget } from '~/lib/utils';
 import { useDialog } from '~/plugin/useDialog';
@@ -34,7 +34,7 @@ export function Clipboard({
 
   const search = useCallback(async () => {
     try {
-      const _clipboard = await invoke.search_clipboard({
+      const _clipboard = await command.search_clipboard({
         query,
         search_mode: props.searchMode,
         content_type: props.searchContentType,
@@ -70,14 +70,14 @@ export function Clipboard({
 
   const deleteClip = useCallback(async function (clip: Clip) {
     setClipboard((clipboard) => clipboard.filter((item) => item.clip.id !== clip.id));
-    void invoke.delete_clip(clip);
+    void command.delete_clip(clip);
   }, []);
 
   const clearClipBoard = useCallback(
     async function () {
       await $dialog.confirm.warn('Are you sure you want to clear all clipboard history?');
 
-      await invoke.clear_clipboard();
+      await command.clear_clipboard();
       setClipboard([]);
     },
     [$dialog],
@@ -88,7 +88,7 @@ export function Clipboard({
     setClipboard((clipboard) =>
       clipboard.map((item) => (item.clip.id === clip.id ? { ...item, clip: updatedClip } : item)),
     );
-    return invoke.update_clip_bookmark({ ...updatedClip });
+    return command.update_clip_bookmark({ ...updatedClip });
   }, []);
 
   const showPasteMenu = useCallback(
@@ -223,11 +223,11 @@ export function Clipboard({
         const selected = clipboard[cursor];
         if (selected != null) {
           if (selected.clip.content_type === 'text') {
-            void invoke.send_text(selected.clip);
+            void command.send_text(selected.clip);
           } else if (selected.clip.content_type === 'image') {
-            void invoke.send_image(selected.clip);
+            void command.send_image(selected.clip);
           } else {
-            void invoke.send_files(selected.clip);
+            void command.send_files(selected.clip);
           }
         }
         return;
@@ -238,11 +238,11 @@ export function Clipboard({
         const selected = clipboard[cursor];
         if (selected != null) {
           if (selected.clip.content_type === 'text') {
-            void invoke.paste_text(selected.clip);
+            void command.paste_text(selected.clip);
           } else if (selected.clip.content_type === 'image') {
-            void invoke.paste_image(selected.clip);
+            void command.paste_image(selected.clip);
           } else {
-            void invoke.paste_files(selected.clip);
+            void command.paste_files(selected.clip);
           }
         }
         return;
@@ -527,11 +527,11 @@ export function Clipboard({
                   onClick={() => {
                     setCursor(i);
                     if (item.clip.content_type === 'text') {
-                      void invoke.paste_text(item.clip);
+                      void command.paste_text(item.clip);
                     } else if (item.clip.content_type === 'image') {
-                      void invoke.paste_image(item.clip);
+                      void command.paste_image(item.clip);
                     } else {
-                      void invoke.paste_files(item.clip);
+                      void command.paste_files(item.clip);
                     }
                   }}
                   onKeyDown={(e) => {
@@ -928,7 +928,7 @@ function PasteMenu(props: {
             autoFocus
             className="after:icon-[humbleicons--text]"
             onClick={() => {
-              void invoke.send_text(props.clip);
+              void command.send_text(props.clip);
               props.onSuccess();
             }}
           >
@@ -940,7 +940,7 @@ function PasteMenu(props: {
             type="button"
             className="before:icon-[material-symbols--chat-paste-go-outline-rounded]"
             onClick={() => {
-              void invoke.paste_text(props.clip);
+              void command.paste_text(props.clip);
               props.onSuccess();
             }}
           >
@@ -954,7 +954,7 @@ function PasteMenu(props: {
             autoFocus={!props.clip.plain_text}
             className="after:icon-[humbleicons--image]"
             onClick={() => {
-              void invoke.send_image(props.clip);
+              void command.send_image(props.clip);
               props.onSuccess();
             }}
           >
@@ -966,7 +966,7 @@ function PasteMenu(props: {
             type="button"
             className="before:icon-[material-symbols--chat-paste-go-outline-rounded]"
             onClick={() => {
-              void invoke.paste_image(props.clip);
+              void command.paste_image(props.clip);
               props.onSuccess();
             }}
           >
@@ -1010,7 +1010,7 @@ function PasteMenu(props: {
             autoFocus={!props.clip.plain_text && !props.clip.image_hash}
             className="after:icon-[humbleicons--folder]"
             onClick={() => {
-              void invoke.send_files(props.clip);
+              void command.send_files(props.clip);
               props.onSuccess();
             }}
           >
@@ -1022,7 +1022,7 @@ function PasteMenu(props: {
             type="button"
             className="before:icon-[material-symbols--chat-paste-go-outline-rounded]"
             onClick={() => {
-              void invoke.paste_files(props.clip);
+              void command.paste_files(props.clip);
               props.onSuccess();
             }}
           >

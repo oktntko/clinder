@@ -3,7 +3,7 @@ import { appLocalDataDir as getAppLocalDataDir } from '@tauri-apps/api/path';
 import { Store } from '@tauri-apps/plugin-store';
 import { useCallback, useEffect, useState } from 'react';
 
-import invoke, { type ContentType, type SearchMode } from '~/command';
+import { command, type ContentType, type SearchMode } from '~/command';
 
 export type Theme = 'light' | 'dark';
 export type Page = 'clipboard' | 'setting' | 'information';
@@ -445,7 +445,7 @@ export function useStore() {
           setFont(v);
           applyFont(v);
         });
-      void invoke.list_system_font().then(setSystemFontList);
+      void command.list_system_font().then(setSystemFontList);
       void store
         ?.get<number>(STORE.appearance.MIN_HEIGHT)
         .then((v) => setMinHeight(v ?? defaultMinHeight));
@@ -469,7 +469,7 @@ export function useStore() {
         ?.get<boolean>(STORE.behavior.TRIM_FINAL_NEWLINES)
         .then((v) => setTrimFinalNewlines(v ?? defaultTrimFinalNewlines));
 
-      void invoke.get_ocr_language().then(setOCR);
+      void command.get_ocr_language().then(setOCR);
       void store
         ?.get<boolean>(STORE.behavior.ENABLE_OCR)
         .then((v) => setEnableOCR(v ?? defaultEnableOCR));
@@ -483,8 +483,8 @@ export function useStore() {
         .then((v) => setSearchBookmark(v ?? [true, false]));
 
       void getVersion().then(setVersion);
-      void invoke.get_real_app_local_data_dir().then(setRealAppLocalDataDir);
-      void invoke.get_real_app_data_dir().then(setRealAppDataDir);
+      void command.get_real_app_local_data_dir().then(setRealAppLocalDataDir);
+      void command.get_real_app_data_dir().then(setRealAppDataDir);
       void getAppLocalDataDir().then(setAppLocalDataDir);
 
       await store

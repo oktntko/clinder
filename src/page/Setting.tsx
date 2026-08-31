@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 
-import invoke from '~/command';
+import { command } from '~/command';
 import { Button } from '~/component/Button';
 import { Checkbox, Input, Radio } from '~/component/Input';
 import { cn, sleep } from '~/lib/utils';
@@ -216,7 +216,7 @@ export function Setting(props: SettingProps) {
                       `Trim Final Newlines ${e.target.checked ? 'enabled' : 'disabled'} successfully.\nDo you want to restart now?`,
                     );
 
-                    return invoke.restart_app();
+                    return command.restart_app();
                   }}
                 >
                   enabled
@@ -264,7 +264,7 @@ export function Setting(props: SettingProps) {
                       `OCR ${e.target.checked ? 'enabled' : 'disabled'} successfully.\nDo you want to restart now?`,
                     );
 
-                    return invoke.restart_app();
+                    return command.restart_app();
                   }}
                 >
                   enabled
@@ -308,7 +308,7 @@ export function Setting(props: SettingProps) {
                       );
                   }
 
-                  return invoke
+                  return command
                     .update_global_shortcut_toggle_window(shortcut)
                     .then(() => props.setGlobalShortcutToggleWindow(shortcut));
                 },

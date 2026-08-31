@@ -1,14 +1,13 @@
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useEffect, useState } from 'react';
 
+import { command } from '~/command';
 import { Footer } from '~/component/Footer';
+import { cn } from '~/lib/utils';
 import { Clipboard } from '~/page/Clipboard';
 import { Information } from '~/page/Information';
 import { Setting } from '~/page/Setting';
 import { useStore } from '~/plugin/useStore';
-
-import command from './command';
-import { cn } from './lib/utils';
 
 function App() {
   const store = useStore();

@@ -150,7 +150,7 @@ async function get_ocr_language(): Promise<string> {
   return invoke('get_ocr_language');
 }
 
-export default {
+export const command = {
   search_clipboard,
   delete_clip,
   clear_clipboard,
