@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import { command } from '~/command';
 import { Button } from '~/component/Button';
@@ -315,13 +315,13 @@ export function Setting(props: SettingProps) {
                 default: defaultGlobalShortcutToggleWindow,
               },
               {
-                title: 'send clipboard',
+                title: 'copy',
                 shortcut: props.shortcutSendClipboard,
                 save: props.saveShortcutSendClipboard,
                 default: defaultShortcutSendClipboard,
               },
               {
-                title: 'send and paste',
+                title: 'paste',
                 shortcut: props.shortcutSendAndPaste,
                 save: props.saveShortcutSendAndPaste,
                 default: defaultShortcutSendAndPaste,
@@ -402,15 +402,15 @@ export function Setting(props: SettingProps) {
                       type="button"
                       set="default"
                       onClick={async () => {
-                        const newShortcut: Shortcut = await $dialog.showModal(
-                          EditShortcutDialog,
-                          (resolve, reject) => ({
+                        const newShortcut: Shortcut = await $dialog.showModal({
+                          Component: EditShortcutDialog,
+                          $props: (resolve, reject) => ({
                             title: x.title,
                             initValue: x.shortcut,
                             onSave: (v) => resolve(v),
                             onCancel: () => reject(),
                           }),
-                        );
+                        });
 
                         try {
                           await x.save(newShortcut);
@@ -555,20 +555,6 @@ function EditShortcutDialog(props: {
   onCancel: () => void;
 }) {
   const [value, setValue] = useState(props.initValue);
-
-  useEffect(() => {
-    function closeDialog(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
-        e.stopPropagation(); // App.tsx の hideWindow に突き抜けないようにする
-      }
-    }
-
-    window.addEventListener('keydown', closeDialog, true);
-
-    return () => {
-      window.removeEventListener('keydown', closeDialog, true);
-    };
-  });
 
   return (
     <div

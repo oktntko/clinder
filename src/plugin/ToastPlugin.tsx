@@ -1,5 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { cn } from '~/lib/utils';
 
@@ -13,20 +12,7 @@ type ToastItem = {
 
 export default function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
-  const [container, setContainer] = useState<HTMLDivElement | null>(null);
   const toastIdRef = useRef(0);
-
-  useEffect(() => {
-    const element = document.createElement('div');
-    element.className =
-      'toast-container pointer-events-none fixed bottom-0 left-1/2 z-10 -translate-x-1/2';
-    document.body.appendChild(element);
-    setContainer(element);
-
-    return () => {
-      element.remove();
-    };
-  }, []);
 
   const removeToast = useCallback((id: number) => {
     setToasts((current) => current.filter((toast) => toast.id !== id));
@@ -73,27 +59,21 @@ export default function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={api}>
       {children}
 
-      {container &&
-        createPortal(
-          <div className="relative">
-            {toasts.map((toast, index, arr) => (
-              <ToastContent
-                key={toast.id}
-                index={arr.length - 1 - index}
-                message={toast.message}
-                set={toast.set}
-                onClose={() => removeToast(toast.id)}
-              />
-            ))}
-          </div>,
-          container,
-        )}
+      {toasts.map((toast, index, arr) => (
+        <ToastContent
+          key={toast.id}
+          index={arr.length - 1 - index}
+          message={toast.message}
+          set={toast.set}
+          onClose={() => removeToast(toast.id)}
+        />
+      ))}
     </ToastContext.Provider>
   );
 }
 
 // React.memo で不要な再レンダリングを防止（index以外の変更時のみ）
-const ToastContent = memo(function ({
+const ToastContent = React.memo(function ({
   index,
   message,
   set,

@@ -106,9 +106,9 @@ export function Clipboard({
       const height = buttonCount * 28 + 4;
       const width = 200;
 
-      return $dialog.showModal(
-        PasteMenu,
-        (resolve) => ({
+      return $dialog.showModal({
+        Component: PasteMenu,
+        $props: (resolve) => ({
           clip,
           showSubContents: props.showSubContents,
           appLocalDataDir: props.appLocalDataDir,
@@ -119,7 +119,7 @@ export function Clipboard({
             resolve('ok');
           },
         }),
-        {
+        options: {
           showCloseButton: false,
           fixed: {
             height,
@@ -127,7 +127,7 @@ export function Clipboard({
             position,
           },
         },
-      );
+      });
     },
     [$dialog, deleteClip, props.showSubContents, props.appLocalDataDir, props.theme],
   );
@@ -822,26 +822,6 @@ function PasteMenu(props: {
   onSuccess: () => void;
   onDelete: (clip: Clip) => void;
 }) {
-  useEffect(() => {
-    function closeDialog(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
-        e.stopPropagation(); // App.tsx の hideWindow に突き抜けないようにする
-      }
-    }
-    function preventContextMenu(e: MouseEvent) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-
-    window.addEventListener('keydown', closeDialog, true);
-    window.addEventListener('contextmenu', preventContextMenu, true);
-
-    return () => {
-      window.removeEventListener('keydown', closeDialog, true);
-      window.removeEventListener('contextmenu', preventContextMenu, true);
-    };
-  });
-
   const cleanupRef = useRef<(() => void) | null>(null);
 
   const refCallback = useCallback((menuRef: HTMLDivElement | null) => {

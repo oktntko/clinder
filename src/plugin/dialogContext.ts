@@ -1,11 +1,6 @@
-import {
-  createContext,
-  type ComponentClass,
-  type ComponentProps,
-  type FunctionComponent,
-} from 'react';
+import { createContext, type ComponentProps } from 'react';
 
-export type ReactComponent = ComponentClass<any> | FunctionComponent<any>;
+export type ReactComponent = React.ComponentType<any>;
 
 export type ColorSet = 'default' | 'positive' | 'warning';
 
@@ -22,6 +17,23 @@ export type WindowDialogProps = WindowDialogOptions & {
   onCancel: (reason?: unknown) => void;
 };
 
+export type DialogContent<T, C extends ReactComponent> = {
+  Component: C;
+  $props?: (
+    resolve: (value: T | PromiseLike<T>) => void,
+    reject: (reason?: unknown) => void,
+  ) => ComponentProps<C>;
+  options?: {
+    closedby?: 'any' | 'closerequest' | 'none';
+    showCloseButton?: boolean;
+    fixed?: {
+      width: number;
+      height: number;
+      position: Position;
+    };
+  };
+};
+
 export type Position = {
   top: number;
   left: number;
@@ -33,26 +45,8 @@ export type DialogPlugin = {
   /**
    * 任意の React コンポーネントをモーダルダイアログとして開きます。
    */
-  showModal: <T, C extends ReactComponent>(
-    Component: C,
-    $props?: (
-      resolve: (value: T | PromiseLike<T>) => void,
-      reject: (reason?: unknown) => void,
-    ) => ComponentProps<C>,
-    options?: {
-      closedby?: 'any' | 'closerequest' | 'none';
-      showCloseButton?: boolean;
-      fixed?: {
-        width: number;
-        height: number;
-        position: Position;
-      };
-    },
-  ) => Promise<T>;
+  showModal: <T, C extends ReactComponent>(args: DialogContent<T, C>) => Promise<T>;
 
-  /**
-   * アラートダイアログ（OKボタンのみ）を表示するユーティリティ
-   */
   alert: {
     open: (
       message: string,
@@ -68,9 +62,6 @@ export type DialogPlugin = {
     ) => Promise<'confirm' | 'cancel'>;
   };
 
-  /**
-   * 確認ダイアログ（YES/NOなどのボタン）を表示するユーティリティ
-   */
   confirm: {
     open: (
       message: string,
