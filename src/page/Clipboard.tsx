@@ -1,31 +1,49 @@
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import { dirname, join } from '@tauri-apps/api/path';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { openPath } from '@tauri-apps/plugin-opener';
 import mediumZoom from 'medium-zoom';
+import path from 'path-browserify-esm';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
 import type { Position } from '~/plugin/dialogContext';
 
 import { FOCUSABLE_SELECTOR } from '~/App';
-import invoke, { type Clip, type Searched } from '~/command';
+import { command, type Clip, type Searched } from '~/command';
 import { Button } from '~/component/Button';
 import { cn, usePortalTarget } from '~/lib/utils';
 import { useDialog } from '~/plugin/useDialog';
-import { matchShortcut, type Theme, type useStore } from '~/plugin/useStore';
+import { useStore } from '~/plugin/useStore';
 
-type ClipboardProps = ReturnType<typeof useStore> & {};
+export function Clipboard() {
+  const {
+    searchMode,
+    saveSearchMode,
+    searchContentType,
+    saveSearchContentType,
+    searchBookmark,
+    saveSearchBookmark,
+    wrapTextAutomatically,
+    saveWrapTextAutomatically,
+    showSubContents,
+    saveShowSubContents,
+    matchShortcut,
+    shortcutShowPasteMenu,
+    shortcutSendClipboard,
+    shortcutSendAndPaste,
+    shortcutDeleteClip,
+    shortcutClearClipboard,
+    shortcutToggleClipBookmark,
+    shortcutToggleSearchContentTypeText,
+    shortcutToggleSearchContentTypeImage,
+    shortcutToggleSearchContentTypeFiles,
+    shortcutToggleSearchBookmark,
+    shortcutToggleSearchMode,
+    shortcutToggleWrapTextAutomatically,
+    shortcutToggleShowSubContents,
+  } = useStore();
 
-export function Clipboard({
-  saveSearchContentType,
-  saveSearchBookmark,
-  saveSearchMode,
-  saveWrapTextAutomatically,
-  saveShowSubContents,
-  ...props
-}: ClipboardProps) {
   const $dialog = useDialog();
 
   const [query, setQuery] = useState('');
@@ -34,18 +52,18 @@ export function Clipboard({
 
   const search = useCallback(async () => {
     try {
-      const _clipboard = await invoke.search_clipboard({
+      const _clipboard = await command.search_clipboard({
         query,
-        search_mode: props.searchMode,
-        content_type: props.searchContentType,
-        bookmark: props.searchBookmark,
+        search_mode: searchMode,
+        content_type: searchContentType,
+        bookmark: searchBookmark,
       });
       setClipboard(_clipboard);
       setCursor(0);
     } catch (err) {
       console.error('Failed to search history:', err);
     }
-  }, [query, props.searchMode, props.searchContentType, props.searchBookmark]);
+  }, [query, searchMode, searchContentType, searchBookmark]);
 
   useEffect(() => {
     setCursor((prev) => {
@@ -70,14 +88,14 @@ export function Clipboard({
 
   const deleteClip = useCallback(async function (clip: Clip) {
     setClipboard((clipboard) => clipboard.filter((item) => item.clip.id !== clip.id));
-    void invoke.delete_clip(clip);
+    void command.delete_clip(clip);
   }, []);
 
   const clearClipBoard = useCallback(
     async function () {
       await $dialog.confirm.warn('Are you sure you want to clear all clipboard history?');
 
-      await invoke.clear_clipboard();
+      await command.clear_clipboard();
       setClipboard([]);
     },
     [$dialog],
@@ -88,7 +106,7 @@ export function Clipboard({
     setClipboard((clipboard) =>
       clipboard.map((item) => (item.clip.id === clip.id ? { ...item, clip: updatedClip } : item)),
     );
-    return invoke.update_clip_bookmark({ ...updatedClip });
+    return command.update_clip_bookmark({ ...updatedClip });
   }, []);
 
   const showPasteMenu = useCallback(
@@ -97,7 +115,7 @@ export function Clipboard({
         (clip.plain_text ? 2 : 0) + // plain_text
         (clip.image_hash ? 2 : 0) + // image_hash
         (clip.files.length > 0 ? 2 : 0) + // files
-        (clip.image_hash && (clip.content_type === 'image' || props.showSubContents) ? 1 : 0) + // zoom image
+        (clip.image_hash && (clip.content_type === 'image' || showSubContents) ? 1 : 0) + // zoom image
         (clip.image_hash ? 1 : 0) + // open image
         (clip.files.length === 1 ? 1 : 0) + // open file
         (clip.files.length > 0 ? 1 : 0) + // open parent directory
@@ -106,20 +124,17 @@ export function Clipboard({
       const height = buttonCount * 28 + 4;
       const width = 200;
 
-      return $dialog.showModal(
-        PasteMenu,
-        (resolve) => ({
+      return $dialog.showModal({
+        Component: PasteMenu,
+        $props: (resolve) => ({
           clip,
-          showSubContents: props.showSubContents,
-          appLocalDataDir: props.appLocalDataDir,
-          theme: props.theme,
           onSuccess: () => resolve('ok'),
           onDelete: (clip) => {
             void deleteClip(clip);
             resolve('ok');
           },
         }),
-        {
+        options: {
           showCloseButton: false,
           fixed: {
             height,
@@ -127,54 +142,52 @@ export function Clipboard({
             position,
           },
         },
-      );
+      });
     },
-    [$dialog, deleteClip, props.showSubContents, props.appLocalDataDir, props.theme],
+    [$dialog, deleteClip, showSubContents],
   );
 
   const toggleSearchContentTypeText = useCallback(async () => {
     return saveSearchContentType(
-      props.searchContentType.some((x) => x === 'text')
-        ? props.searchContentType.filter((x) => x !== 'text')
-        : props.searchContentType.concat(['text']),
+      searchContentType.some((x) => x === 'text')
+        ? searchContentType.filter((x) => x !== 'text')
+        : searchContentType.concat(['text']),
     );
-  }, [saveSearchContentType, props.searchContentType]);
+  }, [searchContentType, saveSearchContentType]);
 
   const toggleSearchContentTypeImage = useCallback(async () => {
     return saveSearchContentType(
-      props.searchContentType.some((x) => x === 'image')
-        ? props.searchContentType.filter((x) => x !== 'image')
-        : props.searchContentType.concat(['image']),
+      searchContentType.some((x) => x === 'image')
+        ? searchContentType.filter((x) => x !== 'image')
+        : searchContentType.concat(['image']),
     );
-  }, [saveSearchContentType, props.searchContentType]);
+  }, [searchContentType, saveSearchContentType]);
 
   const toggleSearchContentTypeFiles = useCallback(async () => {
     return saveSearchContentType(
-      props.searchContentType.some((x) => x === 'files')
-        ? props.searchContentType.filter((x) => x !== 'files')
-        : props.searchContentType.concat(['files']),
+      searchContentType.some((x) => x === 'files')
+        ? searchContentType.filter((x) => x !== 'files')
+        : searchContentType.concat(['files']),
     );
-  }, [saveSearchContentType, props.searchContentType]);
+  }, [searchContentType, saveSearchContentType]);
 
   const toggleSearchBookmark = useCallback(async () => {
     return saveSearchBookmark(
-      props.searchBookmark.length === 1 && props.searchBookmark[0] === true
-        ? [true, false]
-        : [true],
+      searchBookmark.length === 1 && searchBookmark[0] === true ? [true, false] : [true],
     );
-  }, [saveSearchBookmark, props.searchBookmark]);
+  }, [searchBookmark, saveSearchBookmark]);
 
   const toggleSearchMode = useCallback(async () => {
-    return saveSearchMode(props.searchMode === 'fuzzy' ? 'substring' : 'fuzzy');
-  }, [saveSearchMode, props.searchMode]);
+    return saveSearchMode(searchMode === 'fuzzy' ? 'substring' : 'fuzzy');
+  }, [searchMode, saveSearchMode]);
 
   const toggleWrapTextAutomatically = useCallback(async () => {
-    return saveWrapTextAutomatically(!props.wrapTextAutomatically);
-  }, [saveWrapTextAutomatically, props.wrapTextAutomatically]);
+    return saveWrapTextAutomatically(!wrapTextAutomatically);
+  }, [wrapTextAutomatically, saveWrapTextAutomatically]);
 
   const toggleShowSubContents = useCallback(async () => {
-    return saveShowSubContents(!props.showSubContents);
-  }, [saveShowSubContents, props.showSubContents]);
+    return saveShowSubContents(!showSubContents);
+  }, [showSubContents, saveShowSubContents]);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -185,7 +198,7 @@ export function Clipboard({
 
       const modalDialog = document.querySelector('dialog:modal') as HTMLDialogElement | null;
 
-      if (matchShortcut(e, props.shortcutShowPasteMenu)) {
+      if (matchShortcut(e, shortcutShowPasteMenu)) {
         e.preventDefault();
         if (modalDialog == null) {
           const selected = clipboard[cursor];
@@ -218,37 +231,37 @@ export function Clipboard({
         return;
       }
 
-      if (matchShortcut(e, props.shortcutSendClipboard)) {
+      if (matchShortcut(e, shortcutSendClipboard)) {
         e.preventDefault();
         const selected = clipboard[cursor];
         if (selected != null) {
           if (selected.clip.content_type === 'text') {
-            void invoke.send_text(selected.clip);
+            void command.send_text(selected.clip);
           } else if (selected.clip.content_type === 'image') {
-            void invoke.send_image(selected.clip);
+            void command.send_image(selected.clip);
           } else {
-            void invoke.send_files(selected.clip);
+            void command.send_files(selected.clip);
           }
         }
         return;
       }
 
-      if (matchShortcut(e, props.shortcutSendAndPaste)) {
+      if (matchShortcut(e, shortcutSendAndPaste)) {
         e.preventDefault();
         const selected = clipboard[cursor];
         if (selected != null) {
           if (selected.clip.content_type === 'text') {
-            void invoke.paste_text(selected.clip);
+            void command.paste_text(selected.clip);
           } else if (selected.clip.content_type === 'image') {
-            void invoke.paste_image(selected.clip);
+            void command.paste_image(selected.clip);
           } else {
-            void invoke.paste_files(selected.clip);
+            void command.paste_files(selected.clip);
           }
         }
         return;
       }
 
-      if (matchShortcut(e, props.shortcutDeleteClip)) {
+      if (matchShortcut(e, shortcutDeleteClip)) {
         e.preventDefault();
         const selected = clipboard[cursor];
         if (selected != null) {
@@ -257,13 +270,13 @@ export function Clipboard({
         return;
       }
 
-      if (matchShortcut(e, props.shortcutClearClipboard)) {
+      if (matchShortcut(e, shortcutClearClipboard)) {
         e.preventDefault();
         void clearClipBoard();
         return;
       }
 
-      if (matchShortcut(e, props.shortcutToggleClipBookmark)) {
+      if (matchShortcut(e, shortcutToggleClipBookmark)) {
         e.preventDefault();
         const selected = clipboard[cursor];
         if (selected != null) {
@@ -272,37 +285,37 @@ export function Clipboard({
         return;
       }
 
-      if (matchShortcut(e, props.shortcutToggleSearchContentTypeText)) {
+      if (matchShortcut(e, shortcutToggleSearchContentTypeText)) {
         e.preventDefault();
         return toggleSearchContentTypeText();
       }
 
-      if (matchShortcut(e, props.shortcutToggleSearchContentTypeImage)) {
+      if (matchShortcut(e, shortcutToggleSearchContentTypeImage)) {
         e.preventDefault();
         return toggleSearchContentTypeImage();
       }
 
-      if (matchShortcut(e, props.shortcutToggleSearchContentTypeFiles)) {
+      if (matchShortcut(e, shortcutToggleSearchContentTypeFiles)) {
         e.preventDefault();
         return toggleSearchContentTypeFiles();
       }
 
-      if (matchShortcut(e, props.shortcutToggleSearchBookmark)) {
+      if (matchShortcut(e, shortcutToggleSearchBookmark)) {
         e.preventDefault();
         return toggleSearchBookmark();
       }
 
-      if (matchShortcut(e, props.shortcutToggleSearchMode)) {
+      if (matchShortcut(e, shortcutToggleSearchMode)) {
         e.preventDefault();
         return toggleSearchMode();
       }
 
-      if (matchShortcut(e, props.shortcutToggleWrapTextAutomatically)) {
+      if (matchShortcut(e, shortcutToggleWrapTextAutomatically)) {
         e.preventDefault();
         return toggleWrapTextAutomatically();
       }
 
-      if (matchShortcut(e, props.shortcutToggleShowSubContents)) {
+      if (matchShortcut(e, shortcutToggleShowSubContents)) {
         e.preventDefault();
         return toggleShowSubContents();
       }
@@ -335,19 +348,19 @@ export function Clipboard({
   }, [
     cursor,
     clipboard,
-    props.shortcutSendAndPaste,
-    props.shortcutSendClipboard,
-    props.shortcutDeleteClip,
-    props.shortcutClearClipboard,
-    props.shortcutToggleClipBookmark,
-    props.shortcutShowPasteMenu,
-    props.shortcutToggleSearchContentTypeText,
-    props.shortcutToggleSearchContentTypeImage,
-    props.shortcutToggleSearchContentTypeFiles,
-    props.shortcutToggleSearchBookmark,
-    props.shortcutToggleSearchMode,
-    props.shortcutToggleWrapTextAutomatically,
-    props.shortcutToggleShowSubContents,
+    shortcutSendAndPaste,
+    shortcutSendClipboard,
+    shortcutDeleteClip,
+    shortcutClearClipboard,
+    shortcutToggleClipBookmark,
+    shortcutShowPasteMenu,
+    shortcutToggleSearchContentTypeText,
+    shortcutToggleSearchContentTypeImage,
+    shortcutToggleSearchContentTypeFiles,
+    shortcutToggleSearchBookmark,
+    shortcutToggleSearchMode,
+    shortcutToggleWrapTextAutomatically,
+    shortcutToggleShowSubContents,
     deleteClip,
     clearClipBoard,
     toggleClipBookmark,
@@ -359,6 +372,7 @@ export function Clipboard({
     toggleSearchMode,
     toggleWrapTextAutomatically,
     toggleShowSubContents,
+    matchShortcut,
   ]);
 
   // アクティブな要素を参照するための Ref
@@ -404,7 +418,7 @@ export function Clipboard({
         <Button
           title="fuzzy search"
           type="button"
-          set={props.searchMode === 'fuzzy' ? 'positive' : 'ghost'}
+          set={searchMode === 'fuzzy' ? 'positive' : 'ghost'}
           onClick={(e) => {
             e.preventDefault();
             return toggleSearchMode();
@@ -427,7 +441,7 @@ export function Clipboard({
           <Button
             title="text"
             type="button"
-            set={props.searchContentType.some((x) => x === 'text') ? 'positive' : 'ghost'}
+            set={searchContentType.some((x) => x === 'text') ? 'positive' : 'ghost'}
             onClick={(e) => {
               e.preventDefault();
               return toggleSearchContentTypeText();
@@ -438,7 +452,7 @@ export function Clipboard({
           <Button
             title="image"
             type="button"
-            set={props.searchContentType.some((x) => x === 'image') ? 'positive' : 'ghost'}
+            set={searchContentType.some((x) => x === 'image') ? 'positive' : 'ghost'}
             onClick={(e) => {
               e.preventDefault();
               return toggleSearchContentTypeImage();
@@ -449,7 +463,7 @@ export function Clipboard({
           <Button
             title="files"
             type="button"
-            set={props.searchContentType.some((x) => x === 'files') ? 'positive' : 'ghost'}
+            set={searchContentType.some((x) => x === 'files') ? 'positive' : 'ghost'}
             onClick={(e) => {
               e.preventDefault();
               return toggleSearchContentTypeFiles();
@@ -461,11 +475,7 @@ export function Clipboard({
           <Button
             title="search_bookmark"
             type="button"
-            set={
-              props.searchBookmark.length === 1 && props.searchBookmark[0] === true
-                ? 'positive'
-                : 'ghost'
-            }
+            set={searchBookmark.length === 1 && searchBookmark[0] === true ? 'positive' : 'ghost'}
             onClick={(e) => {
               e.preventDefault();
               return toggleSearchBookmark();
@@ -527,11 +537,11 @@ export function Clipboard({
                   onClick={() => {
                     setCursor(i);
                     if (item.clip.content_type === 'text') {
-                      void invoke.paste_text(item.clip);
+                      void command.paste_text(item.clip);
                     } else if (item.clip.content_type === 'image') {
-                      void invoke.paste_image(item.clip);
+                      void command.paste_image(item.clip);
                     } else {
-                      void invoke.paste_files(item.clip);
+                      void command.paste_files(item.clip);
                     }
                   }}
                   onKeyDown={(e) => {
@@ -540,21 +550,17 @@ export function Clipboard({
                 >
                   {item.clip.content_type === 'text' ? (
                     <>
-                      <HighlightText {...{ ...props, item }} />
-                      {item.clip.image_hash && props.showSubContents && (
-                        <ShrinkImage {...{ ...props, item }} />
-                      )}
+                      <HighlightText item={item} />
+                      {item.clip.image_hash && showSubContents && <ShrinkImage item={item} />}
                     </>
                   ) : item.clip.content_type === 'image' ? (
                     <>
-                      <ShrinkImage {...{ ...props, item }} />
-                      {item.clip.plain_text && props.showSubContents && (
-                        <HighlightText {...{ ...props, item }} />
-                      )}
+                      <ShrinkImage item={item} />
+                      {item.clip.plain_text && showSubContents && <HighlightText item={item} />}
                     </>
                   ) : (
                     /* files */
-                    <FileList {...{ ...props, item }} />
+                    <FileList item={item} />
                   )}
                 </button>
 
@@ -616,7 +622,7 @@ export function Clipboard({
               'flex h-full w-full grow items-center justify-center py-1',
               'text-slate-500',
               'dark:text-zinc-400',
-              props.wrapTextAutomatically ? 'wrap-anywhere whitespace-pre-wrap' : '',
+              wrapTextAutomatically ? 'wrap-anywhere whitespace-pre-wrap' : '',
             )}
           >
             No matches found
@@ -630,10 +636,10 @@ export function Clipboard({
             <Button
               title="wrap text"
               type="button"
-              set={props.wrapTextAutomatically ? 'positive' : 'ghost'}
+              set={wrapTextAutomatically ? 'positive' : 'ghost'}
               onClick={(e) => {
                 e.preventDefault();
-                void saveWrapTextAutomatically(!props.wrapTextAutomatically);
+                void saveWrapTextAutomatically(!wrapTextAutomatically);
               }}
             >
               <span className="icon-[pajamas--soft-wrap] size-4"></span>
@@ -642,10 +648,10 @@ export function Clipboard({
             <Button
               title="show sub contents"
               type="button"
-              set={props.showSubContents ? 'positive' : 'ghost'}
+              set={showSubContents ? 'positive' : 'ghost'}
               onClick={(e) => {
                 e.preventDefault();
-                void saveShowSubContents(!props.showSubContents);
+                void saveShowSubContents(!showSubContents);
               }}
             >
               <span className="icon-[fluent--content-view-32-regular] size-4"></span>
@@ -676,18 +682,15 @@ export function Clipboard({
   );
 }
 
-type ClipContainerProps = Pick<
-  ReturnType<typeof useStore>,
-  'wrapTextAutomatically' | 'appLocalDataDir' | 'showSubContents'
-> & { item: Searched };
+type ClipContainerProps = { item: Searched };
 
 function HighlightText(props: ClipContainerProps) {
+  const { wrapTextAutomatically } = useStore();
+
   if (!props.item.indices || props.item.indices.length === 0) {
     return (
       <span
-        className={cn(
-          props.wrapTextAutomatically ? 'wrap-anywhere whitespace-pre-wrap' : 'line-clamp-1',
-        )}
+        className={cn(wrapTextAutomatically ? 'wrap-anywhere whitespace-pre-wrap' : 'line-clamp-1')}
       >
         {props.item.trimmed_begin ? '... ' : ''}
         {props.item.snippet}
@@ -739,9 +742,7 @@ function HighlightText(props: ClipContainerProps) {
 
   return (
     <span
-      className={cn(
-        props.wrapTextAutomatically ? 'wrap-anywhere whitespace-pre-wrap' : 'line-clamp-1',
-      )}
+      className={cn(wrapTextAutomatically ? 'wrap-anywhere whitespace-pre-wrap' : 'line-clamp-1')}
     >
       {props.item.trimmed_begin ? '... ' : ''}
       {elements}
@@ -749,40 +750,12 @@ function HighlightText(props: ClipContainerProps) {
   );
 }
 
-function useImageSrc({
-  image_hash,
-  appLocalDataDir,
-}: {
-  image_hash: string;
-  appLocalDataDir: string;
-}) {
-  const [imageFullPath, setImageFullPath] = useState('');
-
-  useEffect(() => {
-    if (!image_hash) {
-      return;
-    }
-
-    void (async () => {
-      const path = await join(appLocalDataDir, 'clipboard_image', `${image_hash}.png`);
-      setImageFullPath(path);
-    })();
-
-    return () => {
-      //
-    };
-  }, [image_hash, appLocalDataDir]);
-
-  return {
-    imageFullPath,
-  };
-}
-
 function ShrinkImage(props: ClipContainerProps) {
-  const { imageFullPath } = useImageSrc({
-    appLocalDataDir: props.appLocalDataDir,
-    image_hash: props.item.clip.image_hash,
-  });
+  const { appLocalDataDir } = useStore();
+
+  const imageFullPath = props.item.clip.image_hash
+    ? path.join(appLocalDataDir, 'clipboard_image', `${props.item.clip.image_hash}.png`)
+    : '';
 
   return (
     imageFullPath && (
@@ -814,33 +787,8 @@ function FileList(props: ClipContainerProps) {
   );
 }
 
-function PasteMenu(props: {
-  clip: Clip;
-  showSubContents: boolean;
-  appLocalDataDir: string;
-  theme: Theme;
-  onSuccess: () => void;
-  onDelete: (clip: Clip) => void;
-}) {
-  useEffect(() => {
-    function closeDialog(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
-        e.stopPropagation(); // App.tsx の hideWindow に突き抜けないようにする
-      }
-    }
-    function preventContextMenu(e: MouseEvent) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-
-    window.addEventListener('keydown', closeDialog, true);
-    window.addEventListener('contextmenu', preventContextMenu, true);
-
-    return () => {
-      window.removeEventListener('keydown', closeDialog, true);
-      window.removeEventListener('contextmenu', preventContextMenu, true);
-    };
-  });
+function PasteMenu(props: { clip: Clip; onSuccess: () => void; onDelete: (clip: Clip) => void }) {
+  const { showSubContents, theme, appLocalDataDir } = useStore();
 
   const cleanupRef = useRef<(() => void) | null>(null);
 
@@ -890,26 +838,11 @@ function PasteMenu(props: {
     }
   }, []);
 
-  const [dir, setDir] = useState('');
-  useEffect(() => {
-    if (!props.clip.files[0]) {
-      return;
-    }
+  const dir = props.clip.files[0] ? path.dirname(props.clip.files[0]) : '';
 
-    void (async () => {
-      const path = await dirname(props.clip.files[0]);
-      setDir(path);
-    })();
-
-    return () => {
-      //
-    };
-  }, [props.clip.files]);
-
-  const { imageFullPath } = useImageSrc({
-    appLocalDataDir: props.appLocalDataDir,
-    image_hash: props.clip.image_hash,
-  });
+  const imageFullPath = props.clip.image_hash
+    ? path.join(appLocalDataDir, 'clipboard_image', `${props.clip.image_hash}.png`)
+    : '';
 
   return (
     <div
@@ -917,7 +850,7 @@ function PasteMenu(props: {
       className={cn(
         'border-slate-300 bg-white text-slate-900',
         'dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100',
-        'rounded-lg px-0.75 py-px shadow-md',
+        'rounded-lg shadow-md',
         'border text-sm',
       )}
     >
@@ -928,7 +861,7 @@ function PasteMenu(props: {
             autoFocus
             className="after:icon-[humbleicons--text]"
             onClick={() => {
-              void invoke.send_text(props.clip);
+              void command.send_text(props.clip);
               props.onSuccess();
             }}
           >
@@ -940,7 +873,7 @@ function PasteMenu(props: {
             type="button"
             className="before:icon-[material-symbols--chat-paste-go-outline-rounded]"
             onClick={() => {
-              void invoke.paste_text(props.clip);
+              void command.paste_text(props.clip);
               props.onSuccess();
             }}
           >
@@ -954,7 +887,7 @@ function PasteMenu(props: {
             autoFocus={!props.clip.plain_text}
             className="after:icon-[humbleicons--image]"
             onClick={() => {
-              void invoke.send_image(props.clip);
+              void command.send_image(props.clip);
               props.onSuccess();
             }}
           >
@@ -966,31 +899,30 @@ function PasteMenu(props: {
             type="button"
             className="before:icon-[material-symbols--chat-paste-go-outline-rounded]"
             onClick={() => {
-              void invoke.paste_image(props.clip);
+              void command.paste_image(props.clip);
               props.onSuccess();
             }}
           >
             paste image
           </MenuButton>
         )}
-        {props.clip.image_hash &&
-          (props.clip.content_type === 'image' || props.showSubContents) && (
-            <MenuButton
-              type="button"
-              className="before:icon-[akar-icons--zoom-in]"
-              onClick={async () => {
-                const zoom = mediumZoom(`#image-${props.clip.id}`, {
-                  background: props.theme === 'dark' ? '#000' : '#fff',
-                });
+        {props.clip.image_hash && (props.clip.content_type === 'image' || showSubContents) && (
+          <MenuButton
+            type="button"
+            className="before:icon-[akar-icons--zoom-in]"
+            onClick={async () => {
+              const zoom = mediumZoom(`#image-${props.clip.id}`, {
+                background: theme === 'dark' ? '#000' : '#fff',
+              });
 
-                void zoom.open();
+              void zoom.open();
 
-                props.onSuccess();
-              }}
-            >
-              zoom image
-            </MenuButton>
-          )}
+              props.onSuccess();
+            }}
+          >
+            zoom image
+          </MenuButton>
+        )}
         {imageFullPath && (
           <MenuButton
             type="button"
@@ -1010,7 +942,7 @@ function PasteMenu(props: {
             autoFocus={!props.clip.plain_text && !props.clip.image_hash}
             className="after:icon-[humbleicons--folder]"
             onClick={() => {
-              void invoke.send_files(props.clip);
+              void command.send_files(props.clip);
               props.onSuccess();
             }}
           >
@@ -1022,7 +954,7 @@ function PasteMenu(props: {
             type="button"
             className="before:icon-[material-symbols--chat-paste-go-outline-rounded]"
             onClick={() => {
-              void invoke.paste_files(props.clip);
+              void command.paste_files(props.clip);
               props.onSuccess();
             }}
           >
@@ -1091,7 +1023,7 @@ function MenuButton({
         'flex items-center justify-start capitalize transition',
         'outline-none first:rounded-t-md last:rounded-b-md',
         'px-8 py-1',
-        'hover:scale-105 focus:scale-105',
+        'group',
         'bg-white text-slate-500',
         'dark:bg-zinc-900 dark:text-zinc-500',
         'hover:text-slate-900 focus:text-slate-900',
@@ -1105,7 +1037,7 @@ function MenuButton({
         className,
       )}
     >
-      {children}
+      <span className="group-focus:font-semibold">{children}</span>
     </button>
   );
 }

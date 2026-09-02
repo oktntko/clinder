@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 
-import type { Shortcut } from './plugin/useStore';
+import type { Shortcut } from '~/plugin/storeContext';
 
 //////////////////// ////////////////////
 // DB 関連
@@ -115,6 +115,14 @@ async function update_global_shortcut_toggle_window(new_shortcut_web_view: Short
   return invoke('update_global_shortcut_toggle_window', { new_shortcut_web_view });
 }
 
+async function open_window() {
+  return invoke('open_window');
+}
+
+async function hide_window() {
+  return invoke('hide_window');
+}
+
 //////////////////// ////////////////////
 // その他
 //////////////////// ////////////////////
@@ -142,7 +150,7 @@ async function get_ocr_language(): Promise<string> {
   return invoke('get_ocr_language');
 }
 
-export default {
+export const command = {
   search_clipboard,
   delete_clip,
   clear_clipboard,
@@ -154,6 +162,8 @@ export default {
   send_files,
   paste_files,
   update_global_shortcut_toggle_window,
+  open_window,
+  hide_window,
   restart_app,
   list_system_font,
   get_real_app_local_data_dir,

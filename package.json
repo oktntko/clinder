@@ -24,6 +24,7 @@
     "@tauri-apps/plugin-store": "~2.4.4",
     "clsx": "^2.1.1",
     "medium-zoom": "^1.1.0",
+    "path-browserify-esm": "^1.0.6",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "tailwind-merge": "^3.6.0"

@@ -1,10 +1,10 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 
-import invoke from '~/command';
+import { command } from '~/command';
 import { Button } from '~/component/Button';
 import { Checkbox, Input, Radio } from '~/component/Input';
 import { cn, sleep } from '~/lib/utils';
-import { useDialog } from '~/plugin/useDialog';
+import { colorClass, iconClass } from '~/plugin/_plugin';
 import {
   defaultFont,
   defaultGlobalShortcutToggleWindow,
@@ -24,15 +24,62 @@ import {
   defaultShortcutToggleSearchContentTypeText,
   defaultShortcutToggleShowSubContents,
   defaultShortcutToggleWrapTextAutomatically,
-  matchShortcut,
   type Shortcut,
-  type useStore,
-} from '~/plugin/useStore';
+} from '~/plugin/storeContext';
+import { useDialog } from '~/plugin/useDialog';
+import { useStore } from '~/plugin/useStore';
 import { useToast } from '~/plugin/useToast';
 
-type SettingProps = ReturnType<typeof useStore> & {};
-
-export function Setting(props: SettingProps) {
+export function Setting() {
+  const {
+    font,
+    systemFontList,
+    saveAndApplyFont,
+    minHeight,
+    saveMinHeight,
+    maxHeight,
+    saveMaxHeight,
+    wrapTextAutomatically,
+    saveWrapTextAutomatically,
+    showSubContents,
+    saveShowSubContents,
+    historySize,
+    saveHistorySize,
+    maxItems,
+    saveMaxItems,
+    trimFinalNewlines,
+    saveTrimFinalNewlines,
+    ocr,
+    enableOCR,
+    saveEnableOCR,
+    globalShortcutToggleWindow,
+    setGlobalShortcutToggleWindow,
+    shortcutSendClipboard,
+    saveShortcutSendClipboard,
+    shortcutSendAndPaste,
+    saveShortcutSendAndPaste,
+    shortcutDeleteClip,
+    saveShortcutDeleteClip,
+    shortcutClearClipboard,
+    saveShortcutClearClipboard,
+    shortcutToggleClipBookmark,
+    saveShortcutToggleClipBookmark,
+    shortcutShowPasteMenu,
+    saveShortcutShowPasteMenu,
+    shortcutToggleSearchContentTypeText,
+    saveShortcutToggleSearchContentTypeText,
+    shortcutToggleSearchContentTypeImage,
+    saveShortcutToggleSearchContentTypeImage,
+    shortcutToggleSearchContentTypeFiles,
+    saveShortcutToggleSearchContentTypeFiles,
+    shortcutToggleSearchBookmark,
+    saveShortcutToggleSearchBookmark,
+    shortcutToggleWrapTextAutomatically,
+    saveShortcutToggleWrapTextAutomatically,
+    shortcutToggleShowSubContents,
+    saveShortcutToggleShowSubContents,
+    matchShortcut,
+  } = useStore();
   const $toast = useToast();
   const $dialog = useDialog();
 
@@ -55,16 +102,16 @@ export function Setting(props: SettingProps) {
                   id="font"
                   type="text"
                   list="systemFontList"
-                  defaultValue={props.font}
+                  defaultValue={font}
                   onChange={(e) => {
                     const newFont = e.target.value;
-                    if (newFont === '' || props.systemFontList.includes(newFont)) {
-                      void props.saveAndApplyFont(newFont);
+                    if (newFont === '' || systemFontList.includes(newFont)) {
+                      void saveAndApplyFont(newFont);
                     }
                   }}
                 />
                 <datalist id="systemFontList">
-                  {props.systemFontList.map((font) => (
+                  {systemFontList.map((font) => (
                     <option key={font} value={font} style={{ fontFamily: `"${font}"` }}>
                       {font}
                     </option>
@@ -75,7 +122,7 @@ export function Setting(props: SettingProps) {
                   type="button"
                   set="default"
                   onClick={async () => {
-                    await props.saveAndApplyFont(defaultFont);
+                    await saveAndApplyFont(defaultFont);
 
                     const input = document.getElementById('font') as HTMLInputElement;
                     input.value = `${defaultFont}`;
@@ -90,9 +137,9 @@ export function Setting(props: SettingProps) {
               id="min height"
               name="Min Height"
               label="min height (min: 100px)"
-              initialValue={props.minHeight}
+              initialValue={minHeight}
               defaultValue={defaultMinHeight}
-              save={props.saveMinHeight}
+              save={saveMinHeight}
               input={{ type: 'number', min: 100 }}
             />
 
@@ -100,9 +147,9 @@ export function Setting(props: SettingProps) {
               id="max height"
               name="Max Height"
               label="max height (min: 150px)"
-              initialValue={props.maxHeight}
+              initialValue={maxHeight}
               defaultValue={defaultMaxHeight}
-              save={props.saveMaxHeight}
+              save={saveMaxHeight}
               input={{ type: 'number', min: 150 }}
             />
 
@@ -114,10 +161,10 @@ export function Setting(props: SettingProps) {
                 <Radio
                   id="wrap"
                   name="wrap text automatically"
-                  checked={props.wrapTextAutomatically}
+                  checked={wrapTextAutomatically}
                   value="true"
                   onChange={async (e) => {
-                    await props.saveWrapTextAutomatically(e.target.value === 'true');
+                    await saveWrapTextAutomatically(e.target.value === 'true');
 
                     return $toast.success('Wrap Text Automatically updated successfully.');
                   }}
@@ -127,10 +174,10 @@ export function Setting(props: SettingProps) {
                 <Radio
                   id="one-line"
                   name="wrap text automatically"
-                  checked={!props.wrapTextAutomatically}
+                  checked={!wrapTextAutomatically}
                   value="false"
                   onChange={async (e) => {
-                    await props.saveWrapTextAutomatically(e.target.value === 'true');
+                    await saveWrapTextAutomatically(e.target.value === 'true');
 
                     return $toast.success('Wrap Text Automatically updated successfully.');
                   }}
@@ -142,16 +189,14 @@ export function Setting(props: SettingProps) {
 
             <div className="flex flex-col gap-0.5">
               <div>
-                <label htmlFor="show sub contents" className="capitalize">
-                  show sub contents (e.g., excel image, ocr text)
-                </label>
+                <div className="capitalize">show sub contents (e.g., excel image, ocr text)</div>
               </div>
               <div className="flex flex-row items-center gap-2">
                 <Checkbox
                   id="show sub contents"
-                  checked={props.showSubContents}
+                  checked={showSubContents}
                   onChange={async (e) => {
-                    await props.saveShowSubContents(e.target.checked);
+                    await saveShowSubContents(e.target.checked);
 
                     return $toast.success(
                       `Show Sub Contents ${e.target.checked ? 'enabled' : 'disabled'} successfully.`,
@@ -172,9 +217,9 @@ export function Setting(props: SettingProps) {
               id="history size"
               name="History Size"
               label="history size (0 = unlimited)"
-              initialValue={props.historySize}
+              initialValue={historySize}
               defaultValue={defaultHistorySize}
-              save={props.saveHistorySize}
+              save={saveHistorySize}
               input={{ type: 'number', min: 0 }}
             >
               <div className="text-xs">
@@ -187,36 +232,43 @@ export function Setting(props: SettingProps) {
               id="max items"
               name="Max Items"
               label="max items (min: 10, max: 100)"
-              initialValue={props.maxItems}
+              initialValue={maxItems}
               defaultValue={defaultMaxItems}
-              save={props.saveMaxItems}
+              save={saveMaxItems}
               input={{ type: 'number', min: 10, max: 100 }}
             />
 
             <div className="flex flex-col gap-0.5">
               <div>
-                <label htmlFor="trim final newlines" className="capitalize">
-                  trim final newlines (requires restart)
-                </label>
+                <div className="capitalize">trim final newlines (requires restart)</div>
               </div>
               <div className="flex flex-row items-center gap-2">
                 <Checkbox
                   id="trim final newlines"
-                  checked={props.trimFinalNewlines}
+                  checked={trimFinalNewlines}
                   onChange={async (e) => {
-                    await props.saveTrimFinalNewlines(e.target.checked);
+                    const checkbox = document.getElementById(
+                      'trim final newlines',
+                    ) as HTMLInputElement;
 
-                    $toast.success(
-                      `Trim Final Newlines ${e.target.checked ? 'enabled' : 'disabled'} successfully.`,
-                    );
+                    try {
+                      checkbox.disabled = true;
+                      await saveTrimFinalNewlines(e.target.checked);
 
-                    await sleep(1000);
+                      $toast.success(
+                        `Trim Final Newlines ${e.target.checked ? 'enabled' : 'disabled'} successfully.`,
+                      );
 
-                    await $dialog.confirm.success(
-                      `Trim Final Newlines ${e.target.checked ? 'enabled' : 'disabled'} successfully.\nDo you want to restart now?`,
-                    );
+                      await sleep(1000);
 
-                    return invoke.restart_app();
+                      await $dialog.confirm.success(
+                        `Trim Final Newlines ${e.target.checked ? 'enabled' : 'disabled'} successfully.\nDo you want to restart now?`,
+                      );
+
+                      return command.restart_app();
+                    } finally {
+                      checkbox.disabled = false;
+                    }
                   }}
                 >
                   enabled
@@ -226,56 +278,12 @@ export function Setting(props: SettingProps) {
 
             <div className="flex flex-col gap-0.5">
               <div>
-                <label htmlFor="enable OCR" className="capitalize">
-                  enable OCR (requires restart)
-                </label>
+                <div className="capitalize">enable OCR (requires restart)</div>
                 <div className="text-xs">
                   Extracts text from images so you can search them like regular text.
                 </div>
-                <div
-                  className={cn(
-                    'flex flex-col items-start gap-1 rounded-lg text-xs',
-                    'border p-2',
-                    'border-blue-800 bg-blue-200 text-blue-800',
-                    'dark:border-blue-700 dark:bg-blue-900 dark:text-blue-100',
-                  )}
-                >
-                  <div>
-                    Uses built-in OS features for OCR. Your images stay local and are never sent to
-                    external servers.
-                  </div>
-                </div>
               </div>
-              <div className="flex flex-row items-center gap-2">
-                <Checkbox
-                  id="enable OCR"
-                  checked={props.enableOCR}
-                  disabled={!props.ocr}
-                  onChange={async (e) => {
-                    await props.saveEnableOCR(e.target.checked);
-
-                    $toast.success(
-                      `OCR ${e.target.checked ? 'enabled' : 'disabled'} successfully.`,
-                    );
-
-                    await sleep(1000);
-
-                    await $dialog.confirm.success(
-                      `OCR ${e.target.checked ? 'enabled' : 'disabled'} successfully.\nDo you want to restart now?`,
-                    );
-
-                    return invoke.restart_app();
-                  }}
-                >
-                  enabled
-                </Checkbox>
-              </div>
-              {props.ocr ? (
-                <div className="text-xs">
-                  Detected OS Languages:
-                  <span className="font-mono text-base font-bold text-blue-500"> {props.ocr}</span>
-                </div>
-              ) : (
+              {!ocr && (
                 <div className="text-xs text-red-500">
                   <p className="font-bold">No OCR-compatible language packs found.</p>
                   <span>
@@ -284,6 +292,56 @@ export function Setting(props: SettingProps) {
                   </span>
                 </div>
               )}
+              <div className="flex flex-row items-center gap-2">
+                <Checkbox
+                  id="enable OCR"
+                  checked={enableOCR}
+                  disabled={!ocr}
+                  onChange={async (e) => {
+                    const checkbox = document.getElementById('enable OCR') as HTMLInputElement;
+
+                    try {
+                      checkbox.disabled = true;
+
+                      await saveEnableOCR(e.target.checked);
+
+                      $toast.success(
+                        `OCR ${e.target.checked ? 'enabled' : 'disabled'} successfully.`,
+                      );
+
+                      await sleep(1000);
+
+                      await $dialog.confirm.success(
+                        `OCR ${e.target.checked ? 'enabled' : 'disabled'} successfully.\nDo you want to restart now?`,
+                      );
+
+                      return command.restart_app();
+                    } finally {
+                      checkbox.disabled = false;
+                    }
+                  }}
+                >
+                  enabled
+                  {ocr && (
+                    <div className="inline-block ps-2 text-xs">
+                      Detected OS Languages:
+                      <span className="font-bold text-blue-500 dark:text-indigo-400"> {ocr} </span>
+                    </div>
+                  )}
+                </Checkbox>
+              </div>
+              <div
+                className={cn(
+                  'flex flex-col items-start gap-1 rounded-lg text-xs',
+                  'p-2',
+                  colorClass('info'),
+                )}
+              >
+                <div>
+                  Uses built-in OS features for OCR. Your images stay local and are never sent to
+                  external servers.
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -294,7 +352,7 @@ export function Setting(props: SettingProps) {
             {[
               {
                 title: 'toggle window open / close',
-                shortcut: props.globalShortcutToggleWindow,
+                shortcut: globalShortcutToggleWindow,
                 save: async (shortcut: Shortcut) => {
                   if (
                     !shortcut.ctrlKey &&
@@ -308,82 +366,82 @@ export function Setting(props: SettingProps) {
                       );
                   }
 
-                  return invoke
+                  return command
                     .update_global_shortcut_toggle_window(shortcut)
-                    .then(() => props.setGlobalShortcutToggleWindow(shortcut));
+                    .then(() => setGlobalShortcutToggleWindow(shortcut));
                 },
                 default: defaultGlobalShortcutToggleWindow,
               },
               {
-                title: 'send clipboard',
-                shortcut: props.shortcutSendClipboard,
-                save: props.saveShortcutSendClipboard,
+                title: 'copy',
+                shortcut: shortcutSendClipboard,
+                save: saveShortcutSendClipboard,
                 default: defaultShortcutSendClipboard,
               },
               {
-                title: 'send and paste',
-                shortcut: props.shortcutSendAndPaste,
-                save: props.saveShortcutSendAndPaste,
+                title: 'paste',
+                shortcut: shortcutSendAndPaste,
+                save: saveShortcutSendAndPaste,
                 default: defaultShortcutSendAndPaste,
               },
               {
                 title: 'delete clip',
-                shortcut: props.shortcutDeleteClip,
-                save: props.saveShortcutDeleteClip,
+                shortcut: shortcutDeleteClip,
+                save: saveShortcutDeleteClip,
                 default: defaultShortcutDeleteClip,
               },
               {
                 title: 'clear clipboard',
-                shortcut: props.shortcutClearClipboard,
-                save: props.saveShortcutClearClipboard,
+                shortcut: shortcutClearClipboard,
+                save: saveShortcutClearClipboard,
                 default: defaultShortcutClearClipboard,
               },
               {
                 title: 'toggle clip bookmark',
-                shortcut: props.shortcutToggleClipBookmark,
-                save: props.saveShortcutToggleClipBookmark,
+                shortcut: shortcutToggleClipBookmark,
+                save: saveShortcutToggleClipBookmark,
                 default: defaultShortcutToggleClipBookmark,
               },
               {
                 title: 'show paste menu',
-                shortcut: props.shortcutShowPasteMenu,
-                save: props.saveShortcutShowPasteMenu,
+                shortcut: shortcutShowPasteMenu,
+                save: saveShortcutShowPasteMenu,
                 default: defaultShortcutShowPasteMenu,
               },
               {
                 title: 'toggle search content type "text"',
-                shortcut: props.shortcutToggleSearchContentTypeText,
-                save: props.saveShortcutToggleSearchContentTypeText,
+                shortcut: shortcutToggleSearchContentTypeText,
+                save: saveShortcutToggleSearchContentTypeText,
                 default: defaultShortcutToggleSearchContentTypeText,
               },
               {
                 title: 'toggle search content type "image"',
-                shortcut: props.shortcutToggleSearchContentTypeImage,
-                save: props.saveShortcutToggleSearchContentTypeImage,
+                shortcut: shortcutToggleSearchContentTypeImage,
+                save: saveShortcutToggleSearchContentTypeImage,
                 default: defaultShortcutToggleSearchContentTypeImage,
               },
               {
                 title: 'toggle search content type "files"',
-                shortcut: props.shortcutToggleSearchContentTypeFiles,
-                save: props.saveShortcutToggleSearchContentTypeFiles,
+                shortcut: shortcutToggleSearchContentTypeFiles,
+                save: saveShortcutToggleSearchContentTypeFiles,
                 default: defaultShortcutToggleSearchContentTypeFiles,
               },
               {
                 title: 'toggle search bookmark (bookmark only / all)',
-                shortcut: props.shortcutToggleSearchBookmark,
-                save: props.saveShortcutToggleSearchBookmark,
+                shortcut: shortcutToggleSearchBookmark,
+                save: saveShortcutToggleSearchBookmark,
                 default: defaultShortcutToggleSearchBookmark,
               },
               {
                 title: 'toggle wrap text automatically',
-                shortcut: props.shortcutToggleWrapTextAutomatically,
-                save: props.saveShortcutToggleWrapTextAutomatically,
+                shortcut: shortcutToggleWrapTextAutomatically,
+                save: saveShortcutToggleWrapTextAutomatically,
                 default: defaultShortcutToggleWrapTextAutomatically,
               },
               {
                 title: 'toggle show sub contents',
-                shortcut: props.shortcutToggleShowSubContents,
-                save: props.saveShortcutToggleShowSubContents,
+                shortcut: shortcutToggleShowSubContents,
+                save: saveShortcutToggleShowSubContents,
                 default: defaultShortcutToggleShowSubContents,
               },
             ].map((x, i, arr) => {
@@ -402,15 +460,15 @@ export function Setting(props: SettingProps) {
                       type="button"
                       set="default"
                       onClick={async () => {
-                        const newShortcut: Shortcut = await $dialog.showModal(
-                          EditShortcutDialog,
-                          (resolve, reject) => ({
+                        const newShortcut: Shortcut = await $dialog.showModal({
+                          Component: EditShortcutDialog,
+                          $props: (resolve, reject) => ({
                             title: x.title,
                             initValue: x.shortcut,
                             onSave: (v) => resolve(v),
                             onCancel: () => reject(),
                           }),
-                        );
+                        });
 
                         try {
                           await x.save(newShortcut);
@@ -456,15 +514,14 @@ export function Setting(props: SettingProps) {
             <div
               className={cn(
                 'flex flex-col items-start gap-1 rounded-lg',
-                'border p-4',
-                'border-blue-800 bg-blue-200 text-blue-800',
-                'dark:border-blue-700 dark:bg-blue-900 dark:text-blue-100',
+                'p-4',
+                colorClass('info'),
               )}
             >
               <div>
                 <div className="flex items-center gap-1 capitalize">
                   <div className="inline-flex items-center justify-center">
-                    <span className="icon-[material-symbols--info-outline-rounded] size-5"></span>
+                    <span className={`size-5 ${iconClass('info')}`}></span>
                   </div>
                   <div>move window</div>
                 </div>
@@ -555,20 +612,6 @@ function EditShortcutDialog(props: {
   onCancel: () => void;
 }) {
   const [value, setValue] = useState(props.initValue);
-
-  useEffect(() => {
-    function closeDialog(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
-        e.stopPropagation(); // App.tsx の hideWindow に突き抜けないようにする
-      }
-    }
-
-    window.addEventListener('keydown', closeDialog, true);
-
-    return () => {
-      window.removeEventListener('keydown', closeDialog, true);
-    };
-  });
 
   return (
     <div

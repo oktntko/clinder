@@ -1,12 +1,13 @@
 import { createContext } from 'react';
 
-export type ColorType = 'default' | 'positive' | 'warning' | 'danger';
+import type { ColorSet } from './_plugin';
 
-export type ToastOptions = { set?: ColorType };
+export type ToastOptions = { set?: ColorSet };
 
 export type ToastPlugin = {
   open(message: string, options?: ToastOptions): void;
   success(message: string, options?: ToastOptions): void;
+  info(message: string, options?: ToastOptions): void;
   warn(message: string, options?: ToastOptions): void;
   danger(message: string, options?: ToastOptions): void;
 };

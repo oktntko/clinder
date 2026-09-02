@@ -1,3 +1,4 @@
+use crate::WindowPositionMemory;
 use crate::clipboard_image;
 use crate::db;
 use crate::db::ContentType;
@@ -12,7 +13,7 @@ use std::collections::BTreeSet;
 use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
-use tauri::{AppHandle, Manager, WebviewWindow};
+use tauri::{AppHandle, Manager, PhysicalPosition, Position};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 use tauri_plugin_log::log;
 use tauri_plugin_store::StoreExt;
@@ -291,21 +292,21 @@ fn paste() {
 }
 
 #[tauri::command(rename_all = "snake_case")]
-pub fn send_text(window: WebviewWindow, plain_text: String) -> Result<(), String> {
+pub fn send_text(app_handle: AppHandle, plain_text: String) -> Result<(), String> {
     log::debug!("send_text");
 
     let ctx = ClipboardContext::new().map_err(|e| e.to_string())?;
     ctx.set_text(plain_text).map_err(|e| e.to_string())?;
 
-    window.hide().map_err(|e| e.to_string())?;
+    let _ = hide_window(app_handle.clone());
 
     Ok(())
 }
 
 #[tauri::command(rename_all = "snake_case")]
-pub fn paste_text(window: WebviewWindow, plain_text: String) -> Result<(), String> {
+pub fn paste_text(app_handle: AppHandle, plain_text: String) -> Result<(), String> {
     log::debug!("paste_text");
-    let _ = send_text(window, plain_text);
+    let _ = send_text(app_handle, plain_text);
 
     paste();
 
@@ -313,11 +314,7 @@ pub fn paste_text(window: WebviewWindow, plain_text: String) -> Result<(), Strin
 }
 
 #[tauri::command(rename_all = "snake_case")]
-pub fn send_image(
-    app_handle: AppHandle,
-    window: WebviewWindow,
-    image_hash: String,
-) -> Result<(), String> {
+pub fn send_image(app_handle: AppHandle, image_hash: String) -> Result<(), String> {
     log::debug!("send_image");
 
     let path =
@@ -327,19 +324,15 @@ pub fn send_image(
     let ctx = ClipboardContext::new().map_err(|e| e.to_string())?;
     ctx.set_image(image_data).map_err(|e| e.to_string())?;
 
-    window.hide().map_err(|e| e.to_string())?;
+    let _ = hide_window(app_handle.clone());
 
     Ok(())
 }
 
 #[tauri::command(rename_all = "snake_case")]
-pub fn paste_image(
-    app_handle: AppHandle,
-    window: WebviewWindow,
-    image_hash: String,
-) -> Result<(), String> {
+pub fn paste_image(app_handle: AppHandle, image_hash: String) -> Result<(), String> {
     log::debug!("paste_image");
-    let _ = send_image(app_handle, window, image_hash);
+    let _ = send_image(app_handle, image_hash);
 
     paste();
 
@@ -347,20 +340,20 @@ pub fn paste_image(
 }
 
 #[tauri::command(rename_all = "snake_case")]
-pub fn send_files(window: WebviewWindow, files: Vec<String>) -> Result<(), String> {
+pub fn send_files(app_handle: AppHandle, files: Vec<String>) -> Result<(), String> {
     log::debug!("send_files");
     let ctx = ClipboardContext::new().map_err(|e| e.to_string())?;
     ctx.set_files(files).map_err(|e| e.to_string())?;
 
-    window.hide().map_err(|e| e.to_string())?;
+    let _ = hide_window(app_handle.clone());
 
     Ok(())
 }
 
 #[tauri::command(rename_all = "snake_case")]
-pub fn paste_files(window: WebviewWindow, files: Vec<String>) -> Result<(), String> {
+pub fn paste_files(app_handle: AppHandle, files: Vec<String>) -> Result<(), String> {
     log::debug!("paste_files");
-    let _ = send_files(window, files);
+    let _ = send_files(app_handle, files);
 
     paste();
 
@@ -498,12 +491,87 @@ pub fn register_global_shortcut_toggle_window(
 pub fn toggle_window(app_handle: &AppHandle) {
     if let Some(window) = app_handle.get_webview_window("main") {
         if window.is_visible().unwrap_or(false) {
-            let _ = window.hide();
+            let _ = hide_window(app_handle.clone());
         } else {
-            let _ = window.show();
-            let _ = window.set_focus();
+            let _ = open_window(app_handle.clone());
         }
     }
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub fn open_window(app_handle: AppHandle) -> Result<(), String> {
+    let window = app_handle
+        .get_webview_window("main")
+        .ok_or("Window not found")?;
+
+    if window.is_visible().unwrap_or(false) {
+        return Ok(());
+    }
+
+    // カーソルのあるモニターを取得
+    if let Ok(cursor_pos) = window.cursor_position() {
+        if let Ok(Some(target_monitor)) = window.monitor_from_point(cursor_pos.x, cursor_pos.y) {
+            let monitor_name = target_monitor
+                .name()
+                .cloned()
+                .unwrap_or_else(|| String::from("default"));
+
+            let memory = app_handle.state::<WindowPositionMemory>();
+            let map = memory.0.lock().unwrap();
+
+            if let Some(saved_pos) = map.get(&monitor_name) {
+                // 1. そのディスプレイの位置記憶がある場合 -> 保存された位置へ移動
+                let _ = window.set_position(Position::Physical(*saved_pos));
+            } else {
+                // 2. 位置記憶がない場合 -> ディスプレイの中央へ配置
+                let monitor_pos = target_monitor.position();
+                let monitor_size = target_monitor.size();
+                let win_size = window.outer_size().unwrap_or_default();
+
+                let center_x =
+                    monitor_pos.x + ((monitor_size.width as i32 - win_size.width as i32) / 2);
+                let center_y =
+                    monitor_pos.y + ((monitor_size.height as i32 - win_size.height as i32) / 2);
+
+                let _ = window.set_position(Position::Physical(PhysicalPosition::new(
+                    center_x, center_y,
+                )));
+            }
+        }
+    }
+
+    // 移動後に表示とフォーカス
+    let _ = window.show();
+    let _ = window.set_focus();
+
+    Ok(())
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub fn hide_window(app_handle: AppHandle) -> Result<(), String> {
+    let window = app_handle
+        .get_webview_window("main")
+        .ok_or("Window not found")?;
+
+    if !window.is_visible().unwrap_or(false) {
+        return Ok(());
+    }
+
+    // 非表示にする直前の位置とモニターを取得して記憶
+    if let (Ok(pos), Ok(Some(monitor))) = (window.outer_position(), window.current_monitor()) {
+        let monitor_name = monitor
+            .name()
+            .cloned()
+            .unwrap_or_else(|| String::from("default"));
+
+        let memory = app_handle.state::<WindowPositionMemory>();
+        let mut map = memory.0.lock().unwrap();
+        map.insert(monitor_name, pos);
+    }
+
+    let _ = window.hide();
+
+    Ok(())
 }
 
 //////////////////// ////////////////////
