@@ -14,7 +14,10 @@
     "spell-check": "cspell .",
     "lint": "oxlint --type-aware --type-check",
     "format": "oxfmt",
-    "tag": "tsx script/tag.ts"
+    "tag": "tsx script/tag.ts",
+    "docs:dev": "pnpm --filter docs dev",
+    "docs:build": "pnpm --filter docs build",
+    "docs:preview": "pnpm --filter docs preview"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
