@@ -3,11 +3,11 @@ import { openPath, openUrl } from '@tauri-apps/plugin-opener';
 import Wide310x150Logo from '~/assets/Wide310x150Logo.png';
 import { Button } from '~/component/Button';
 import { cn } from '~/lib/utils';
+import { colorClass } from '~/plugin/_plugin';
 import { useStore } from '~/plugin/useStore';
 
-type InformationProps = ReturnType<typeof useStore> & {};
-
-export function Information(props: InformationProps) {
+export function Information() {
+  const { version, realAppLocalDataDir, realAppDataDir } = useStore();
   return (
     <div className="flex flex-col gap-8 overflow-y-auto px-12 py-8 focus:outline-none">
       {/* About Section */}
@@ -21,7 +21,7 @@ export function Information(props: InformationProps) {
         />
         <div className="inline-flex gap-1 text-center">
           Version
-          <span className="font-semibold">{props.version}</span>
+          <span className="font-semibold">{version}</span>
         </div>
       </section>
 
@@ -58,21 +58,21 @@ export function Information(props: InformationProps) {
             type="button"
             set="default"
             variant="text"
-            onClick={() => openPath(props.realAppLocalDataDir)}
+            onClick={() => openPath(realAppLocalDataDir)}
             className={cn('justify-start text-xs', afterIcon('after:icon-[proicons--folder-open]'))}
-            title={props.realAppLocalDataDir}
+            title={realAppLocalDataDir}
           >
-            <span className="truncate pr-4 pl-2">App Data: {props.realAppLocalDataDir}</span>
+            <span className="truncate pr-4 pl-2">App Data: {realAppLocalDataDir}</span>
           </Button>
           <Button
             type="button"
             set="default"
             variant="text"
-            onClick={() => openPath(props.realAppDataDir)}
+            onClick={() => openPath(realAppDataDir)}
             className={cn('justify-start text-xs', afterIcon('after:icon-[proicons--folder-open]'))}
-            title={props.realAppDataDir}
+            title={realAppDataDir}
           >
-            <span className="truncate pr-4 pl-2">App Setting: {props.realAppDataDir}</span>
+            <span className="truncate pr-4 pl-2">App Setting: {realAppDataDir}</span>
           </Button>
         </div>
       </section>
@@ -80,33 +80,28 @@ export function Information(props: InformationProps) {
       {/* Troubleshooting Section */}
       <section className="flex flex-col gap-2">
         <h2 className="text-base font-semibold capitalize">Troubleshooting</h2>
-        <div className="rounded-lg bg-amber-50 p-4 text-sm text-amber-900 dark:bg-amber-900/20 dark:text-amber-200">
-          <p className="mb-2 font-medium">If the application is not working correctly:</p>
-          <ol className="list-inside list-decimal space-y-1">
-            <li>Navigate to the App Data directory above</li>
+
+        <div className={cn('flex flex-col gap-2 rounded-lg p-4', colorClass('warning'))}>
+          <p>If the application is not working correctly:</p>
+          <ol className="list-inside list-decimal">
+            <li>Navigate to the Application Data directory above</li>
             <li>Delete the following files and folders:</li>
           </ol>
-          <ul className="ml-4 list-inside list-disc space-y-1 pt-2">
+          <ul className="ml-4 list-disc">
             <li>
-              <code className="rounded bg-amber-100 px-1.5 py-0.5 font-mono text-xs dark:bg-amber-900/40">
-                clinder.db
-              </code>
+              <code className="font-mono"> clinder.db </code>
+              <span className="text-xs"> (App Data) </span>
             </li>
             <li>
-              <code className="rounded bg-amber-100 px-1.5 py-0.5 font-mono text-xs dark:bg-amber-900/40">
-                clipboard_image
-              </code>
-              directory
+              <code className="font-mono"> clipboard_image </code> directory
+              <span className="text-xs"> (App Data) </span>
             </li>
             <li>
-              <code className="rounded bg-amber-100 px-1.5 py-0.5 font-mono text-xs dark:bg-amber-900/40">
-                settings.json
-              </code>
+              <code className="font-mono"> settings.json </code>
+              <span className="text-xs"> (App Setting) </span>
             </li>
           </ul>
-          <p className="mt-2 text-xs italic opacity-75">
-            The application will recreate these files on next launch.
-          </p>
+          <p>The application will recreate these files on next launch.</p>
         </div>
       </section>
     </div>

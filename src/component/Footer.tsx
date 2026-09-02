@@ -1,12 +1,11 @@
-import type { useStore } from '~/plugin/useStore';
-
 import { cn } from '~/lib/utils';
+import { useStore } from '~/plugin/useStore';
 
 import { Button } from './Button';
 
-type FooterProps = ReturnType<typeof useStore> & {};
+export function Footer() {
+  const { enablePin, saveEnablePin, theme, saveTheme, page, setPage } = useStore();
 
-export function Footer(props: FooterProps) {
   return (
     <div
       className={cn(
@@ -21,37 +20,13 @@ export function Footer(props: FooterProps) {
         <Button
           title="pin"
           type="button"
-          set={props.enablePin ? 'positive' : 'ghost'}
+          set={enablePin ? 'positive' : 'ghost'}
           onClick={(e) => {
             e.preventDefault();
-            void props.saveEnablePin(!props.enablePin);
+            void saveEnablePin(!enablePin);
           }}
         >
           <span className="icon-[mynaui--pin] size-4"></span>
-        </Button>
-
-        <Button
-          title="theme"
-          type="button"
-          set="none"
-          className={cn(
-            props.theme === 'light'
-              ? 'border-amber-500 bg-white text-amber-500'
-              : 'border-indigo-600 bg-indigo-900 text-indigo-500',
-          )}
-          onClick={(e) => {
-            e.preventDefault();
-            void props.saveTheme(props.theme === 'light' ? 'dark' : 'light');
-          }}
-        >
-          <span
-            className={cn(
-              'size-4',
-              props.theme === 'light'
-                ? 'icon-[material-symbols--clear-day-outline-rounded]'
-                : 'icon-[material-symbols--mode-night-rounded]',
-            )}
-          ></span>
         </Button>
 
         <div id="portal-footer-left" className="contents"></div>
@@ -66,12 +41,36 @@ export function Footer(props: FooterProps) {
         <div id="portal-footer-right" className="contents"></div>
 
         <Button
-          title="clipboard"
+          title="theme"
           type="button"
-          set={props.page === 'clipboard' ? 'default' : 'ghost'}
+          set="none"
+          className={cn(
+            theme === 'light'
+              ? 'border-amber-500 bg-white text-amber-500'
+              : 'border-indigo-600 bg-indigo-900 text-indigo-500',
+          )}
           onClick={(e) => {
             e.preventDefault();
-            props.setPage('clipboard');
+            void saveTheme(theme === 'light' ? 'dark' : 'light');
+          }}
+        >
+          <span
+            className={cn(
+              'size-4',
+              theme === 'light'
+                ? 'icon-[material-symbols--clear-day-outline-rounded]'
+                : 'icon-[material-symbols--mode-night-rounded]',
+            )}
+          ></span>
+        </Button>
+
+        <Button
+          title="clipboard"
+          type="button"
+          set={page === 'clipboard' ? 'default' : 'ghost'}
+          onClick={(e) => {
+            e.preventDefault();
+            setPage('clipboard');
           }}
         >
           <span className="icon-[solar--clipboard-outline] size-4"></span>
@@ -79,10 +78,10 @@ export function Footer(props: FooterProps) {
         <Button
           title="setting"
           type="button"
-          set={props.page === 'setting' ? 'default' : 'ghost'}
+          set={page === 'setting' ? 'default' : 'ghost'}
           onClick={(e) => {
             e.preventDefault();
-            props.setPage('setting');
+            setPage('setting');
           }}
         >
           <span className="icon-[ep--setting] size-4"></span>
@@ -90,10 +89,10 @@ export function Footer(props: FooterProps) {
         <Button
           title="information"
           type="button"
-          set={props.page === 'information' ? 'default' : 'ghost'}
+          set={page === 'information' ? 'default' : 'ghost'}
           onClick={(e) => {
             e.preventDefault();
-            props.setPage('information');
+            setPage('information');
           }}
         >
           <span className="icon-[mdi--information-outline] size-4"></span>

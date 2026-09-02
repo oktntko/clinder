@@ -39,6 +39,7 @@ export function Checkbox({ className, children, ...props }: CheckboxProps) {
         type="checkbox"
         className={cn(
           'peer size-4 shrink-0 cursor-pointer rounded-md transition outline-none hover:ring-2 focus:ring-3',
+          'disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:ring-0 disabled:focus:ring-0',
           'hover:ring-slate-400',
           'focus:ring-slate-400',
           'dark:hover:ring-zinc-600',
@@ -51,6 +52,7 @@ export function Checkbox({ className, children, ...props }: CheckboxProps) {
           'capitalize transition peer-hover:opacity-80',
           'peer-not-checked:text-slate-500 peer-not-checked:peer-hover:text-slate-900',
           'dark:peer-not-checked:text-zinc-500 dark:peer-not-checked:peer-hover:text-zinc-100',
+          'peer-disabled:cursor-not-allowed peer-disabled:opacity-30 peer-disabled:hover:ring-0 peer-disabled:focus:ring-0',
         )}
       >
         {children}
@@ -78,6 +80,7 @@ export function Radio({ className, children, ...props }: RadioProps) {
           'peer size-4 shrink-0 cursor-pointer appearance-none rounded-full transition outline-none hover:ring-1 focus:ring-2',
           'border-2 border-slate-400 bg-white ring-slate-400',
           'bg-white checked:border-5 checked:border-blue-600 checked:ring-blue-400',
+          'disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:ring-0 disabled:focus:ring-0',
           className,
         )}
       />
@@ -86,6 +89,7 @@ export function Radio({ className, children, ...props }: RadioProps) {
           'capitalize transition peer-hover:opacity-80',
           'peer-not-checked:text-slate-500 peer-not-checked:peer-hover:text-slate-900',
           'dark:peer-not-checked:text-zinc-500 dark:peer-not-checked:peer-hover:text-zinc-100',
+          'peer-disabled:cursor-not-allowed peer-disabled:opacity-30 peer-disabled:hover:ring-0 peer-disabled:focus:ring-0',
         )}
       >
         {children}

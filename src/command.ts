@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 
-import type { Shortcut } from './plugin/useStore';
+import type { Shortcut } from '~/plugin/storeContext';
 
 //////////////////// ////////////////////
 // DB 関連

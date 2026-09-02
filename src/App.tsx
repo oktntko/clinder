@@ -10,7 +10,9 @@ import { Setting } from '~/page/Setting';
 import { useStore } from '~/plugin/useStore';
 
 function App() {
-  const store = useStore();
+  const { page, setPage, enablePin, minHeight, maxHeight } = useStore();
+
+  const [pressingAlt, setPressingAlt] = useState(false);
 
   useEffect(() => {
     // 'Alt' を prevent しているのは復帰時にOSのウィンドウメニューが開くことがあるため
@@ -39,11 +41,11 @@ function App() {
             }
 
             if (!e.shiftKey) {
-              store.setPage((page) =>
+              setPage((page) =>
                 page === 'clipboard' ? 'setting' : page === 'setting' ? 'information' : 'clipboard',
               );
             } else {
-              store.setPage((page) =>
+              setPage((page) =>
                 page === 'clipboard' ? 'information' : page === 'setting' ? 'clipboard' : 'setting',
               );
             }
@@ -72,24 +74,32 @@ function App() {
       }
     }
 
-    function preventAltKey(e: KeyboardEvent) {
-      if (e.altKey || e.key === 'Alt') {
+    function startDragging(e: KeyboardEvent) {
+      if (e.key === 'Alt') {
         e.preventDefault();
+        setPressingAlt(true);
       }
     }
 
-    window.addEventListener('keydown', preventAltKey, true);
-    window.addEventListener('keyup', preventAltKey, true);
+    function stopDragging(e: KeyboardEvent) {
+      if (e.key === 'Alt') {
+        e.preventDefault();
+        setPressingAlt(false);
+      }
+    }
+
+    window.addEventListener('keydown', startDragging);
+    window.addEventListener('keyup', stopDragging);
     window.addEventListener('keydown', loopTabKey, true);
     window.addEventListener('keydown', hideWindow);
 
     return () => {
-      window.removeEventListener('keydown', preventAltKey, true);
-      window.removeEventListener('keyup', preventAltKey, true);
+      window.removeEventListener('keydown', startDragging);
+      window.removeEventListener('keyup', stopDragging);
       window.removeEventListener('keydown', loopTabKey, true);
       window.removeEventListener('keydown', hideWindow);
     };
-  }, [store]);
+  }, [setPage]);
 
   const [isDragging, setIsDragging] = useState(false);
   async function startDragging(e: React.MouseEvent<HTMLDivElement>) {
@@ -105,36 +115,13 @@ function App() {
     }
   }
 
-  const [pressingAlt, setPressingAlt] = useState(false);
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Alt') {
-        setPressingAlt(true);
-      }
-    }
-
-    function handleKeyUp(e: KeyboardEvent) {
-      if (e.key === 'Alt') {
-        setPressingAlt(false);
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-    };
-  }, []);
-
   // ウィンドウのフォーカス変化を監視
   // フォーカスが外れたら非表示にする
   useEffect(() => {
     const unlistenPromise = getCurrentWindow().onFocusChanged(({ payload: focused }) => {
       if (!focused && !isDragging) {
         setPressingAlt(false);
-        if (!store.enablePin) {
+        if (!enablePin) {
           void command.hide_window();
         }
       }
@@ -143,7 +130,7 @@ function App() {
     return () => {
       void unlistenPromise.then((unlisten) => unlisten());
     };
-  }, [isDragging, store.enablePin]);
+  }, [isDragging, enablePin]);
 
   return (
     <>
@@ -157,20 +144,14 @@ function App() {
           pressingAlt ? 'cursor-move! [&_div_*]:cursor-move!' : '',
         )}
         style={{
-          minHeight: store.minHeight,
-          maxHeight: store.maxHeight,
+          minHeight,
+          maxHeight,
         }}
         onMouseDown={startDragging}
       >
-        {store.page === 'clipboard' ? (
-          <Clipboard {...store} />
-        ) : store.page === 'setting' ? (
-          <Setting {...store} />
-        ) : (
-          <Information {...store} />
-        )}
+        {page === 'clipboard' ? <Clipboard /> : page === 'setting' ? <Setting /> : <Information />}
 
-        <Footer {...store} />
+        <Footer />
       </div>
     </>
   );

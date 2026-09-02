@@ -5,15 +5,18 @@ import ReactDOM from 'react-dom/client';
 import App from '~/App';
 import '~/main.css';
 import DialogProvider from '~/plugin/DialogPlugin';
+import StoreProvider from '~/plugin/StorePlugin';
 import ToastProvider from '~/plugin/ToastPlugin';
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
-    <ToastProvider>
-      <DialogProvider>
-        <App />
-      </DialogProvider>
-    </ToastProvider>
+    <StoreProvider>
+      <ToastProvider>
+        <DialogProvider>
+          <App />
+        </DialogProvider>
+      </ToastProvider>
+    </StoreProvider>
   </React.StrictMode>,
 );
 
