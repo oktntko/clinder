@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react';
 
 import { cn } from '~/lib/utils';
+import { type ColorSet } from '~/plugin/_plugin';
 
 export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   children?: ReactNode;
-  set: 'default' | 'positive' | 'warning' | 'ghost' | 'none';
+  set: ColorSet;
   variant?: 'icon' | 'text';
 };
 
@@ -28,7 +29,9 @@ export function Button({
         'inline-flex items-center justify-center capitalize transition',
         'border outline-none hover:ring-1 focus:ring-2',
         'disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:ring-0 disabled:focus:ring-0',
-        variant === 'text' ? 'font-semi-bold min-w-24 rounded-md p-2' : 'rounded-full p-1',
+        variant === 'text'
+          ? /* text */ 'font-semi-bold min-w-24 rounded-md p-2'
+          : /* icon */ 'rounded-full p-1',
         ...(set === 'default'
           ? [
               'border-slate-400 bg-white',
@@ -43,7 +46,7 @@ export function Button({
                 'border-transparent bg-transparent',
                 'hover:bg-white hover:ring-slate-400',
                 'focus:bg-white focus:ring-slate-400',
-                'dark:transparent dark:border-transparent',
+                'dark:border-transparent dark:bg-transparent',
                 'dark:hover:bg-zinc-600 dark:hover:ring-zinc-500',
                 'dark:focus:bg-zinc-600 dark:focus:ring-zinc-500',
               ]
@@ -56,16 +59,34 @@ export function Button({
                   'dark:hover:bg-emerald-700 dark:hover:text-white dark:hover:ring-emerald-500',
                   'dark:focus:bg-emerald-700 dark:focus:text-white dark:focus:ring-emerald-500',
                 ]
-              : set === 'warning'
+              : set === 'info'
                 ? [
-                    'border-amber-800 bg-amber-300 text-amber-800',
-                    'hover:bg-amber-300 hover:text-amber-900 hover:ring-amber-800',
-                    'focus:bg-amber-300 focus:text-amber-900 focus:ring-amber-800',
-                    'dark:border-amber-500 dark:bg-amber-300 dark:text-amber-800',
-                    'dark:hover:bg-amber-300 dark:hover:text-amber-900 dark:hover:ring-amber-500',
-                    'dark:focus:bg-amber-300 dark:focus:text-amber-900 dark:focus:ring-amber-500',
+                    'border-blue-800 bg-blue-300 text-blue-800',
+                    'hover:bg-blue-300 hover:text-slate-900 hover:ring-blue-800',
+                    'focus:bg-blue-300 focus:text-slate-900 focus:ring-blue-800',
+                    'dark:border-indigo-700 dark:bg-indigo-900 dark:text-indigo-100',
+                    'dark:hover:bg-indigo-700 dark:hover:text-white dark:hover:ring-indigo-500',
+                    'dark:focus:bg-indigo-700 dark:focus:text-white dark:focus:ring-indigo-500',
                   ]
-                : []),
+                : set === 'warning'
+                  ? [
+                      'border-amber-800 bg-amber-300 text-amber-800',
+                      'hover:bg-amber-300 hover:text-amber-900 hover:ring-amber-800',
+                      'focus:bg-amber-300 focus:text-amber-900 focus:ring-amber-800',
+                      'dark:border-amber-500 dark:bg-amber-300 dark:text-amber-800',
+                      'dark:hover:bg-amber-300 dark:hover:text-amber-900 dark:hover:ring-amber-500',
+                      'dark:focus:bg-amber-300 dark:focus:text-amber-900 dark:focus:ring-amber-500',
+                    ]
+                  : set === 'danger'
+                    ? [
+                        'border-red-800 bg-red-300 text-red-800',
+                        'hover:bg-red-300 hover:text-red-900 hover:ring-red-800',
+                        'focus:bg-red-300 focus:text-red-900 focus:ring-red-800',
+                        'dark:border-red-500 dark:bg-red-300 dark:text-red-800',
+                        'dark:hover:bg-red-300 dark:hover:text-red-900 dark:hover:ring-red-500',
+                        'dark:focus:bg-red-300 dark:focus:text-red-900 dark:focus:ring-red-500',
+                      ]
+                    : []),
         className,
       )}
     >

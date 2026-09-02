@@ -12,13 +12,15 @@ import {
 import { Button } from '~/component/Button';
 import { cn } from '~/lib/utils';
 
+import { borderColor, iconClass, iconColorClass, type ReactComponent } from './_plugin';
 import {
   DialogContext,
-  type ColorSet,
+  type AlertOptions,
+  type ConfirmOptions,
   type DialogContent,
-  type ReactComponent,
+  type WindowDialogAlertOptions,
+  type WindowDialogConfirmOptions,
   type WindowDialogOptions,
-  type WindowDialogProps,
 } from './dialogContext';
 
 export default function DialogProvider({ children }: { children: ReactNode }) {
@@ -49,7 +51,7 @@ export default function DialogProvider({ children }: { children: ReactNode }) {
             message,
             ...options,
             onConfirm: (value) => resolve(value as T),
-            onCancel: reject,
+            onCancel: () => reject(),
           }),
         });
       },
@@ -61,25 +63,32 @@ export default function DialogProvider({ children }: { children: ReactNode }) {
       showModal,
 
       get alert() {
-        type O = Pick<WindowDialogOptions, 'set' | 'confirmText'>;
         return {
-          async open(message: string, { confirmText = 'OK', ...options }: O = {}) {
+          async open(
+            message: string,
+            { confirmText = 'OK', ...options }: WindowDialogAlertOptions = {},
+          ) {
             return showWindowDialog<'confirm' | 'cancel'>(message, { confirmText, ...options });
           },
-          async success(message: string, { set = 'positive', ...options }: O = {}) {
-            return this.open(message, { set, ...options });
+          async success(message: string, options: AlertOptions = {}) {
+            return this.open(message, { set: 'positive', ...options });
           },
-          async warn(message: string, { set = 'warning', ...options }: O = {}) {
-            return this.open(message, { set, ...options });
+          async info(message: string, options: AlertOptions = {}) {
+            return this.open(message, { set: 'info', ...options });
+          },
+          async warn(message: string, options: AlertOptions = {}) {
+            return this.open(message, { set: 'warning', ...options });
+          },
+          async danger(message: string, options: AlertOptions = {}) {
+            return this.open(message, { set: 'danger', ...options });
           },
         };
       },
       get confirm() {
-        type O = Pick<WindowDialogOptions, 'set' | 'confirmText' | 'cancelText'>;
         return {
           async open(
             message: string,
-            { confirmText = 'YES', cancelText = 'NO', ...options }: O = {},
+            { confirmText = 'YES', cancelText = 'NO', ...options }: WindowDialogConfirmOptions = {},
           ) {
             return showWindowDialog<'YES' | 'cancel'>(message, {
               confirmText,
@@ -88,11 +97,17 @@ export default function DialogProvider({ children }: { children: ReactNode }) {
               ...options,
             });
           },
-          async success(message: string, { set = 'positive', ...options }: O = {}) {
-            return this.open(message, { set, ...options });
+          async success(message: string, options: ConfirmOptions = {}) {
+            return this.open(message, { set: 'positive', ...options });
           },
-          async warn(message: string, { set = 'warning', ...options }: O = {}) {
-            return this.open(message, { set, ...options });
+          async info(message: string, options: ConfirmOptions = {}) {
+            return this.open(message, { set: 'info', ...options });
+          },
+          async warn(message: string, options: ConfirmOptions = {}) {
+            return this.open(message, { set: 'warning', ...options });
+          },
+          async danger(message: string, options: ConfirmOptions = {}) {
+            return this.open(message, { set: 'danger', ...options });
           },
         };
       },
@@ -147,6 +162,7 @@ function DialogContainer<T, C extends ReactComponent>({
 
   const trapReject = useCallback(
     (reason?: unknown) => {
+      console.log(dialogRef.current);
       dialogRef.current?.close('cancel');
       reject(reason);
     },
@@ -277,6 +293,7 @@ function DialogContainer<T, C extends ReactComponent>({
             'dark:hover:bg-zinc-700 dark:hover:ring-zinc-500',
             'dark:focus:bg-zinc-700 dark:focus:ring-zinc-500',
           )}
+          onClick={() => trapReject()}
         >
           <span className="icon-[bi--x] size-5"></span>
         </button>
@@ -284,6 +301,12 @@ function DialogContainer<T, C extends ReactComponent>({
     </dialog>
   );
 }
+
+export type WindowDialogProps = WindowDialogOptions & {
+  message: string;
+  onConfirm: (value: string) => void;
+  onCancel: (reason?: unknown) => void;
+};
 
 function WindowDialog({
   message,
@@ -301,6 +324,8 @@ function WindowDialog({
         'text-sm',
         'bg-white text-slate-900',
         'dark:bg-zinc-900 dark:text-zinc-100',
+        'border',
+        borderColor(set),
       )}
     >
       <form
@@ -312,19 +337,7 @@ function WindowDialog({
       >
         <main className="flex items-center gap-4">
           <div className={`inline-flex shrink-0 items-center justify-center rounded-full`}>
-            <span
-              className={cn(
-                'size-6',
-                iconClass(set),
-                set === 'default'
-                  ? ['bg-white', 'dark:bg-zinc-700']
-                  : set === 'positive'
-                    ? ['bg-green-800 dark:bg-green-300']
-                    : set === 'warning'
-                      ? ['bg-amber-500 dark:bg-amber-300']
-                      : [],
-              )}
-            />
+            <span className={cn('size-6', iconClass(set), iconColorClass(set))} />
           </div>
 
           <div className="flex flex-col gap-2">
@@ -333,7 +346,7 @@ function WindowDialog({
         </main>
 
         <footer className="flex items-center justify-center gap-4">
-          <Button type="submit" set={set} variant="text" autoFocus>
+          <Button type="submit" set={set} variant="text">
             <span className="capitalize">{confirmText}</span>
           </Button>
           {cancelText && (
@@ -345,16 +358,4 @@ function WindowDialog({
       </form>
     </div>
   );
-}
-
-function iconClass(set: ColorSet) {
-  switch (set) {
-    case 'positive':
-      return 'icon-[qlementine-icons--success-12]';
-    case 'warning':
-      return 'icon-[material-symbols--warning-outline-rounded]';
-    case 'default':
-    default:
-      return 'icon-[solar--dialog-line-duotone]';
-  }
 }

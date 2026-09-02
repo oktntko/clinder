@@ -2,12 +2,13 @@ import React, { useCallback, useEffect, useMemo, useRef, useState, type ReactNod
 
 import { cn } from '~/lib/utils';
 
-import { ToastContext, type ColorType, type ToastOptions, type ToastPlugin } from './toastContext';
+import { colorClass, iconClass, type ColorSet } from './_plugin';
+import { ToastContext, type ToastOptions, type ToastPlugin } from './toastContext';
 
 type ToastItem = {
   id: number;
   message: string;
-  set: ColorType;
+  set: ColorSet;
 };
 
 export default function ToastProvider({ children }: { children: ReactNode }) {
@@ -42,13 +43,16 @@ export default function ToastProvider({ children }: { children: ReactNode }) {
   const api = useMemo<ToastPlugin>(
     () => ({
       open: openToast,
-      success(message: string, options?: ToastOptions) {
+      success(message: string, options: ToastOptions = {}) {
         return openToast(message, { set: 'positive', ...options });
       },
-      warn(message: string, options?: ToastOptions) {
+      info(message: string, options: ToastOptions = {}) {
+        return openToast(message, { set: 'info', ...options });
+      },
+      warn(message: string, options: ToastOptions = {}) {
         return openToast(message, { set: 'warning', ...options });
       },
-      danger(message: string, options?: ToastOptions) {
+      danger(message: string, options: ToastOptions = {}) {
         return openToast(message, { set: 'danger', ...options });
       },
     }),
@@ -81,7 +85,7 @@ const ToastContent = React.memo(function ({
 }: {
   index: number;
   message: string;
-  set: ColorType;
+  set: ColorSet;
   onClose: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -146,7 +150,7 @@ const ToastContent = React.memo(function ({
       <div
         className={cn([
           'relative flex items-center gap-2 rounded-lg border px-4 py-2',
-          contentColor(set),
+          colorClass(set),
         ])}
       >
         <span className={cn('size-5', iconClass(set))} />
@@ -175,30 +179,3 @@ const ToastContent = React.memo(function ({
     </div>
   );
 });
-
-function contentColor(set: ColorType) {
-  switch (set) {
-    case 'positive':
-      return 'border-green-800 text-green-600 dark:border-emerald-400 dark:text-emerald-400';
-    case 'warning':
-      return 'border-amber-800 text-amber-600 dark:border-amber-300 dark:text-amber-200';
-    case 'danger':
-      return 'border-red-500 text-red-500 dark:border-red-500 dark:text-red-500';
-    case 'default':
-    default:
-      return 'border-slate-900 text-slate-900 dark:border-zinc-100 dark:text-zinc-100';
-  }
-}
-
-function iconClass(set: ColorType) {
-  switch (set) {
-    case 'positive':
-      return 'icon-[qlementine-icons--success-12]';
-    case 'warning':
-    case 'danger':
-      return 'icon-[material-symbols--warning-outline-rounded]';
-    case 'default':
-    default:
-      return 'icon-[solar--dialog-line-duotone]';
-  }
-}

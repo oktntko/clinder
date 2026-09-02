@@ -1,21 +1,6 @@
 import { createContext, type ComponentProps } from 'react';
 
-export type ReactComponent = React.ComponentType<any>;
-
-export type ColorSet = 'default' | 'positive' | 'warning';
-
-export type WindowDialogOptions = {
-  set?: ColorSet;
-  confirmText?: string;
-  confirmValue?: string;
-  cancelText?: string;
-};
-
-export type WindowDialogProps = WindowDialogOptions & {
-  message: string;
-  onConfirm: (value: string) => void;
-  onCancel: (reason?: unknown) => void;
-};
+import type { ColorSet, ReactComponent } from './_plugin';
 
 export type DialogContent<T, C extends ReactComponent> = {
   Component: C;
@@ -41,6 +26,20 @@ export type Position = {
   right: number;
 };
 
+export type WindowDialogOptions = {
+  set?: ColorSet;
+  confirmText?: string;
+  confirmValue?: string;
+  cancelText?: string;
+};
+export type WindowDialogAlertOptions = Pick<WindowDialogOptions, 'set' | 'confirmText'>;
+export type AlertOptions = Omit<WindowDialogAlertOptions, 'set'>;
+export type WindowDialogConfirmOptions = Pick<
+  WindowDialogOptions,
+  'set' | 'confirmText' | 'cancelText'
+>;
+export type ConfirmOptions = Omit<WindowDialogConfirmOptions, 'set'>;
+
 export type DialogPlugin = {
   /**
    * 任意の React コンポーネントをモーダルダイアログとして開きます。
@@ -48,33 +47,19 @@ export type DialogPlugin = {
   showModal: <T, C extends ReactComponent>(args: DialogContent<T, C>) => Promise<T>;
 
   alert: {
-    open: (
-      message: string,
-      options?: Pick<WindowDialogOptions, 'set' | 'confirmText'>,
-    ) => Promise<'confirm' | 'cancel'>;
-    success: (
-      message: string,
-      options?: Pick<WindowDialogOptions, 'set' | 'confirmText'>,
-    ) => Promise<'confirm' | 'cancel'>;
-    warn: (
-      message: string,
-      options?: Pick<WindowDialogOptions, 'set' | 'confirmText'>,
-    ) => Promise<'confirm' | 'cancel'>;
+    open: (message: string, options?: WindowDialogAlertOptions) => Promise<'confirm' | 'cancel'>;
+    success: (message: string, options?: AlertOptions) => Promise<'confirm' | 'cancel'>;
+    info: (message: string, options?: AlertOptions) => Promise<'confirm' | 'cancel'>;
+    warn: (message: string, options?: AlertOptions) => Promise<'confirm' | 'cancel'>;
+    danger: (message: string, options?: AlertOptions) => Promise<'confirm' | 'cancel'>;
   };
 
   confirm: {
-    open: (
-      message: string,
-      options?: Pick<WindowDialogOptions, 'set' | 'confirmText' | 'cancelText'>,
-    ) => Promise<'YES' | 'cancel'>;
-    success: (
-      message: string,
-      options?: Pick<WindowDialogOptions, 'set' | 'confirmText' | 'cancelText'>,
-    ) => Promise<'YES' | 'cancel'>;
-    warn: (
-      message: string,
-      options?: Pick<WindowDialogOptions, 'set' | 'confirmText' | 'cancelText'>,
-    ) => Promise<'YES' | 'cancel'>;
+    open: (message: string, options?: WindowDialogConfirmOptions) => Promise<'YES' | 'cancel'>;
+    success: (message: string, options?: ConfirmOptions) => Promise<'YES' | 'cancel'>;
+    info: (message: string, options?: ConfirmOptions) => Promise<'YES' | 'cancel'>;
+    warn: (message: string, options?: ConfirmOptions) => Promise<'YES' | 'cancel'>;
+    danger: (message: string, options?: ConfirmOptions) => Promise<'YES' | 'cancel'>;
   };
 };
 

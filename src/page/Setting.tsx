@@ -4,6 +4,7 @@ import { command } from '~/command';
 import { Button } from '~/component/Button';
 import { Checkbox, Input, Radio } from '~/component/Input';
 import { cn, sleep } from '~/lib/utils';
+import { colorClass, iconClass } from '~/plugin/_plugin';
 import { useDialog } from '~/plugin/useDialog';
 import {
   defaultFont,
@@ -232,20 +233,16 @@ export function Setting(props: SettingProps) {
                 <div className="text-xs">
                   Extracts text from images so you can search them like regular text.
                 </div>
-                <div
-                  className={cn(
-                    'flex flex-col items-start gap-1 rounded-lg text-xs',
-                    'border p-2',
-                    'border-blue-800 bg-blue-200 text-blue-800',
-                    'dark:border-blue-700 dark:bg-blue-900 dark:text-blue-100',
-                  )}
-                >
-                  <div>
-                    Uses built-in OS features for OCR. Your images stay local and are never sent to
-                    external servers.
-                  </div>
-                </div>
               </div>
+              {!props.ocr && (
+                <div className="text-xs text-red-500">
+                  <p className="font-bold">No OCR-compatible language packs found.</p>
+                  <span>
+                    Please install a supported language pack (e.g., English, Japanese) in Settings
+                    to use OCR.
+                  </span>
+                </div>
+              )}
               <div className="flex flex-row items-center gap-2">
                 <Checkbox
                   id="enable OCR"
@@ -268,22 +265,29 @@ export function Setting(props: SettingProps) {
                   }}
                 >
                   enabled
+                  {props.ocr && (
+                    <div className="inline-block ps-2 text-xs">
+                      Detected OS Languages:
+                      <span className="font-bold text-blue-500 dark:text-indigo-400">
+                        {' '}
+                        {props.ocr}{' '}
+                      </span>
+                    </div>
+                  )}
                 </Checkbox>
               </div>
-              {props.ocr ? (
-                <div className="text-xs">
-                  Detected OS Languages:
-                  <span className="font-mono text-base font-bold text-blue-500"> {props.ocr}</span>
+              <div
+                className={cn(
+                  'flex flex-col items-start gap-1 rounded-lg text-xs',
+                  'p-2',
+                  colorClass('info'),
+                )}
+              >
+                <div>
+                  Uses built-in OS features for OCR. Your images stay local and are never sent to
+                  external servers.
                 </div>
-              ) : (
-                <div className="text-xs text-red-500">
-                  <p className="font-bold">No OCR-compatible language packs found.</p>
-                  <span>
-                    Please install a supported language pack (e.g., English, Japanese) in Settings
-                    to use OCR.
-                  </span>
-                </div>
-              )}
+              </div>
             </div>
           </div>
         </section>
@@ -456,15 +460,14 @@ export function Setting(props: SettingProps) {
             <div
               className={cn(
                 'flex flex-col items-start gap-1 rounded-lg',
-                'border p-4',
-                'border-blue-800 bg-blue-200 text-blue-800',
-                'dark:border-blue-700 dark:bg-blue-900 dark:text-blue-100',
+                'p-4',
+                colorClass('info'),
               )}
             >
               <div>
                 <div className="flex items-center gap-1 capitalize">
                   <div className="inline-flex items-center justify-center">
-                    <span className="icon-[material-symbols--info-outline-rounded] size-5"></span>
+                    <span className={`size-5 ${iconClass('info')}`}></span>
                   </div>
                   <div>move window</div>
                 </div>

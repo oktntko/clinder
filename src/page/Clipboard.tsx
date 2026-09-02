@@ -897,7 +897,7 @@ function PasteMenu(props: {
       className={cn(
         'border-slate-300 bg-white text-slate-900',
         'dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100',
-        'rounded-lg px-0.75 py-px shadow-md',
+        'rounded-lg shadow-md',
         'border text-sm',
       )}
     >
@@ -1071,7 +1071,7 @@ function MenuButton({
         'flex items-center justify-start capitalize transition',
         'outline-none first:rounded-t-md last:rounded-b-md',
         'px-8 py-1',
-        'hover:scale-105 focus:scale-105',
+        'group',
         'bg-white text-slate-500',
         'dark:bg-zinc-900 dark:text-zinc-500',
         'hover:text-slate-900 focus:text-slate-900',
@@ -1085,7 +1085,7 @@ function MenuButton({
         className,
       )}
     >
-      {children}
+      <span className="group-focus:font-semibold">{children}</span>
     </button>
   );
 }
