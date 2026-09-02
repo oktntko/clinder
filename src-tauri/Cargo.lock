@@ -499,7 +499,7 @@ dependencies = [
 
 [[package]]
 name = "clinder"
-version = "0.9.6"
+version = "0.9.7"
 dependencies = [
  "clipboard-rs",
  "enigo",

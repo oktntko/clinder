@@ -1,6 +1,6 @@
 [package]
 name = "clinder"
-version = "0.9.6"
+version = "0.9.7"
 description = "Clinder is a lightweight, always-running clipboard history manager designed for fast, keyboard-only use."
 authors = ["oktntko@gmail.com"]
 edition = "2024"
