@@ -1,39 +1,36 @@
 ---
-title: Welcome to Starlight
-description: Get started building your docs site with Starlight.
-template: splash # Remove or comment out this line to display the site sidebar on this page.
+title: Clinder
+description: Clinder Docs
+template: splash
 hero:
-  tagline: Congrats on setting up a new Starlight project!
+  tagline: Clinder is a lightweight, always-running clipboard history manager designed for fast, keyboard-only use.
   image:
-    file: ../../assets/houston.webp
+    file: ../../assets/986x986.png
   actions:
-    - text: Example Guide
-      link: /guides/example/
+    - text: Getting Started
+      link: /guides/getting-started/
       icon: right-arrow
-    - text: Read the Starlight docs
-      link: https://starlight.astro.build
-      icon: external
+      variant: primary
+    - text: How to Use
+      link: /how-to-use/clipboard
       variant: minimal
 ---
 
-import { Card, CardGrid } from '@astrojs/starlight/components';
+import { Card, CardGrid } from "@astrojs/starlight/components";
 
-## Next steps
+## Feature
 
 <CardGrid stagger>
-  <Card title="Update content" icon="pencil">
-    Edit `src/content/docs/index.mdx` to see this page change.
+  <Card title="Lightning Fast" icon="rocket">
+    Built for speed and instant response times, ensuring a seamless workflow
+    without lags.
   </Card>
-  <Card title="Change page layout" icon="document">
-    Delete `template: splash` in `src/content/docs/index.mdx` to display a sidebar on this page.
+  <Card title="Keyboard-First Design" icon="laptop">
+    Operate every feature entirely with your keyboard using intuitive,
+    configurable shortcuts.
   </Card>
-  <Card title="Add new content" icon="add-document">
-    Add Markdown or MDX files to `src/content/docs` to create new pages.
-  </Card>
-  <Card title="Configure your site" icon="setting">
-    Edit your `sidebar` and other config in `astro.config.mjs`.
-  </Card>
-  <Card title="Read the docs" icon="open-book">
-    Learn more in [the Starlight Docs](https://starlight.astro.build/).
+  <Card title="Flexible Configuration" icon="setting">
+    Effortlessly tailor options and preferences to match your exact environment
+    using straightforward config files.
   </Card>
 </CardGrid>

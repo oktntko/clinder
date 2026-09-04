@@ -22,7 +22,7 @@
   "dependencies": {
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-global-shortcut": "~2.3.2",
-    "@tauri-apps/plugin-log": "~2.9.0",
+    "@tauri-apps/plugin-log": "~2.9.1",
     "@tauri-apps/plugin-opener": "^2",
     "@tauri-apps/plugin-store": "~2.4.4",
     "clsx": "^2.1.1",
@@ -33,25 +33,25 @@
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
-    "@choochmeque/tauri-windows-bundle": "^0.1.28",
-    "@cspell/eslint-plugin": "^10.0.1",
-    "@iconify/json": "^2.2.505",
+    "@choochmeque/tauri-windows-bundle": "^0.1.29",
+    "@cspell/eslint-plugin": "^10.2.2",
+    "@iconify/json": "^2.2.525",
     "@iconify/tailwind4": "^1.2.3",
     "@tailwindcss/vite": "^4.3.3",
     "@tauri-apps/cli": "^2",
-    "@tsconfig/node26": "^26.0.0",
+    "@tsconfig/node26": "^26.0.1",
     "@tsconfig/strictest": "^2.0.8",
-    "@types/node": "^26.1.1",
-    "@types/react": "^19.2.17",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.4",
-    "cspell": "^10.0.1",
-    "oxfmt": "^0.60.0",
-    "oxlint": "^1.75.0",
+    "@types/node": "^26.4.1",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@vitejs/plugin-react": "^6.1.1",
+    "cspell": "^10.2.2",
+    "oxfmt": "^0.66.0",
+    "oxlint": "^1.81.0",
     "oxlint-tsgolint": "^7.0.2001",
     "tailwindcss": "^4.3.3",
     "typescript": "~7.0.2",
-    "vite": "^8.1.5"
+    "vite": "^8.2.2"
   },
-  "packageManager": "pnpm@11.17.0"
+  "packageManager": "pnpm@11.25.0"
 }
