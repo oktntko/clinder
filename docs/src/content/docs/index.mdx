@@ -8,29 +8,27 @@ hero:
     file: ../../assets/986x986.png
   actions:
     - text: Getting Started
-      link: /guides/getting-started/
+      link: ./guides/getting-started/
       icon: right-arrow
       variant: primary
     - text: How to Use
-      link: /how-to-use/clipboard
+      link: ./how-to-use/clipboard
       variant: minimal
 ---
 
-import { Card, CardGrid } from "@astrojs/starlight/components";
+import { Card, CardGrid } from '@astrojs/starlight/components';
 
 ## Feature
 
 <CardGrid stagger>
   <Card title="Lightning Fast" icon="rocket">
-    Built for speed and instant response times, ensuring a seamless workflow
-    without lags.
+    Built for speed and instant response times, ensuring a seamless workflow without lags.
   </Card>
   <Card title="Keyboard-First Design" icon="laptop">
-    Operate every feature entirely with your keyboard using intuitive,
-    configurable shortcuts.
+    Operate every feature entirely with your keyboard using intuitive, configurable shortcuts.
   </Card>
   <Card title="Flexible Configuration" icon="setting">
-    Effortlessly tailor options and preferences to match your exact environment
-    using straightforward config files.
+    Effortlessly tailor options and preferences to match your exact environment using
+    straightforward config files.
   </Card>
 </CardGrid>

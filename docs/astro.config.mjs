@@ -5,6 +5,8 @@ import { defineConfig } from 'astro/config';
 
 // https://astro.build/config
 export default defineConfig({
+  site: 'https://oktntko.github.io',
+  base: '/clinder',
   integrations: [
     starlight({
       title: 'Clinder',
