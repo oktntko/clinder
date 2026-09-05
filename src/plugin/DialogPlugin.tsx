@@ -261,7 +261,7 @@ function DialogContainer<T, C extends ReactComponent>({
       ref={dialogRef}
       style={style}
       className={cn([
-        'm-auto overflow-visible bg-transparent outline-hidden',
+        'm-auto max-h-dvh max-w-dvw overflow-visible bg-transparent outline-hidden',
         'transition transition-discrete duration-200 ease-out',
         'scale-95 opacity-0',
         'starting:[[open]]:scale-95 starting:[[open]]:opacity-0',
