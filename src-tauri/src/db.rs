@@ -56,10 +56,12 @@ CREATE TABLE IF NOT EXISTS clip(
   , files           TEXT NOT NULL
   , bookmark        BOOLEAN NOT NULL CHECK (bookmark IN (0, 1)) DEFAULT 0
   , updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP
-  , UNIQUE(plain_text, image_hash, files)
 );
 
 CREATE INDEX IF NOT EXISTS idx_clip_updated_at ON clip(updated_at DESC);
+CREATE UNIQUE INDEX idx_unique_clip_text  ON clip(plain_text) WHERE content_type = 'text' ;
+CREATE UNIQUE INDEX idx_unique_clip_image ON clip(image_hash) WHERE content_type = 'image';
+CREATE UNIQUE INDEX idx_unique_clip_files ON clip(files     ) WHERE content_type = 'files';
 ";
 
     conn.execute_batch(DDL)?;
@@ -254,11 +256,18 @@ pub fn upsert_clip(
 ) -> Result<Clip, String> {
     let conn = ensure_db(app_handle).map_err(|e| e.to_string())?;
 
-    const SQL: &str = "
+    let conflict_statement = match content_type {
+        ContentType::Text => "CONFLICT(plain_text) WHERE content_type = 'text'",
+        ContentType::Image => "CONFLICT(image_hash) WHERE content_type = 'image'",
+        ContentType::Files => "CONFLICT(files) WHERE content_type = 'files'",
+    };
+
+    let sql = format!(
+        "
 INSERT
 INTO clip(content_type, plain_text, image_hash, files, bookmark)
 VALUES (?1, ?2, ?3, ?4, ?5)
-ON CONFLICT(plain_text, image_hash, files) DO
+ON {conflict_statement} DO
 UPDATE 
 SET
     plain_text = ?2
@@ -273,10 +282,11 @@ RETURNING
   , image_hash
   , files
   , bookmark
-  , updated_at";
+  , updated_at"
+    );
 
     conn.query_row(
-        SQL,
+        &sql,
         params![
             content_type,
             plain_text,

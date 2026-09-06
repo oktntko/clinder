@@ -31,7 +31,9 @@ export function Button({
         'disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:ring-0 disabled:focus:ring-0',
         variant === 'text'
           ? /* text */ 'font-semi-bold min-w-24 rounded-md p-2'
-          : /* icon */ 'rounded-full p-1',
+          : variant === 'icon'
+            ? /* icon */ 'rounded-full p-1'
+            : '',
         ...(set === 'default'
           ? [
               'border-slate-400 bg-white',

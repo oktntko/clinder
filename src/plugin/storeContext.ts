@@ -272,7 +272,6 @@ export function useStorePlugin() {
     await store?.save();
   }
 
-  const [ocr, setOCR] = useState('');
   const [enableOCR, setEnableOCR] = useState(defaultEnableOCR);
   async function saveEnableOCR(v: boolean) {
     setEnableOCR(v);
@@ -479,7 +478,6 @@ export function useStorePlugin() {
         ?.get<boolean>(STORE.behavior.TRIM_FINAL_NEWLINES)
         .then((v) => setTrimFinalNewlines(v ?? defaultTrimFinalNewlines));
 
-      void command.get_ocr_language().then(setOCR);
       void store
         ?.get<boolean>(STORE.behavior.ENABLE_OCR)
         .then((v) => setEnableOCR(v ?? defaultEnableOCR));
@@ -578,7 +576,6 @@ export function useStorePlugin() {
     saveMaxItems,
     trimFinalNewlines,
     saveTrimFinalNewlines,
-    ocr,
     enableOCR,
     saveEnableOCR,
 

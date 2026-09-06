@@ -1,173 +1,147 @@
-use tauri_plugin_log::log;
-#[cfg(target_os = "windows")]
-use windows::Globalization::Language;
+use image;
+use ocr_rs::{OcrEngine, OcrResult_};
+use std::fs;
+use std::fs::File;
+use std::io::Write;
+use std::path;
+use tauri::{AppHandle, Manager};
 
-#[cfg(target_os = "windows")]
-pub fn get_ocr_language() -> Result<Language, String> {
-    use windows::Globalization::ApplicationLanguages;
-    use windows::Media::Ocr::OcrEngine;
+pub async fn read_text(
+    app_handle: AppHandle,
+    image_path: &std::path::Path,
+) -> Result<String, String> {
+    let models_dir = models_dir(app_handle)?;
 
-    // 1. インストールされている OCR 対応言語の一覧を取得
-    let available_languages = OcrEngine::AvailableRecognizerLanguages()
-        .map_err(|e| format!("Failed to get OCR languages: {}", e))?;
+    let det_model = models_dir.join(MODELS.det_model.name);
+    let rec_model = models_dir.join(MODELS.rec_model.name);
+    let charset = models_dir.join(MODELS.charset.name);
 
-    let language_count = available_languages.Size().unwrap_or(0);
-    if language_count == 0 {
-        return Err("OCR 対応の言語パックが Windows に 1 つもインストールされていません。".into());
+    let engine = OcrEngine::new(det_model, rec_model, charset, None).map_err(|e| e.to_string())?;
+
+    let image = image::open(image_path).map_err(|e| e.to_string())?;
+    let results = engine.recognize(&image).map_err(|e| e.to_string())?;
+
+    let text: Vec<String> = sort_ocr_results(results)
+        .iter()
+        .map(|x| x.text.to_string())
+        .collect();
+
+    Ok(text.join("\n"))
+}
+
+fn models_dir(app_handle: AppHandle) -> Result<path::PathBuf, String> {
+    let app_data_dir = app_handle
+        .path()
+        .app_data_dir()
+        .map_err(|e| e.to_string())?;
+    let models_dir = app_data_dir.join("models");
+
+    if !models_dir.exists() {
+        fs::create_dir_all(&models_dir).map_err(|e| e.to_string())?;
     }
 
-    // 利用可能な OCR 言語のタグ一覧（例: ["ja-JP", "en-US"]）
-    let mut available_tags = Vec::new();
-    for i in 0..language_count {
-        if let Ok(lang) = available_languages.GetAt(i) {
-            if let Ok(tag) = lang.LanguageTag() {
-                available_tags.push(tag.to_string_lossy().to_string());
+    Ok(models_dir)
+}
+
+/// OCR結果を読順（上→下、同じ行内は左→右）にソートする
+pub fn sort_ocr_results(mut results: Vec<OcrResult_>) -> Vec<OcrResult_> {
+    if results.is_empty() {
+        return results;
+    }
+
+    // 1. 全要素の平均高さを計算し、同じ行とみなす Y 座標の許容誤差（閾値）を算出
+    let total_height: u32 = results.iter().map(|res| res.bbox.rect.height()).sum();
+    let avg_height = (total_height as f32) / (results.len() as f32);
+    let y_threshold = (avg_height * 0.5) as i32; // 高さの半分以下なら同じ行と判定
+
+    // 2. 一旦 Y 座標（top）で全体を昇順ソート
+    results.sort_by(|a, b| a.bbox.rect.top().cmp(&b.bbox.rect.top()));
+
+    // 3. 同じ行ごとにグループ分けし、行内で X 座標（left）順にソート
+    let mut sorted_results = Vec::with_capacity(results.len());
+    let mut current_line: Vec<OcrResult_> = Vec::new();
+
+    for item in results {
+        if current_line.is_empty() {
+            current_line.push(item);
+        } else {
+            let line_top = current_line[0].bbox.rect.top();
+            let item_top = item.bbox.rect.top();
+
+            // 行の先頭要素からの Y 差分が閾値以内なら「同じ行」
+            if (item_top - line_top).abs() <= y_threshold {
+                current_line.push(item);
+            } else {
+                // 行が変わったため、これまでの行を left (X座標) で昇順ソートして確定
+                current_line.sort_by(|a, b| a.bbox.rect.left().cmp(&b.bbox.rect.left()));
+                sorted_results.append(&mut current_line);
+
+                current_line.push(item);
             }
         }
     }
 
-    log::debug!("available_tags {:?}", available_tags);
-
-    // 2. OSの優先言語リストを取得（例: ["ja-JP", "en-US"]）
-    let user_languages = ApplicationLanguages::Languages().ok().and_then(|langs| {
-        let mut tags = Vec::new();
-        for i in 0..langs.Size().unwrap_or(0) {
-            if let Ok(hstr) = langs.GetAt(i) {
-                tags.push(hstr.to_string_lossy().to_string());
-            }
-        }
-        if tags.is_empty() { None } else { Some(tags) }
-    });
-    log::debug!("user_languages {:?}", user_languages);
-
-    // 3. 使用する言語の決定
-    // 優先順位:
-    // ① OSの優先言語（User/OS Priority）の中で、OCRがサポートされているもの
-    // ② なければ "ja" (日本語)
-    // ③ それも無ければ、利用可能な OCR 言語の先頭 (GetAt(0))
-    let selected_index: usize = user_languages
-        .as_ref()
-        .and_then(|user_tags| {
-            // OSの優先言語とOCR利用可能言語をマッチング
-            user_tags.iter().find_map(|u_tag| {
-                available_tags.iter().position(|a_tag| {
-                    // "ja-JP" 完全一致、または "ja" 前方一致
-                    a_tag.eq_ignore_ascii_case(u_tag)
-                        || u_tag.starts_with(a_tag)
-                        || a_tag.starts_with(u_tag)
-                })
-            })
-        })
-        .unwrap_or(0); // ③ なければ 0 番目
-
-    available_languages
-        .GetAt(selected_index as u32)
-        .map_err(|e| format!("Failed to get selected language: {}", e))
-}
-
-#[cfg(target_os = "windows")]
-pub async fn ocr_windows_dynamic(image_path: &std::path::Path) -> Result<String, String> {
-    use windows::Graphics::Imaging::BitmapDecoder;
-    use windows::Media::Ocr::OcrEngine;
-    use windows::Storage::StorageFile;
-
-    let selected_language = get_ocr_language()?;
-
-    log::debug!(
-        "Selected OCR Language: {}",
-        selected_language
-            .LanguageTag()
-            .unwrap_or_default()
-            .to_string_lossy()
-    );
-
-    // 4. OcrEngine の作成
-    let engine = OcrEngine::TryCreateFromLanguage(&selected_language)
-        .map_err(|e| format!("Failed to create OcrEngine: {}", e))?;
-
-    // 5. 画像読み込み & OCR 実行
-    let file = StorageFile::GetFileFromPathAsync(&windows::core::HSTRING::from(
-        image_path.to_str().ok_or("Invalid path encoding")?,
-    ))
-    .map_err(|e| e.to_string())?
-    .await
-    .map_err(|e| e.to_string())?;
-
-    let stream = file
-        .OpenReadAsync()
-        .map_err(|e| e.to_string())?
-        .await
-        .map_err(|e| e.to_string())?;
-    let decoder = BitmapDecoder::CreateAsync(&stream)
-        .map_err(|e| e.to_string())?
-        .await
-        .map_err(|e| e.to_string())?;
-    let software_bitmap = decoder
-        .GetSoftwareBitmapAsync()
-        .map_err(|e| e.to_string())?
-        .await
-        .map_err(|e| e.to_string())?;
-
-    let result = engine
-        .RecognizeAsync(&software_bitmap)
-        .map_err(|e| e.to_string())?
-        .await
-        .map_err(|e| e.to_string())?;
-
-    let text = result
-        .Text()
-        .map_err(|e| e.to_string())?
-        .to_string_lossy()
-        .to_string();
-
-    let clean_text: String = clean_ocr_text(&text);
-
-    Ok(clean_text)
-}
-
-/// CJK（日本語・中国語・韓国語など）および全角記号の判定
-#[cfg(target_os = "windows")]
-fn is_cjk(c: char) -> bool {
-    matches!(c,
-        // ひらがな・カタカナ・注音符号
-        '\u{3040}'..='\u{309F}' | '\u{30A0}'..='\u{30FF}' | '\u{3100}'..='\u{312F}' |
-        // 漢字（CJK統合漢字・拡張）
-        '\u{4E00}'..='\u{9FFF}' | '\u{3400}'..='\u{4DBF}' |
-        // 全角記号・句読点（「」など）
-        '\u{3000}'..='\u{303F}' | '\u{FF01}'..='\u{FF60}'
-    )
-}
-
-/// Windows OCR 特有の無駄なスペースを取り除く後処理（標準ライブラリのみ）
-#[cfg(target_os = "windows")]
-fn clean_ocr_text(input: &str) -> String {
-    // 1. 特殊表記ぶれの簡易置換（必要に応じて）
-    let text = input.replace('—', "-");
-
-    let chars: Vec<char> = text.chars().collect();
-    let mut result = String::with_capacity(text.len());
-
-    let len = chars.len();
-    for i in 0..len {
-        let current = chars[i];
-
-        // 半角スペースの場合、前後が共に CJK 文字ならスキップ（＝削除）
-        if current == ' ' {
-            let prev_is_cjk = i > 0 && is_cjk(chars[i - 1]);
-            let next_is_cjk = i + 1 < len && is_cjk(chars[i + 1]);
-
-            if prev_is_cjk && next_is_cjk {
-                continue; // スケップして文字を追加しない
-            }
-        }
-
-        result.push(current);
+    // 最後の行のソートと追加
+    if !current_line.is_empty() {
+        current_line.sort_by(|a, b| a.bbox.rect.left().cmp(&b.bbox.rect.left()));
+        sorted_results.append(&mut current_line);
     }
 
-    // 2. 行末・行頭の余分なスペースをトリムして整形
-    result
-        .lines()
-        .map(|line| line.trim())
-        .collect::<Vec<&str>>()
-        .join("\n")
+    sorted_results
 }
+
+pub async fn download_ocr_files(app_handle: AppHandle) -> Result<(), String> {
+    let models_dir = models_dir(app_handle)?;
+
+    for model in vec![MODELS.det_model, MODELS.rec_model, MODELS.charset] {
+        let file_path = models_dir.join(model.name);
+
+        if file_path.exists() {
+            let file_path = file_path.clone();
+            let metadata = fs::metadata(&file_path).map_err(|e| e.to_string())?;
+
+            if metadata.is_file() {
+                fs::remove_file(file_path).map_err(|e| e.to_string())?;
+            } else if metadata.is_dir() {
+                fs::remove_dir_all(file_path).map_err(|e| e.to_string())?;
+            }
+        }
+
+        let bytes = reqwest::get(model.url)
+            .await
+            .map_err(|e| e.to_string())?
+            .bytes()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        let mut file = File::create(&file_path).map_err(|e| e.to_string())?;
+        file.write_all(&bytes).map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
+}
+
+struct Model {
+    name: &'static str,
+    url: &'static str,
+}
+struct Models {
+    det_model: Model,
+    rec_model: Model,
+    charset: Model,
+}
+
+const MODELS: Models = Models {
+    det_model: Model {
+        name: "PP-OCRv6_medium_det.mnn",
+        url: "https://github.com/oktntko/rust-paddle-ocr/raw/refs/heads/clinder/models/PP-OCRv6_medium_det.mnn",
+    },
+    rec_model: Model {
+        name: "PP-OCRv6_medium_rec.mnn",
+        url: "https://github.com/oktntko/rust-paddle-ocr/raw/refs/heads/clinder/models/PP-OCRv6_medium_rec.mnn",
+    },
+    charset: Model {
+        name: "ppocr_keys_v6_medium.txt",
+        url: "https://github.com/oktntko/rust-paddle-ocr/raw/refs/heads/clinder/models/ppocr_keys_v6_medium.txt",
+    },
+};

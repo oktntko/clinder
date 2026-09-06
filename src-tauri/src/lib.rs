@@ -1,7 +1,6 @@
 mod clipboard_image;
 mod command;
 mod db;
-#[cfg(target_os = "windows")]
 mod ocr;
 
 use clipboard_rs::{
@@ -163,7 +162,7 @@ pub fn run() {
             command::list_system_font,
             command::get_real_app_local_data_dir,
             command::get_real_app_data_dir,
-            command::get_ocr_language
+            command::download_ocr_files
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -297,94 +296,90 @@ impl ClipboardHandler for WatcherHandler {
                 });
         }
 
+        let content_type = if !current_clip.files.is_empty() {
+            // ファイルがある場合＝ファイル
+            db::ContentType::Files
+        } else if current_clip.plain_text.is_empty() {
+            // 画像のみ＝画像
+            db::ContentType::Image
+        } else {
+            // テキストのみ＝テキスト, 画像もテキストも両方ある＝テキスト
+            db::ContentType::Text
+        };
+
         if let Ok(clip_item) = db::upsert_clip(
             &self.app_handle,
-            if !current_clip.files.is_empty() {
-                // ファイルがある場合＝ファイル
-                db::ContentType::Files
-            } else if current_clip.plain_text.is_empty() {
-                // 画像のみ＝画像
-                db::ContentType::Image
-            } else {
-                // テキストのみ＝テキスト, 画像もテキストも両方ある＝テキスト
-                db::ContentType::Text
-            },
+            content_type,
             current_clip.plain_text,
             current_clip.image_hash,
             current_clip.files.clone(),
             false,
         ) {
             log::debug!("clipboard-updated");
+            self.last_clip = last_clip;
             let _ = self.app_handle.emit("clipboard-updated", &clip_item);
 
-            // 画像の保存に成功しており、パスが存在する場合のみ OCR 処理を実行（投げっぱなし）
+            if !self.enable_ocr {
+                return;
+            }
+
+            if content_type != db::ContentType::Image {
+                return;
+            }
+
             if let Some(path) = saved_image_path {
-                if self.enable_ocr {
-                    #[cfg(target_os = "windows")]
+                let app_handle = self.app_handle.clone();
+                let clip_id = clip_item.id;
+
+                // 別スレッドを立ち上げて非同期で処理（メインスレッドをブロックしない）
+                std::thread::spawn(move || {
+                    let rt = match tokio::runtime::Builder::new_current_thread()
+                        .enable_all()
+                        .build()
                     {
-                        let app_handle = self.app_handle.clone();
-                        let clip_id = clip_item.id;
+                        Ok(rt) => rt,
+                        Err(e) => {
+                            log::error!("Failed to create tokio runtime for OCR: {}", e);
+                            return;
+                        }
+                    };
 
-                        // 別スレッドを立ち上げて非同期で処理（メインスレッドをブロックしない）
-                        std::thread::spawn(move || {
-                            let rt = match tokio::runtime::Builder::new_current_thread()
-                                .enable_all()
-                                .build()
-                            {
-                                Ok(rt) => rt,
-                                Err(e) => {
-                                    log::error!("Failed to create tokio runtime for OCR: {}", e);
-                                    return;
-                                }
-                            };
+                    // OCR の実行
+                    let ocr_handle = app_handle.clone();
+                    let ocr_result = rt.block_on(async { ocr::read_text(ocr_handle, &path).await });
 
-                            // OCR の実行
-                            let ocr_result =
-                                rt.block_on(async { ocr::ocr_windows_dynamic(&path).await });
+                    match ocr_result {
+                        Ok(extracted_text) => {
+                            if extracted_text.trim().is_empty() {
+                                log::debug!(
+                                    "OCR succeeded but no text was found for clip_id: {}",
+                                    clip_id
+                                );
+                                return;
+                            }
 
-                            match ocr_result {
-                                Ok(extracted_text) => {
-                                    if extracted_text.trim().is_empty() {
-                                        log::debug!(
-                                            "OCR succeeded but no text was found for clip_id: {}",
-                                            clip_id
-                                        );
-                                        return;
-                                    }
+                            log::debug!("OCR success for clip_id {}: {}", clip_id, extracted_text);
 
-                                    log::debug!(
-                                        "OCR success for clip_id {}: {}",
-                                        clip_id,
-                                        extracted_text
-                                    );
-
-                                    // DB更新 (clip_id と抽出したテキストを使ってDBを更新する関数を呼ぶ)
-                                    if let Ok(updated_item) =
-                                        db::update_clip_text(&app_handle, extracted_text, clip_id)
-                                    {
-                                        // フロントエンドへ更新通知を発行
-                                        let _ = app_handle.emit("clipboard-updated", &updated_item);
-                                    } else {
-                                        log::warn!(
-                                            "Failed to update DB with OCR text for clip_id: {}",
-                                            clip_id
-                                        );
-                                    }
+                            match db::update_clip_text(&app_handle, extracted_text, clip_id) {
+                                Ok(updated_item) => {
+                                    // フロントエンドへ更新通知を発行
+                                    let _ = app_handle.emit("clipboard-updated", &updated_item);
                                 }
                                 Err(e) => {
                                     log::warn!(
-                                        "OCR processing failed for clip_id {}: {}",
+                                        "Failed to update DB with OCR text for clip_id {}: {}",
                                         clip_id,
                                         e
                                     );
                                 }
                             }
-                        });
+                        }
+                        Err(e) => {
+                            log::warn!("OCR processing failed for clip_id {}: {}", clip_id, e);
+                        }
                     }
-                }
+                });
             }
         }
-
-        self.last_clip = last_clip;
     }
 }

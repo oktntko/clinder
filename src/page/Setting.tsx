@@ -49,7 +49,6 @@ export function Setting() {
     saveMaxItems,
     trimFinalNewlines,
     saveTrimFinalNewlines,
-    ocr,
     enableOCR,
     saveEnableOCR,
     globalShortcutToggleWindow,
@@ -283,52 +282,50 @@ export function Setting() {
                   Extracts text from images so you can search them like regular text.
                 </div>
               </div>
-              {!ocr && (
-                <div className="text-xs text-red-500">
-                  <p className="font-bold">No OCR-compatible language packs found.</p>
-                  <span>
-                    Please install a supported language pack (e.g., English, Japanese) in Settings
-                    to use OCR.
-                  </span>
-                </div>
-              )}
               <div className="flex flex-row items-center gap-2">
-                <Checkbox
+                <span
+                  className={`size-5 ${enableOCR ? 'icon-[akar-icons--check-box]' : 'icon-[akar-icons--box]'}`}
+                ></span>
+                <span className="capitalize">{enableOCR ? 'enabled' : 'disabled'}</span>
+
+                <Button
                   id="enable OCR"
-                  checked={enableOCR}
-                  disabled={!ocr}
-                  onChange={async (e) => {
-                    const checkbox = document.getElementById('enable OCR') as HTMLInputElement;
+                  set="default"
+                  className="rounded-md p-1 font-semibold"
+                  onClick={async () => {
+                    const button = document.getElementById('enable OCR') as HTMLButtonElement;
+
+                    const enable = !enableOCR;
 
                     try {
-                      checkbox.disabled = true;
+                      button.disabled = true;
 
-                      await saveEnableOCR(e.target.checked);
+                      if (enable) {
+                        await $dialog.confirm.success(
+                          `Additional files are required to enable OCR. Would you like to download them?`,
+                        );
 
-                      $toast.success(
-                        `OCR ${e.target.checked ? 'enabled' : 'disabled'} successfully.`,
-                      );
+                        await command.download_ocr_files();
+                      }
+
+                      await saveEnableOCR(enable);
+
+                      $toast.success(`OCR ${enable ? 'enabled' : 'disabled'} successfully.`);
 
                       await sleep(1000);
 
                       await $dialog.confirm.success(
-                        `OCR ${e.target.checked ? 'enabled' : 'disabled'} successfully.\nDo you want to restart now?`,
+                        `OCR ${enable ? 'enabled' : 'disabled'} successfully.\nDo you want to restart now?`,
                       );
 
                       return command.restart_app();
                     } finally {
-                      checkbox.disabled = false;
+                      button.disabled = false;
                     }
                   }}
                 >
-                  enabled
-                  {ocr && (
-                    <div className="inline-block ps-2 text-xs">
-                      Detected OS Languages:
-                      <span className="font-bold text-blue-500 dark:text-indigo-400"> {ocr} </span>
-                    </div>
-                  )}
-                </Checkbox>
+                  {enableOCR ? 'disable' : 'enable'}
+                </Button>
               </div>
               <div
                 className={cn(
@@ -338,7 +335,7 @@ export function Setting() {
                 )}
               >
                 <div>
-                  Uses built-in OS features for OCR. Your images stay local and are never sent to
+                  Uses on-device AI for OCR. Your images stay 100% local and are never sent to
                   external servers.
                 </div>
               </div>
