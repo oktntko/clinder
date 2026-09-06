@@ -2,6 +2,7 @@ use crate::WindowPositionMemory;
 use crate::clipboard_image;
 use crate::db;
 use crate::db::ContentType;
+use crate::ocr;
 
 use clipboard_rs::{Clipboard, ClipboardContext, common::RustImage};
 use enigo::{Enigo, Key, Keyboard, Settings};
@@ -696,14 +697,6 @@ fn get_package_family_name() -> Option<String> {
 }
 
 #[tauri::command(rename_all = "snake_case")]
-pub fn get_ocr_language() -> Result<String, String> {
-    if cfg!(target_os = "windows") {
-        use crate::ocr;
-
-        let language = ocr::get_ocr_language()?;
-        let tag = language.LanguageTag().unwrap_or_default().to_string_lossy();
-        Ok(tag)
-    } else {
-        Ok("".to_string())
-    }
+pub async fn download_ocr_files(app_handle: AppHandle) -> Result<(), String> {
+    ocr::download_ocr_files(app_handle).await
 }

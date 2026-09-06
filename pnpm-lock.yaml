@@ -26,9 +26,6 @@ importers:
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
-      medium-zoom:
-        specifier: ^1.1.0
-        version: 1.1.0
       path-browserify-esm:
         specifier: ^1.0.6
         version: 1.0.6
@@ -2956,9 +2953,6 @@ packages:
 
   median-quickselect@1.0.1:
     resolution: {integrity: sha512-/QL9ptNuLsdA68qO+2o10TKCyu621zwwTFdLvtu8rzRNKsn8zvuGoq/vDxECPyELFG8wu+BpyoMR9BnsJqfVZQ==}
-
-  medium-zoom@1.1.0:
-    resolution: {integrity: sha512-ewyDsp7k4InCUp3jRmwHBRFGyjBimKps/AJLjRSox+2q/2H4p/PNpQf+pwONWlJiOudkBXtbdmVbFjqyybfTmQ==}
 
   micromark-core-commonmark@2.0.3:
     resolution: {integrity: sha512-RDBrHEMSxVFLg6xvnXmb1Ayr2WzLAWjeSATAoxwKYJV94TeNavgoIdA0a9ytzDSVzBy2YKFK+emCPOEibLeCrg==}
@@ -6361,8 +6355,6 @@ snapshots:
   mdn-data@2.27.1: {}
 
   median-quickselect@1.0.1: {}
-
-  medium-zoom@1.1.0: {}
 
   micromark-core-commonmark@2.0.3:
     dependencies:

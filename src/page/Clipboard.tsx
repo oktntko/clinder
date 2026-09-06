@@ -2,7 +2,6 @@ import { convertFileSrc } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { openPath } from '@tauri-apps/plugin-opener';
-import mediumZoom from 'medium-zoom';
 import path from 'path-browserify-esm';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
@@ -128,7 +127,9 @@ export function Clipboard() {
         Component: PasteMenu,
         $props: (resolve) => ({
           clip,
-          onSuccess: () => resolve('ok'),
+          onSuccess: () => {
+            resolve('ok');
+          },
           onDelete: (clip) => {
             void deleteClip(clip);
             resolve('ok');
@@ -788,7 +789,8 @@ function FileList(props: ClipContainerProps) {
 }
 
 function PasteMenu(props: { clip: Clip; onSuccess: () => void; onDelete: (clip: Clip) => void }) {
-  const { showSubContents, theme, appLocalDataDir } = useStore();
+  const $dialog = useDialog();
+  const { showSubContents, appLocalDataDir } = useStore();
 
   const cleanupRef = useRef<(() => void) | null>(null);
 
@@ -911,11 +913,86 @@ function PasteMenu(props: { clip: Clip; onSuccess: () => void; onDelete: (clip: 
             type="button"
             className="before:icon-[akar-icons--zoom-in]"
             onClick={async () => {
-              const zoom = mediumZoom(`#image-${props.clip.id}`, {
-                background: theme === 'dark' ? '#000' : '#fff',
-              });
+              const image = document.getElementById(
+                `image-${props.clip.id}`,
+              ) as HTMLImageElement | null;
 
-              void zoom.open();
+              if (image != null) {
+                void $dialog.showModal({
+                  Component: function () {
+                    const [scale, setScale] = useState(1);
+                    const [position, setPosition] = useState({ x: 0, y: 0 });
+                    const [isDragging, setIsDragging] = useState(false);
+
+                    const containerRef = useRef<HTMLImageElement>(null);
+                    const dragStart = useRef({ x: 0, y: 0 });
+
+                    return (
+                      <img
+                        ref={containerRef}
+                        src={image.src}
+                        className={`block h-auto max-h-dvh w-auto max-w-dvw object-contain ${
+                          isDragging ? 'cursor-grab' : 'cursor-zoom-in'
+                        }`}
+                        style={{
+                          transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+                        }}
+                        onWheel={(e) => {
+                          e.preventDefault();
+                          const zoomFactor = 0.1;
+                          const newScale =
+                            e.deltaY < 0
+                              ? Math.min(scale + zoomFactor, 4)
+                              : Math.max(scale - zoomFactor, 1);
+
+                          setScale(newScale);
+
+                          if (newScale === 1) {
+                            setPosition({ x: 0, y: 0 });
+                          }
+                        }}
+                        onMouseDown={(e) => {
+                          if (e.button === 0 || scale === 1) {
+                            return;
+                          }
+
+                          e.preventDefault();
+                          e.stopPropagation();
+
+                          setIsDragging(true);
+
+                          dragStart.current = {
+                            x: e.clientX - position.x,
+                            y: e.clientY - position.y,
+                          };
+                        }}
+                        onMouseMove={(e) => {
+                          if (!isDragging) {
+                            return;
+                          }
+
+                          setPosition({
+                            x: e.clientX - dragStart.current.x,
+                            y: e.clientY - dragStart.current.y,
+                          });
+                        }}
+                        onMouseUp={() => setIsDragging(false)}
+                        onMouseLeave={() => setIsDragging(false)}
+                        onClick={(e) => {
+                          if (isDragging) {
+                            return;
+                          }
+
+                          e.preventDefault();
+                          e.stopPropagation();
+
+                          setScale((scale) => Math.min(scale + 0.15, 4));
+                        }}
+                      />
+                    );
+                  },
+                });
+              }
 
               props.onSuccess();
             }}
@@ -1020,7 +1097,7 @@ function MenuButton({
       {...props}
       onKeyDown={onKeyDown}
       className={cn(
-        'flex items-center justify-start capitalize transition',
+        'flex items-center justify-start capitalize transition-colors',
         'outline-none first:rounded-t-md last:rounded-b-md',
         'px-8 py-1',
         'group',
@@ -1037,7 +1114,15 @@ function MenuButton({
         className,
       )}
     >
-      <span className="group-focus:font-semibold">{children}</span>
+      <span
+        className={cn(
+          'group-focus:text-shadow-xs',
+          'group-focus:text-shadow-slate-900',
+          'dark:group-focus:text-shadow-zinc-100',
+        )}
+      >
+        {children}
+      </span>
     </button>
   );
 }

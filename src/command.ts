@@ -146,8 +146,8 @@ async function get_real_app_data_dir(): Promise<string> {
   return invoke('get_real_app_data_dir');
 }
 
-async function get_ocr_language(): Promise<string> {
-  return invoke('get_ocr_language');
+async function download_ocr_files(): Promise<string> {
+  return invoke('download_ocr_files');
 }
 
 export const command = {
@@ -168,5 +168,5 @@ export const command = {
   list_system_font,
   get_real_app_local_data_dir,
   get_real_app_data_dir,
-  get_ocr_language,
+  download_ocr_files,
 };
