@@ -608,7 +608,7 @@ function EditShortcutDialog(props: {
   onSave: (shortcut: Shortcut) => void;
   onCancel: () => void;
 }) {
-  const [value, setValue] = useState(props.initValue);
+  const [value, setValue] = useState({ ...props.initValue });
 
   return (
     <div

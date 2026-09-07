@@ -10,12 +10,6 @@ export function usePortalTarget(id: string) {
   const [element, setElement] = useState<HTMLElement>();
 
   useEffect(() => {
-    const el = document.getElementById(id);
-    if (el) {
-      setElement(el);
-      return;
-    }
-
     const observer = new MutationObserver(() => {
       const el = document.getElementById(id);
       if (el) {

@@ -137,6 +137,7 @@ type DialogContentInner<T, C extends ReactComponent> = DialogContent<T, C> & {
 };
 
 function DialogContainer<T, C extends ReactComponent>({
+  id,
   onClose,
   Component,
   resolve,
@@ -146,27 +147,24 @@ function DialogContainer<T, C extends ReactComponent>({
 }: {
   onClose: () => void;
 } & DialogContentInner<T, C>) {
-  const dialogRef = useRef<HTMLDialogElement | null>(null);
-
   useEffect(() => {
-    dialogRef.current?.showModal();
-  }, []);
+    (document.getElementById(`dialog-${id}`) as HTMLDialogElement | null)?.showModal();
+  }, [id]);
 
   const trapResolve = useCallback(
     (value: T | PromiseLike<T>) => {
-      dialogRef.current?.close('cancel');
+      (document.getElementById(`dialog-${id}`) as HTMLDialogElement | null)?.close();
       resolve(value);
     },
-    [resolve],
+    [resolve, id],
   );
 
   const trapReject = useCallback(
     (reason?: unknown) => {
-      console.log(dialogRef.current);
-      dialogRef.current?.close('cancel');
+      (document.getElementById(`dialog-${id}`) as HTMLDialogElement | null)?.close();
       reject(reason);
     },
-    [reject],
+    [reject, id],
   );
 
   const componentProps = useMemo(
@@ -180,7 +178,7 @@ function DialogContainer<T, C extends ReactComponent>({
   }, [onClose]);
 
   useEffect(() => {
-    const dialog = dialogRef.current;
+    const dialog = document.getElementById(`dialog-${id}`) as HTMLDialogElement | null;
     if (!dialog) {
       return;
     }
@@ -209,7 +207,7 @@ function DialogContainer<T, C extends ReactComponent>({
     return () => {
       dialog.removeEventListener('close', handleClose);
     };
-  }, [reject]);
+  }, [reject, id]);
 
   useEffect(() => {
     function closeDialog(e: KeyboardEvent) {
@@ -258,7 +256,7 @@ function DialogContainer<T, C extends ReactComponent>({
 
   return (
     <dialog
-      ref={dialogRef}
+      id={`dialog-${id}`}
       style={style}
       className={cn([
         'm-auto max-h-dvh max-w-dvw overflow-visible bg-transparent outline-hidden',

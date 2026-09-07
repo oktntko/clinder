@@ -65,6 +65,7 @@ export function Clipboard() {
   }, [query, searchMode, searchContentType, searchBookmark]);
 
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect
     setCursor((prev) => {
       if (clipboard.length === 0) return 0;
       return Math.min(prev, clipboard.length - 1);
@@ -72,6 +73,7 @@ export function Clipboard() {
   }, [clipboard]);
 
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect
     void search();
   }, [query, search]);
 
@@ -986,7 +988,7 @@ function PasteMenu(props: { clip: Clip; onSuccess: () => void; onDelete: (clip: 
                           e.preventDefault();
                           e.stopPropagation();
 
-                          setScale((scale) => Math.min(scale + 0.15, 4));
+                          setScale((scale) => Math.min(scale + 0.3, 4));
                         }}
                       />
                     );
